@@ -32,3 +32,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
