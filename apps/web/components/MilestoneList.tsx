@@ -1,0 +1,41 @@
+import type { Milestone } from '@grabcode/contracts';
+import { formatTime } from '../lib/orderView';
+
+const META = {
+  COMPLETED: { icon: 'check_circle', cls: 'text-emerald', label: 'Hoàn thành' },
+  IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber', label: 'Đang làm' },
+  PENDING: { icon: 'radio_button_unchecked', cls: 'text-slate-300', label: 'Chờ' },
+} as const;
+
+export default function MilestoneList({ milestones }: { milestones: Milestone[] }) {
+  return (
+    <section aria-label="Các mốc bàn giao" className="space-y-3">
+      <h2 className="font-display text-base font-bold text-ink">Mốc bàn giao</h2>
+      {milestones.map((m) => {
+        const meta = META[m.status];
+        return (
+          <article
+            key={m.id}
+            className={`card !p-4 transition ${m.status === 'IN_PROGRESS' ? 'border-emerald/50 shadow-l2' : ''} ${m.status === 'COMPLETED' ? 'bg-emerald-mint/40' : ''}`}
+          >
+            <div className="flex items-start gap-3">
+              <span className={`material-symbols-outlined ${meta.cls} ${m.status === 'IN_PROGRESS' ? 'animate-spin' : ''}`} aria-hidden>{meta.icon}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-display text-sm font-bold text-ink">[{m.id}] {m.title}</span>
+                  <span className="font-display text-sm font-extrabold text-emerald-dark">{m.weightPercent}%</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{m.description}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-500'}>{meta.label}</span>
+                  {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
+                  {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
