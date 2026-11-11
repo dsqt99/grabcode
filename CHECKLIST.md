@@ -73,10 +73,6 @@
 - [x] Web: panel chuyển khoản (QR, STK, nội dung, số còn thiếu, nút giả lập dev) thay ký quỹ giả — `27d94c1`
 - [x] Coder: ví + thu nhập hôm nay lấy từ ledger thay ví local — `27d94c1`
 - [x] Test ledger: tổng luôn cân, chia tiền nhả; smoke: CK trùng id không cộng 2 lần, CK thiếu giữ DRAFT — `1ff520b`
-- [ ] Đối soát `suspense` (CK sai nội dung / không có đơn) — màn admin S7
-- [ ] Hoàn tiền thừa / huỷ đơn DRAFT đã nạp một phần — S7 (tiền thừa hiện nằm lại escrow)
-- [ ] Nhả tiền theo mốc thay vì 1 lần khi ACCEPTED — S4
-- [ ] Coder rút tiền từ ví về ngân hàng (payout) — chưa lên kế hoạch
 
 ## S3 — Dispatch + Matching
 
@@ -92,7 +88,7 @@
 - [ ] Contract: `MilestoneSubmission`, events `milestone.submitted|approved|rejected`
 - [ ] Coder: nộp mốc gắn commit SHA (`core.repo_commits`)
 - [ ] API: tách milestones khỏi `orders.brief` jsonb sang bảng riêng (cần khi mốc có submission / duyệt / nhả tiền)
-- [ ] Web: khách duyệt / yêu cầu sửa từng mốc → nhả tiền theo mốc (S2)
+- [ ] Web: khách duyệt / yêu cầu sửa từng mốc → nhả tiền theo mốc qua ledger S2 (hiện nhả 1 lần khi ACCEPTED)
 - [ ] Tranh chấp: chuyển DISPUTED, khoá tiền, ghi nhận cho admin
 - [ ] Bàn giao: chuyển repo / quyền sang khách khi ACCEPTED
 
@@ -116,6 +112,9 @@
 - [ ] App `apps/admin` (Next.js 15) + role ADMIN trong contract / API
 - [ ] Quản lý coder tier, khoá / mở coder
 - [ ] Giải quyết tranh chấp (hoàn / nhả tiền qua ledger)
+- [ ] Đối soát tài khoản `suspense` (CK sai nội dung / không khớp đơn) — gán vào đơn hoặc hoàn
+- [ ] Hoàn tiền thừa / huỷ đơn DRAFT đã nạp một phần (tiền thừa hiện nằm lại escrow)
+- [ ] Coder rút tiền từ ví về ngân hàng (payout, duyệt thủ công)
 - [ ] Giám sát worker / queue (JetStream consumer lag, job FAILED, thử lại)
 - [ ] Cấu hình AI model & bảng giá (đọc từ DB thay `.env`)
 
