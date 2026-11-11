@@ -55,6 +55,21 @@ export function estimateOrder(tier: z.infer<typeof OrderTierSchema>, prompt: str
   return { priceVnd: Math.round(price / 10000) * 10000, etaHours: eta };
 }
 
+// ---- Coder stats (shown in the coder app header) ----
+
+export const CoderTierSchema = z.enum(['BRONZE', 'SILVER', 'GOLD', 'DIAMOND']);
+export const CoderStatsSchema = z.object({
+  tier: CoderTierSchema,
+  completedOrders: z.number().int(),
+  /** null until customer reviews exist (S4). */
+  rating: z.number().nullable(),
+});
+export type CoderStats = z.infer<typeof CoderStatsSchema>;
+
+/** Tier from accepted orders; admin overrides come with S7. */
+export const coderTierFor = (completed: number): z.infer<typeof CoderTierSchema> =>
+  completed >= 50 ? 'DIAMOND' : completed >= 20 ? 'GOLD' : completed >= 5 ? 'SILVER' : 'BRONZE';
+
 // ---- REST ----
 
 export const OrderCreateSchema = z.object({
@@ -63,7 +78,7 @@ export const OrderCreateSchema = z.object({
   templateId: z.string().max(100).nullish(),
   framework: z.string().max(200).default('Next.js 15 + Tailwind CSS'),
   /** Brief the customer reviewed (AI or fallback). Milestone statuses are reset to PENDING by the server. */
-  brief: AIBriefSchema,
+  brief: AIBriefSchema.extend({ milestones: AIBriefSchema.shape.milestones.min(1) }),
 });
 
 /** Body of POST /v1/orders/{id}/transitions. */
@@ -93,7 +108,7 @@ export const OrderSchema = z.object({
   payoutVnd: z.number().int(),
   etaHours: z.number().int(),
   customer: OrderPartySchema,
-  coder: OrderPartySchema.nullable(),
+  coder: OrderPartySchema.extend({ stats: CoderStatsSchema }).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -103,18 +118,3 @@ export const OrderListSchema = z.object({ orders: z.array(OrderSchema) });
 export type OrderCreate = z.input<typeof OrderCreateSchema>;
 export type OrderDto = z.infer<typeof OrderSchema>;
 export type OrderList = z.infer<typeof OrderListSchema>;
-
-// ---- Coder stats (shown in the coder app header) ----
-
-export const CoderTierSchema = z.enum(['BRONZE', 'SILVER', 'GOLD', 'DIAMOND']);
-export const CoderStatsSchema = z.object({
-  tier: CoderTierSchema,
-  completedOrders: z.number().int(),
-  /** null until customer reviews exist (S4). */
-  rating: z.number().nullable(),
-});
-export type CoderStats = z.infer<typeof CoderStatsSchema>;
-
-/** Tier from accepted orders; admin overrides come with S7. */
-export const coderTierFor = (completed: number): z.infer<typeof CoderTierSchema> =>
-  completed >= 50 ? 'DIAMOND' : completed >= 20 ? 'GOLD' : completed >= 5 ? 'SILVER' : 'BRONZE';

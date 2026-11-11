@@ -31,9 +31,19 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     escrowStatus: o.status === 'DRAFT' ? 'UNPAID' : o.status === 'ACCEPTED' ? 'RELEASED' : 'ESCROW_LOCKED',
     status: status[o.status],
     brief: o.brief,
-    // Stats are not on the order; rating 0 means unknown.
+    // rating 0 means unknown (no reviews before S4).
     assignedCoder: o.coder
-      ? { id: o.coder.id, name: o.coder.name, avatar: o.coder.avatarUrl ?? '', tier: 'BRONZE', rating: 0, completedOrders: 0, walletBalanceVnd: 0, isOnline: true, specialties: [] }
+      ? {
+          id: o.coder.id,
+          name: o.coder.name,
+          avatar: o.coder.avatarUrl ?? '',
+          tier: o.coder.stats.tier,
+          rating: o.coder.stats.rating ?? 0,
+          completedOrders: o.coder.stats.completedOrders,
+          walletBalanceVnd: 0,
+          isOnline: true,
+          specialties: [],
+        }
       : undefined,
     repoUrl: repo?.htmlUrl ?? undefined,
     createdAt: o.createdAt,

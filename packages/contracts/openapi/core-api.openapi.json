@@ -2262,6 +2262,7 @@
                 }
               },
               "milestones": {
+                "minItems": 1,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -2536,12 +2537,44 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "stats": {
+                    "type": "object",
+                    "properties": {
+                      "tier": {
+                        "type": "string",
+                        "enum": [
+                          "BRONZE",
+                          "SILVER",
+                          "GOLD",
+                          "DIAMOND"
+                        ]
+                      },
+                      "completedOrders": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "rating": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "tier",
+                      "completedOrders",
+                      "rating"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
                   "id",
                   "name",
-                  "avatarUrl"
+                  "avatarUrl",
+                  "stats"
                 ],
                 "additionalProperties": false
               },
@@ -2791,12 +2824,44 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "tier": {
+                              "type": "string",
+                              "enum": [
+                                "BRONZE",
+                                "SILVER",
+                                "GOLD",
+                                "DIAMOND"
+                              ]
+                            },
+                            "completedOrders": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "rating": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "tier",
+                            "completedOrders",
+                            "rating"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "id",
                         "name",
-                        "avatarUrl"
+                        "avatarUrl",
+                        "stats"
                       ],
                       "additionalProperties": false
                     },
