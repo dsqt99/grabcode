@@ -53,6 +53,11 @@ grabcode / multi-repo
 - Mọi thay đổi trạng thái nghiệp vụ (đơn hàng, thanh toán, mốc) lưu trong Postgres schema riêng của từng module.
 - Redis, Vector index, Cache chỉ là dữ liệu dẫn xuất (phải tái tạo lại được 100% từ Postgres).
 
+### Nguyên tắc 5: Cập nhật `CHECKLIST.md` sau mỗi việc
+- Xong một việc (hoặc bắt đầu làm dở) → cập nhật ngay [CHECKLIST.md](CHECKLIST.md): `[x]` xong, `[~]` đang làm, kèm commit hash ngắn.
+- Việc mới phát sinh (bug, nợ kỹ thuật, bước thiếu) → thêm dòng `[ ]` vào đúng sprint.
+- Commit checklist cùng commit của việc đó, không để lệch với code.
+
 ---
 
 ## 3. Chiến lược phân vai Multi-Agent (AI Coding Workflow)
