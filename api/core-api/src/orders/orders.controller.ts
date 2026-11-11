@@ -1,7 +1,8 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import {
-  MilestoneCompleteSchema,
+  MilestoneRejectSchema,
+  MilestoneSubmitSchema,
   OrderCreateSchema,
   OrderListQuerySchema,
   OrderTransitionSchema,
@@ -53,18 +54,28 @@ export class OrdersController {
   @HttpCode(200)
   async transition(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<OrderDto> {
     const user = await this.user(req);
-    return this.orders.transition(user, id, parse(OrderTransitionSchema, body).status);
+    const { status, reason } = parse(OrderTransitionSchema, body);
+    return this.orders.transition(user, id, status, reason);
   }
 
-  @Post(':id/milestones/:milestoneId/complete')
+  @Post(':id/milestones/:milestoneId/submit')
   @HttpCode(200)
-  async completeMilestone(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Param('milestoneId') milestoneId: string,
-    @Body() body: unknown,
-  ): Promise<OrderDto> {
+  async submitMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string, @Body() body: unknown): Promise<OrderDto> {
     const user = await this.user(req);
-    return this.orders.completeMilestone(user, id, milestoneId, parse(MilestoneCompleteSchema, body ?? {}).commitHash ?? null);
+    const { commitHash, note } = parse(MilestoneSubmitSchema, body ?? {});
+    return this.orders.submitMilestone(user, id, mid, commitHash ?? null, note || null);
+  }
+
+  @Post(':id/milestones/:milestoneId/approve')
+  @HttpCode(200)
+  async approveMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string): Promise<OrderDto> {
+    return this.orders.reviewMilestone(await this.user(req), id, mid, true, null);
+  }
+
+  @Post(':id/milestones/:milestoneId/reject')
+  @HttpCode(200)
+  async rejectMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string, @Body() body: unknown): Promise<OrderDto> {
+    const user = await this.user(req);
+    return this.orders.reviewMilestone(user, id, mid, false, parse(MilestoneRejectSchema, body).note);
   }
 }

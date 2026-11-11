@@ -1,4 +1,4 @@
-import { payoutOf } from '@grabcode/contracts/schemas';
+import { milestoneShare, payoutOf } from '@grabcode/contracts/schemas';
 
 // Pure ledger rules (no DB) so they are unit-testable. Account names: see contracts/schemas/payment.ts.
 
@@ -19,13 +19,14 @@ export const depositEntries = (orderId: string | null, amountVnd: number): Entry
   { account: orderId ? escrowOf(orderId) : SUSPENSE, amountVnd },
 ];
 
-/** On ACCEPTED: the price leaves escrow, the coder gets the payout, the platform keeps the rest. */
-export function releaseEntries(orderId: string, priceVnd: number, coderUserId: string): Entry[] {
-  const payout = payoutOf(priceVnd);
+/** Milestone `index` approved: its share of the price leaves escrow, the coder gets the same share of the payout, the platform the rest. */
+export function releaseEntries(orderId: string, priceVnd: number, weights: number[], index: number, coderUserId: string): Entry[] {
+  const amount = milestoneShare(priceVnd, weights, index);
+  const payout = milestoneShare(payoutOf(priceVnd), weights, index);
   return [
-    { account: escrowOf(orderId), amountVnd: -priceVnd },
+    { account: escrowOf(orderId), amountVnd: -amount },
     { account: coderOf(coderUserId), amountVnd: payout },
-    { account: PLATFORM, amountVnd: priceVnd - payout },
+    { account: PLATFORM, amountVnd: amount - payout },
   ];
 }
 

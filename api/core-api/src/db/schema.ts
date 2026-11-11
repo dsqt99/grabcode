@@ -111,6 +111,7 @@ export const orders = core.table(
     brief: jsonb('brief').$type<AIBrief>().notNull(),
     priceVnd: integer('price_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
+    disputeReason: text('dispute_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -131,6 +132,8 @@ export const orderRepos = core.table('order_repos', {
   cloneUrl: text('clone_url'),
   collaborator: text('collaborator'),
   error: text('error'),
+  handedOverAt: timestamp('handed_over_at', { withTimezone: true }),
+  handedOverTo: text('handed_over_to'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -93,6 +93,11 @@ export class ReposService {
       .where(and(eq(orderRepos.orderId, orderId), eq(orderRepos.status, 'PENDING')));
   }
 
+  /** repo-worker finished the ACCEPTED handover; a redelivery rewrites the same values. */
+  async markHandedOver(orderId: string, to: string | null): Promise<void> {
+    await this.db.update(orderRepos).set({ handedOverAt: sql`now()`, handedOverTo: to, updatedAt: sql`now()` }).where(eq(orderRepos.orderId, orderId));
+  }
+
   /** Push webhook: store commits of a known repo; unknown repos are ignored. sha PK dedupes redeliveries. */
   async recordPush(repoFullName: string, commits: { id: string; message: string; author?: { name?: string; username?: string }; url: string; timestamp: string }[]) {
     const [r] = await this.db.select({ orderId: orderRepos.orderId }).from(orderRepos).where(eq(orderRepos.repoFullName, repoFullName));
@@ -121,6 +126,8 @@ const toDto = (r: Row, commits: (typeof repoCommits.$inferSelect)[]): OrderRepo 
   cloneUrl: r.cloneUrl,
   collaborator: r.collaborator,
   error: r.error,
+  handedOverAt: r.handedOverAt?.toISOString() ?? null,
+  handedOverTo: r.handedOverTo,
   commits: commits.map((c) => ({ sha: c.sha, message: c.message, author: c.author, url: c.url, pushedAt: c.pushedAt.toISOString() })),
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),

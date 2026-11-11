@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdo
 import { AckPolicy, connect, type ConsumerMessages, type NatsConnection } from 'nats';
 import {
   RepoFailedEventSchema,
+  RepoHandedOverEventSchema,
   RepoProvisionedEventSchema,
   STREAM_NAME,
   STREAM_SUBJECTS,
@@ -11,7 +12,7 @@ import { ReposService } from './repos.service';
 
 const DURABLE = 'core-api-repo-results';
 
-/** Applies repo-worker results (repo.provisioned / repo.failed) back to Postgres. */
+/** Applies repo-worker results (repo.provisioned / repo.failed / repo.handed_over) back to Postgres. */
 @Injectable()
 export class RepoResultsConsumer implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly log = new Logger(RepoResultsConsumer.name);
@@ -27,12 +28,11 @@ export class RepoResultsConsumer implements OnApplicationBootstrap, OnApplicatio
     await jsm.streams
       .add({ name: STREAM_NAME, subjects: STREAM_SUBJECTS })
       .catch(() => jsm.streams.update(STREAM_NAME, { subjects: STREAM_SUBJECTS }));
-    await jsm.consumers.add(STREAM_NAME, {
-      durable_name: DURABLE,
-      ack_policy: AckPolicy.Explicit,
-      filter_subjects: [SUBJECTS.REPO_PROVISIONED, SUBJECTS.REPO_FAILED],
-      max_deliver: 10,
-    });
+    const filter_subjects = [SUBJECTS.REPO_PROVISIONED, SUBJECTS.REPO_FAILED, SUBJECTS.REPO_HANDED_OVER];
+    // add rejects a changed config on an existing durable; update widens its filter in place.
+    await jsm.consumers
+      .add(STREAM_NAME, { durable_name: DURABLE, ack_policy: AckPolicy.Explicit, filter_subjects, max_deliver: 10 })
+      .catch(() => jsm.consumers.update(STREAM_NAME, DURABLE, { filter_subjects }));
     const consumer = await this.nc.jetstream().consumers.get(STREAM_NAME, DURABLE);
     this.messages = await consumer.consume();
     void this.loop();
@@ -44,6 +44,9 @@ export class RepoResultsConsumer implements OnApplicationBootstrap, OnApplicatio
         const body = m.json<unknown>();
         if (m.subject === SUBJECTS.REPO_PROVISIONED) {
           await this.repos.markReady(RepoProvisionedEventSchema.parse(body).data);
+        } else if (m.subject === SUBJECTS.REPO_HANDED_OVER) {
+          const d = RepoHandedOverEventSchema.parse(body).data;
+          await this.repos.markHandedOver(d.orderId, d.customerGithubLogin);
         } else {
           const e = RepoFailedEventSchema.parse(body);
           await this.repos.markFailed(e.data.orderId, e.data.error);

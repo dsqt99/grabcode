@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AIBrief } from '@grabcode/contracts';
 import { ORDER_TRANSITIONS, OrderStatusSchema, type OrderStatus } from '@grabcode/contracts/schemas';
-import { completeMilestone, isDenied, planTransition } from './transition';
+import { isDenied, planTransition, reviewMilestone, submitMilestone } from './transition';
 
 const CUST = { id: 'c', roles: ['CUSTOMER'] };
 const CODER = { id: 'k', roles: ['CODER'] };
 const OTHER = { id: 'x', roles: ['CODER', 'CUSTOMER'] };
-const brief = (...st: ('PENDING' | 'IN_PROGRESS' | 'COMPLETED')[]): AIBrief => ({
+const brief = (...st: AIBrief['milestones'][number]['status'][]): AIBrief => ({
   title: 't', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '',
   milestones: st.map((status, i) => ({ id: `M${i + 1}`, title: '', description: '', weightPercent: 50, status })),
 });
@@ -19,6 +19,7 @@ test('happy path: each edge allowed for the right actor', () => {
   for (const to of ['ACCEPTED', 'DISPUTED', 'IN_PROGRESS'] as const) {
     assert.deepEqual(planTransition(order('DELIVERED'), CUST, to), { coderUserId: 'k' });
   }
+  assert.deepEqual(planTransition(order('IN_PROGRESS'), CUST, 'DISPUTED'), { coderUserId: 'k' });
 });
 
 test('every edge not in the table is 409, SYSTEM edges are not callable', () => {
@@ -42,13 +43,24 @@ test('deliver needs every milestone done', () => {
   assert.ok(isDenied(r) && r.denied === 409);
 });
 
-test('milestones complete in order and start the next one', () => {
+test('submit -> reject -> resubmit -> approve, in order, starting the next milestone', () => {
   const o = order('IN_PROGRESS', 'k', brief('IN_PROGRESS', 'PENDING'));
-  const out = completeMilestone(o, CODER, 'M1', 'abc1234', 'now');
-  assert.ok(!isDenied(out));
-  assert.deepEqual(out.milestones.map((m) => m.status), ['COMPLETED', 'IN_PROGRESS']);
-  assert.equal(out.milestones[0].commitHash, 'abc1234');
-  assert.ok(isDenied(completeMilestone(o, CODER, 'M2', null, 'now')));
-  assert.ok(isDenied(completeMilestone(o, OTHER, 'M1', null, 'now')));
-  assert.ok(isDenied(completeMilestone(order('DELIVERED', 'k', brief('PENDING')), CODER, 'M1', null, 'now')));
+  assert.ok(isDenied(submitMilestone(o, CODER, 'M2', null, null, 't')));
+  assert.ok(isDenied(submitMilestone(o, OTHER, 'M1', null, null, 't')));
+  const sub = submitMilestone(o, CODER, 'M1', 'abc1234', 'done', 't') as AIBrief;
+  assert.deepEqual([sub.milestones[0].status, sub.milestones[0].commitHash, sub.milestones[0].note], ['SUBMITTED', 'abc1234', 'done']);
+  const o2 = { ...o, brief: sub };
+  assert.ok(isDenied(submitMilestone(o2, CODER, 'M1', null, null, 't')), 'no double submit');
+  assert.ok(isDenied(reviewMilestone(o2, CODER, 'M1', true, null, 't')), 'coder cannot approve');
+  assert.ok(isDenied(reviewMilestone({ ...o2, status: 'DISPUTED' }, CUST, 'M1', true, null, 't')), 'frozen while disputed');
+  const rej = reviewMilestone(o2, CUST, 'M1', false, 'fix header', 't') as { brief: AIBrief };
+  assert.deepEqual([rej.brief.milestones[0].status, rej.brief.milestones[0].note], ['IN_PROGRESS', 'fix header']);
+  const ok = reviewMilestone(o2, CUST, 'M1', true, null, 't') as { brief: AIBrief; index: number };
+  assert.deepEqual([ok.index, ...ok.brief.milestones.map((m) => m.status)], [0, 'COMPLETED', 'IN_PROGRESS']);
+  assert.ok(isDenied(reviewMilestone({ ...o, brief: ok.brief }, CUST, 'M1', true, null, 't')), 'no double approve');
+});
+
+test('a PENDING first milestone (order just accepted) can be submitted', () => {
+  assert.ok(!isDenied(submitMilestone(order('IN_PROGRESS', 'k', brief('PENDING')), CODER, 'M1', null, null, 't')));
+  assert.ok(isDenied(submitMilestone(order('DELIVERED', 'k', brief('PENDING')), CODER, 'M1', null, null, 't')));
 });

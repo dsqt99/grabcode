@@ -1,5 +1,5 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import {
@@ -8,18 +8,20 @@ import {
   coderTierFor,
   estimateOrder,
   payoutOf,
+  type MilestoneEvent,
   type OrderCreateSchema,
   type OrderDto,
+  type RepoHandoverRequestedEvent,
   type OrderEvent,
   type OrderStatus,
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
-import { orders, outbox, users } from '../db/schema';
+import { ledgerTxs, orderRepos, orders, outbox, repoCommits, users } from '../db/schema';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
 import { dispatchEvent } from '../dispatch/events';
-import { completeMilestone, isDenied, planTransition, type Denied } from './transition';
+import { isDenied, planTransition, reviewMilestone, submitMilestone, type Denied } from './transition';
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orders.$inferSelect;
@@ -57,6 +59,42 @@ export async function fundIfCovered(tx: Tx, row: Row) {
   await dispatchEvent(tx, SUBJECTS.DISPATCH_REQUESTED, { orderId: row.id, wave: 0, coderUserIds: [] });
 }
 
+/**
+ * Pays out milestone `index`'s escrow share. Idempotent per milestone (tx id), so ACCEPTED can sweep every
+ * milestone and only unpaid ones move. Returns the amount released (0 when already paid or zero-weight).
+ */
+async function releaseMilestone(tx: Tx, row: Row, index: number): Promise<number> {
+  const ms = row.brief.milestones;
+  const entries = releaseEntries(row.id, row.priceVnd, ms.map((m) => m.weightPercent), index, row.coderUserId!);
+  const amount = -entries[0].amountVnd;
+  const txId = `release:${row.id}:${ms[index].id}`;
+  const [done] = await tx.select({ id: ledgerTxs.id }).from(ledgerTxs).where(eq(ledgerTxs.id, txId));
+  if (done || amount === 0) return 0;
+  // Funding required escrow >= price, so this only trips on a corrupted ledger.
+  if ((await balanceOf(tx, escrowOf(row.id))) < amount) throw new ConflictException({ message: 'Escrow does not hold this milestone share' });
+  await postTx(tx, txId, 'RELEASE', row.id, entries);
+  return amount;
+}
+
+async function emitMilestone(tx: Tx, type: MilestoneEvent['type'], data: MilestoneEvent['data']) {
+  const event: MilestoneEvent = { event_id: randomUUID(), type, occurred_at: new Date().toISOString(), data };
+  await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+}
+
+/** ACCEPTED: repo-worker gives the customer admin on the order repo and drops the coder to read. */
+async function requestHandover(tx: Tx, row: Row) {
+  const [repo] = await tx.select().from(orderRepos).where(eq(orderRepos.orderId, row.id));
+  if (!repo || repo.status !== 'READY' || !repo.repoFullName) return;
+  const [c] = await tx.select({ githubLogin: users.githubLogin }).from(users).where(eq(users.id, row.customerUserId));
+  const event: RepoHandoverRequestedEvent = {
+    event_id: randomUUID(),
+    type: SUBJECTS.REPO_HANDOVER_REQUESTED,
+    occurred_at: new Date().toISOString(),
+    data: { orderId: row.id, repoFullName: repo.repoFullName, customerGithubLogin: c?.githubLogin ?? null, coderGithubLogin: repo.collaborator },
+  };
+  await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+}
+
 @Injectable()
 export class OrdersService {
   constructor(@Inject(DB) private readonly db: Db) {}
@@ -65,7 +103,7 @@ export class OrdersService {
     if (!user.roles.includes('CUSTOMER')) throw new ForbiddenException({ message: 'Missing CUSTOMER role' });
     const est = estimateOrder(input.tier, input.prompt, input.templateId);
     // The customer only reviewed the plan: progress always starts from scratch.
-    const brief = { ...input.brief, milestones: input.brief.milestones.map(({ completedAt, commitHash, ...m }) => ({ ...m, status: 'PENDING' as const })) };
+    const brief = { ...input.brief, milestones: input.brief.milestones.map(({ completedAt, commitHash, submittedAt, note, ...m }) => ({ ...m, status: 'PENDING' as const })) };
     const id = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(orders)
@@ -107,7 +145,7 @@ export class OrdersService {
     return this.load(or(eq(orders.customerUserId, user.id), eq(orders.coderUserId, user.id)), 50);
   }
 
-  async transition(user: UserRow, id: string, to: OrderStatus): Promise<OrderDto> {
+  async transition(user: UserRow, id: string, to: OrderStatus, reason?: string): Promise<OrderDto> {
     await this.db.transaction(async (tx) => {
       // Row lock: concurrent transitions (and offer accepts) on one order serialize here.
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
@@ -116,23 +154,60 @@ export class OrdersService {
       if (isDenied(plan)) fail(plan);
       const { coderUserId } = plan as { coderUserId: string | null };
       if (to === 'ACCEPTED') {
-        // FUNDED required escrow >= price, so this only trips on a corrupted ledger.
-        if ((await balanceOf(tx, escrowOf(id))) < row.priceVnd) throw new ConflictException({ message: 'Escrow does not hold the order price' });
-        await postTx(tx, `release:${id}`, 'RELEASE', id, releaseEntries(id, row.priceVnd, row.coderUserId!));
+        // Pays whatever milestone shares are still held (all of them for orders delivered before S4).
+        for (let i = 0; i < row.brief.milestones.length; i++) await releaseMilestone(tx, row, i);
+        await requestHandover(tx, row);
       }
-      const [next] = await tx.update(orders).set({ status: to, coderUserId, updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
+      const [next] = await tx
+        .update(orders)
+        .set({ status: to, coderUserId, ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}), updatedAt: sql`now()` })
+        .where(eq(orders.id, id))
+        .returning();
       await emit(tx, next, row.status);
     });
     return (await this.load(eq(orders.id, id)))[0];
   }
 
-  async completeMilestone(user: UserRow, id: string, milestoneId: string, commitHash: string | null): Promise<OrderDto> {
+  async submitMilestone(user: UserRow, id: string, milestoneId: string, commitHash: string | null, note: string | null): Promise<OrderDto> {
     await this.db.transaction(async (tx) => {
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
       if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
-      const brief = completeMilestone(row, user, milestoneId, commitHash, new Date().toISOString());
+      let sha = commitHash;
+      if (commitHash) {
+        // Must be a pushed commit of this order's repo (webhook timeline); a prefix resolves to the full sha.
+        const [c] = await tx
+          .select({ sha: repoCommits.sha })
+          .from(repoCommits)
+          .where(and(eq(repoCommits.orderId, id), like(repoCommits.sha, `${commitHash}%`)))
+          .limit(1);
+        if (!c) throw new BadRequestException({ message: 'Commit not found in the order repo' });
+        sha = c.sha;
+      }
+      const brief = submitMilestone(row, user, milestoneId, sha, note, new Date().toISOString());
       if (isDenied(brief)) fail(brief);
       await tx.update(orders).set({ brief: brief as Row['brief'], updatedAt: sql`now()` }).where(eq(orders.id, id));
+      await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0 });
+    });
+    return (await this.load(eq(orders.id, id)))[0];
+  }
+
+  /** approve: COMPLETED + release that milestone's escrow share; reject: back to IN_PROGRESS with the note. */
+  async reviewMilestone(user: UserRow, id: string, milestoneId: string, approve: boolean, note: string | null): Promise<OrderDto> {
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
+      if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
+      const r = reviewMilestone(row, user, milestoneId, approve, note, new Date().toISOString());
+      if (isDenied(r)) fail(r);
+      const { brief, index } = r as { brief: Row['brief']; index: number };
+      const releasedVnd = approve ? await releaseMilestone(tx, row, index) : 0;
+      await tx.update(orders).set({ brief, updatedAt: sql`now()` }).where(eq(orders.id, id));
+      await emitMilestone(tx, approve ? SUBJECTS.MILESTONE_APPROVED : SUBJECTS.MILESTONE_REJECTED, {
+        orderId: id,
+        milestoneId,
+        commitHash: row.brief.milestones[index].commitHash ?? null,
+        note,
+        releasedVnd,
+      });
     });
     return (await this.load(eq(orders.id, id)))[0];
   }
@@ -161,6 +236,7 @@ export class OrdersService {
       framework: o.framework,
       brief: o.brief,
       priceVnd: o.priceVnd,
+      disputeReason: o.disputeReason,
       payoutVnd: payoutOf(o.priceVnd),
       etaHours: o.etaHours,
       customer: party(c),
