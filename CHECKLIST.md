@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S1 Order core xong (chưa PR). S0 vẫn chờ cấu hình GitHub App thật. **Tiếp theo:** S2 Ledger ký quỹ.
+**Đang ở:** S1 Order core + nợ S1 xong (chưa PR). S0 chỉ còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S2 Ledger ký quỹ.
 
 ---
 
@@ -35,7 +35,7 @@
 - [ ] 👤 Tạo GitHub App trên org `grabcode-sandbox` (quyền Administration RW, Contents RW, Metadata R; event Push), cài vào org
 - [ ] 👤 Điền `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_APP_WEBHOOK_SECRET` trong `.env`
 - [ ] Webhook local qua smee.io / ngrok → `/v1/github/webhook`; test 1 đơn end-to-end (repo tạo, coder được mời, push hiện commit)
-- [ ] Xoá dòng test `GC-3428` (FAILED) trong `core.order_repos` sau khi test thật
+- [x] Xoá dòng test `GC-3428` (FAILED) trong `core.order_repos` (migration 0006 xoá repo không có đơn) — `b73486c`
 - [ ] Mở PR `feat/s0-backend-core` → `main`
 
 ---
@@ -53,20 +53,18 @@
 - [x] Coder: đơn đang làm lấy từ API, bỏ `coderStore` mock — `cdcb2f2`
 - [x] Coder: tier/rating lấy từ hồ sơ Coder trong core-api — hết shortcut `DriverHeader.tsx:28` — `cdcb2f2`
 - [x] Test state machine (chuyển hợp lệ / bị chặn) — `f8665de`
-- [ ] Nợ S1: `core.order_repos` chưa FK sang `core.orders`
-- [ ] Nợ S1: ký quỹ giả lập, FUNDED tự chuyển DISPATCHED (thay ở S2)
-- [ ] Nợ S1: coder tự nhận đơn từ open pool (`scope=open`), ai nhận trước thắng (thay ở S3)
-- [ ] Nợ S1: milestones lưu trong `brief` jsonb, chưa bảng riêng
-- [ ] Nợ S1: checkout web hiện phí nền tảng 5%, giá server không có phí — thống nhất ở S2
-- [ ] Nợ S1: chat đơn vẫn localStorage/eventBus (S4)
-- [ ] Nợ S1: `OrderDto` chưa có tier/rating coder được giao; ví coder vẫn local
-- [ ] Nợ S1: đơn rỗng milestones → coder fallback `GENERIC_MILESTONES`, lệch server
+- [x] Nợ S1: `core.order_repos` FK sang `core.orders` — `b73486c`
+- [x] Nợ S1: checkout web bỏ phí 5% tự bịa, tổng = giá server (nền tảng giữ 30% qua `payoutVnd`) — `c686c0a`
+- [x] Nợ S1: `OrderDto.coder.stats` (tier, số đơn, rating null tới S4) — `dcfa2a6`, `b73486c`, `c686c0a`
+- [x] Nợ S1: `POST /v1/orders` bắt brief có ≥1 milestone (400); `GENERIC_MILESTONES` chỉ còn cho đơn mock cũ — `dcfa2a6`
 
 ## S2 — Ledger ký quỹ
 
 - [ ] 👤 Chọn cổng thanh toán (VNPay / MoMo / Stripe) + lấy key chế độ test
 - [ ] Contract: ledger entry, events `escrow.deposited|held|released|refunded`
 - [ ] API: ledger double-entry (nạp, giữ, nhả theo mốc, hoàn) + bảng idempotency key
+- [ ] API: FUNDED chỉ khi ledger xác nhận đã giữ tiền — bỏ shortcut tự FUNDED → DISPATCHED (`orders.service.ts`, `viewOrder.ts` escrowStatus)
+- [ ] Coder: ví lấy từ ledger thay ví local (`coderStore.ts` cộng tiền khi ACCEPTED)
 - [ ] API: webhook nạp tiền từ cổng thanh toán (xác thực chữ ký)
 - [ ] Web: checkout ký quỹ thật thay `EscrowCheckout` mock
 - [ ] Test ledger: tổng luôn cân, gọi trùng không trừ / cộng 2 lần
@@ -76,7 +74,7 @@
 - [ ] Contract: `WaveOffer`, events `dispatch.requested|offered|accepted|expired`
 - [ ] `api/matching` (Go 1.23, `pgx`, `go-redis`): chấm điểm coder, gửi wave offer
 - [ ] API: coder nhận / từ chối offer; hết hạn → wave sau; chỉ 1 coder nhận được
-- [ ] Coder: offer thật thay giả lập (`WaveOfferModal`, `OnlineRadar`)
+- [ ] Coder: offer thật thay giả lập (`WaveOfferModal`, `OnlineRadar`) — bỏ open pool `GET /v1/orders?scope=open` + ai nhận trước thắng (`transition.ts`)
 - [ ] Coder: trạng thái online/offline lưu server
 - [ ] Test: 2 coder nhận cùng lúc → chỉ 1 thắng
 
@@ -84,6 +82,7 @@
 
 - [ ] Contract: `MilestoneSubmission`, events `milestone.submitted|approved|rejected`
 - [ ] Coder: nộp mốc gắn commit SHA (`core.repo_commits`)
+- [ ] API: tách milestones khỏi `orders.brief` jsonb sang bảng riêng (cần khi mốc có submission / duyệt / nhả tiền)
 - [ ] Web: khách duyệt / yêu cầu sửa từng mốc → nhả tiền theo mốc (S2)
 - [ ] Tranh chấp: chuyển DISPUTED, khoá tiền, ghi nhận cho admin
 - [ ] Bàn giao: chuyển repo / quyền sang khách khi ACCEPTED
@@ -99,7 +98,7 @@
 
 - [ ] Centrifugo trong docker-compose; core-api phát kênh theo đơn / coder
 - [ ] Web + coder thay polling (brief, repo, tiến độ, offer) bằng subscribe
-- [ ] Chat backend khách ↔ coder (lưu Postgres) thay `OrderChatBox` / `CoderChat` mock
+- [ ] Chat backend khách ↔ coder (lưu Postgres) thay `OrderChatBox` / `CoderChat` mock (hiện localStorage/eventBus)
 - [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
 - [ ] `notifier`: Zalo ZNS, FCM, WebPush theo cài đặt thông báo trong `/profile`
 
