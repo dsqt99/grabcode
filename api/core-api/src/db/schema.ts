@@ -45,6 +45,9 @@ export const users = core.table('users', {
   country: text('country').notNull().default('VN'),
   timezone: text('timezone').notNull().default('Asia/Ho_Chi_Minh'),
   notifications: jsonb('notifications').$type<NotificationPrefs>().notNull().default({ email: true, zalo: true, push: true }),
+  // Coder presence: online toggle + last GET /v1/me/offers poll (heartbeat). Matching only offers to fresh online coders.
+  online: boolean('online').notNull().default(false),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -166,4 +169,23 @@ export const ledgerEntries = core.table(
     amountVnd: bigint('amount_vnd', { mode: 'number' }).notNull(),
   },
   (t) => [index('ledger_entries_account_idx').on(t.account)],
+);
+
+// Wave offers (S3). One row per (order, coder, wave); the order row lock decides the single winner.
+export const dispatchOffers = core.table(
+  'dispatch_offers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: text('order_id')
+      .notNull()
+      .references(() => orders.id),
+    coderUserId: uuid('coder_user_id')
+      .notNull()
+      .references(() => users.id),
+    wave: integer('wave').notNull(),
+    status: text('status', { enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'LOST'] }).notNull().default('PENDING'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('dispatch_offers_order_idx').on(t.orderId), index('dispatch_offers_coder_status_idx').on(t.coderUserId, t.status)],
 );

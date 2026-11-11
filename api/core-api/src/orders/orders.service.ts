@@ -1,9 +1,10 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import {
   ORDER_SUBJECTS,
+  SUBJECTS,
   coderTierFor,
   estimateOrder,
   payoutOf,
@@ -17,6 +18,7 @@ import { DB, type Db } from '../db/client';
 import { orders, outbox, users } from '../db/schema';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
+import { dispatchEvent } from '../dispatch/events';
 import { completeMilestone, isDenied, planTransition, type Denied } from './transition';
 
 type UserRow = typeof users.$inferSelect;
@@ -31,11 +33,10 @@ const fail = (d: Denied): never => {
   throw d.denied === 403 ? new ForbiddenException({ message: d.message }) : new ConflictException({ message: d.message });
 };
 
-/** customer / assigned coder, or any coder while the order is open (DISPATCHED, unassigned). */
-const canRead = (r: Row, u: UserRow) =>
-  r.customerUserId === u.id || r.coderUserId === u.id || (r.status === 'DISPATCHED' && !r.coderUserId && u.roles.includes('CODER'));
+/** customer / assigned coder. Coders see unassigned orders only inside their wave offers. */
+const canRead = (r: Row, u: UserRow) => r.customerUserId === u.id || r.coderUserId === u.id;
 
-async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
+export async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
   const event: OrderEvent = {
     event_id: randomUUID(),
     type: ORDER_SUBJECTS[r.status],
@@ -46,16 +47,14 @@ async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
 }
 
 /**
- * SYSTEM edge DRAFT -> FUNDED -> DISPATCHED once the escrow holds the full price.
+ * SYSTEM edge DRAFT -> FUNDED once the escrow holds the full price; dispatch then sends the first wave.
  * `row` must be locked FOR UPDATE by the caller (same tx as the deposit).
  */
 export async function fundIfCovered(tx: Tx, row: Row) {
   if (row.status !== 'DRAFT' || (await balanceOf(tx, escrowOf(row.id))) < row.priceVnd) return;
-  let [next] = await tx.update(orders).set({ status: 'FUNDED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+  const [next] = await tx.update(orders).set({ status: 'FUNDED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
   await emit(tx, next, 'DRAFT');
-  // shortcut: dispatch right after funding (open pool) until S3 matching sends wave offers.
-  [next] = await tx.update(orders).set({ status: 'DISPATCHED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
-  await emit(tx, next, 'FUNDED');
+  await dispatchEvent(tx, SUBJECTS.DISPATCH_REQUESTED, { orderId: row.id, wave: 0, coderUserIds: [] });
 }
 
 @Injectable()
@@ -104,18 +103,13 @@ export class OrdersService {
     return !!row;
   }
 
-  async list(user: UserRow, scope: 'mine' | 'open'): Promise<OrderDto[]> {
-    if (scope === 'open') {
-      if (!user.roles.includes('CODER')) throw new ForbiddenException({ message: 'Missing CODER role' });
-      // shortcut: open pool polled by coders until S3 matching pushes wave offers.
-      return this.load(and(eq(orders.status, 'DISPATCHED'), isNull(orders.coderUserId)), 20);
-    }
+  async list(user: UserRow): Promise<OrderDto[]> {
     return this.load(or(eq(orders.customerUserId, user.id), eq(orders.coderUserId, user.id)), 50);
   }
 
   async transition(user: UserRow, id: string, to: OrderStatus): Promise<OrderDto> {
     await this.db.transaction(async (tx) => {
-      // Row lock: two coders claiming at once serialize here; the loser sees IN_PROGRESS and gets 409.
+      // Row lock: concurrent transitions (and offer accepts) on one order serialize here.
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
       if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
       const plan = planTransition(row, user, to);
@@ -143,7 +137,7 @@ export class OrdersService {
     return (await this.load(eq(orders.id, id)))[0];
   }
 
-  private async load(where: SQL | undefined, limit = 1): Promise<OrderDto[]> {
+  async load(where: SQL | undefined, limit = 1): Promise<OrderDto[]> {
     const rows = await this.db
       .select({
         o: orders,

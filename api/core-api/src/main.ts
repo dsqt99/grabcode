@@ -5,11 +5,12 @@ import { AuthModule } from './auth/auth.module';
 import { BriefsModule } from './briefs/briefs.module';
 import { WEB_ORIGINS } from './config';
 import { DbModule } from './db/db.module';
+import { DispatchModule } from './dispatch/dispatch.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ReposModule } from './repos/repos.module';
 
-@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule] })
+@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule, DispatchModule] })
 class AppModule {}
 
 async function bootstrap() {

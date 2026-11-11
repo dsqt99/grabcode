@@ -25,12 +25,6 @@ export function planTransition(o: OrderState, user: Actor, to: OrderStatus): Den
   if (actor === 'CUSTOMER') {
     return o.customerUserId === user.id ? { coderUserId: o.coderUserId } : { denied: 403, message: 'Only the customer can do this' };
   }
-  if (o.status === 'DISPATCHED') {
-    // shortcut: first coder to claim wins until S3 matching sends wave offers.
-    if (!user.roles.includes('CODER')) return { denied: 403, message: 'Missing CODER role' };
-    if (user.id === o.customerUserId) return { denied: 403, message: 'Cannot take your own order' };
-    return { coderUserId: user.id };
-  }
   if (o.coderUserId !== user.id) return { denied: 403, message: 'Only the assigned coder can do this' };
   if (to === 'DELIVERED' && o.brief.milestones.some((m) => m.status !== 'COMPLETED')) {
     return { denied: 409, message: 'Complete every milestone before delivering' };

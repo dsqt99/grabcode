@@ -40,7 +40,8 @@ export class OrdersController {
   @Get()
   async list(@Req() req: Request, @Query() query: unknown): Promise<OrderList> {
     const user = await this.user(req);
-    return { orders: await this.orders.list(user, parse(OrderListQuerySchema, query).scope) };
+    parse(OrderListQuerySchema, query);
+    return { orders: await this.orders.list(user) };
   }
 
   @Get(':id')

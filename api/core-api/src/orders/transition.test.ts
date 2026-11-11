@@ -15,7 +15,6 @@ const order = (status: OrderStatus, coderUserId: string | null = 'k', b = brief(
   ({ status, customerUserId: 'c', coderUserId, brief: b });
 
 test('happy path: each edge allowed for the right actor', () => {
-  assert.deepEqual(planTransition(order('DISPATCHED', null), CODER, 'IN_PROGRESS'), { coderUserId: 'k' });
   assert.deepEqual(planTransition(order('IN_PROGRESS'), CODER, 'DELIVERED'), { coderUserId: 'k' });
   for (const to of ['ACCEPTED', 'DISPUTED', 'IN_PROGRESS'] as const) {
     assert.deepEqual(planTransition(order('DELIVERED'), CUST, to), { coderUserId: 'k' });
@@ -34,8 +33,6 @@ test('every edge not in the table is 409, SYSTEM edges are not callable', () => 
 });
 
 test('wrong actor is 403', () => {
-  assert.equal((planTransition(order('DISPATCHED', null), CUST, 'IN_PROGRESS') as { denied: number }).denied, 403); // no CODER role
-  assert.equal((planTransition(order('DISPATCHED', null), { id: 'c', roles: ['CODER'] }, 'IN_PROGRESS') as { denied: number }).denied, 403); // own order
   assert.equal((planTransition(order('IN_PROGRESS'), OTHER, 'DELIVERED') as { denied: number }).denied, 403);
   assert.equal((planTransition(order('DELIVERED'), CODER, 'ACCEPTED') as { denied: number }).denied, 403);
 });
