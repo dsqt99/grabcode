@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S3 Dispatch + Matching xong (matching chạy in-process TS, Go service hoãn). S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S4 Milestone & nghiệm thu.
+**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S5 Workers bàn giao.
 
 ---
 
@@ -90,12 +90,15 @@
 
 ## S4 — Milestone & nghiệm thu
 
-- [ ] Contract: `MilestoneSubmission`, events `milestone.submitted|approved|rejected`
-- [ ] Coder: nộp mốc gắn commit SHA (`core.repo_commits`)
-- [ ] API: tách milestones khỏi `orders.brief` jsonb sang bảng riêng (cần khi mốc có submission / duyệt / nhả tiền)
-- [ ] Web: khách duyệt / yêu cầu sửa từng mốc → nhả tiền theo mốc qua ledger S2 (hiện nhả 1 lần khi ACCEPTED)
-- [ ] Tranh chấp: chuyển DISPUTED, khoá tiền, ghi nhận cho admin
-- [ ] Bàn giao: chuyển repo / quyền sang khách khi ACCEPTED
+- [x] Contract: `MilestoneSubmit/Reject`, status `SUBMITTED`, `milestoneShare`, events `milestone.submitted|approved|rejected`, `repo.handover.requested|handed_over`, `disputeReason` — 79c13e3
+- [x] Coder: nộp mốc (`POST …/milestones/:id/submit`) gắn commit SHA mới nhất; API chỉ nhận SHA có trong `core.repo_commits` của đơn (prefix → full sha) — 2dcf509, efed16b
+- [x] ~~API: tách milestones sang bảng riêng~~ **Quyết định giữ jsonb** `orders.brief.milestones`: mọi thao tác mốc chạy dưới row lock `orders FOR UPDATE`, idempotency nằm ở ledger tx id `release:<order>:<milestone>` — không cần bảng riêng — 2dcf509
+- [x] Web: khách duyệt / yêu cầu sửa (bắt buộc ghi chú) từng mốc → duyệt nhả đúng phần ký quỹ của mốc (`milestoneShare`, tổng khớp giá); ACCEPTED quét nhả nốt mốc chưa trả (đơn cũ) — 2dcf509, efed16b
+- [x] Tranh chấp: khách mở `IN_PROGRESS|DELIVERED → DISPUTED` kèm lý do (`orders.dispute_reason`), DISPUTED chặn duyệt mốc → ký quỹ còn lại bị khoá; banner lý do trên web — 2dcf509, efed16b
+- [~] Bàn giao: ACCEPTED + repo READY → outbox `repo.handover.requested` → repo-worker cho khách quyền admin, hạ coder xuống pull → `repo.handed_over` → `order_repos.handed_over_at/to` — b4f40d7. **Chưa test thật** (cần 👤 GitHub App); smoke chỉ kiểm tra event được phát
+- [ ] Admin xử lý tranh chấp (hoàn tiền / nhả tiền phần còn khoá) — sang S6 admin portal
+- [ ] Bàn giao khi khách không có GitHub login: hiện chỉ log cảnh báo, repo nằm lại org; cần transfer repo hoặc UI nhập login
+- Smoke: `node api/core-api/scripts/smoke-milestones.mjs` (core-api chạy, `AUTH_DEV_LOGIN=true`)
 
 ## S5 — Workers bàn giao
 
