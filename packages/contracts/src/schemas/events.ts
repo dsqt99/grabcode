@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -16,12 +16,17 @@ export const SUBJECTS = {
   REPO_REQUESTED: 'repo.requested',
   REPO_PROVISIONED: 'repo.provisioned',
   REPO_FAILED: 'repo.failed',
+  REPO_HANDOVER_REQUESTED: 'repo.handover.requested',
+  REPO_HANDED_OVER: 'repo.handed_over',
   ESCROW_DEPOSITED: 'escrow.deposited',
   ESCROW_RELEASED: 'escrow.released',
   DISPATCH_REQUESTED: 'dispatch.requested',
   DISPATCH_OFFERED: 'dispatch.offered',
   DISPATCH_ACCEPTED: 'dispatch.accepted',
   DISPATCH_EXPIRED: 'dispatch.expired',
+  MILESTONE_SUBMITTED: 'milestone.submitted',
+  MILESTONE_APPROVED: 'milestone.approved',
+  MILESTONE_REJECTED: 'milestone.rejected',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -87,6 +92,25 @@ export const RepoFailedEventSchema = envelope(
   z.object({ orderId: OrderIdSchema, error: z.string(), retryable: z.boolean() }),
 );
 
+/** Emitted with order.accepted when the order has a READY repo: customer gets admin, coder drops to read-only. */
+export const RepoHandoverRequestedEventSchema = envelope(
+  SUBJECTS.REPO_HANDOVER_REQUESTED,
+  z.object({
+    orderId: OrderIdSchema,
+    repoFullName: z.string(),
+    /** null = customer has no GitHub login: only the coder is downgraded. */
+    customerGithubLogin: z.string().nullable(),
+    coderGithubLogin: z.string().nullable(),
+  }),
+);
+
+export const RepoHandedOverEventSchema = envelope(
+  SUBJECTS.REPO_HANDED_OVER,
+  z.object({ orderId: OrderIdSchema, customerGithubLogin: z.string().nullable() }),
+);
+
+export type RepoHandoverRequestedEvent = z.infer<typeof RepoHandoverRequestedEventSchema>;
+export type RepoHandedOverEvent = z.infer<typeof RepoHandedOverEventSchema>;
 export type RepoRequestedEvent = z.infer<typeof RepoRequestedEventSchema>;
 export type RepoProvisionedEvent = z.infer<typeof RepoProvisionedEventSchema>;
 export type RepoFailedEvent = z.infer<typeof RepoFailedEventSchema>;
@@ -118,7 +142,7 @@ export const OrderEventSchema = z.object({
 
 export type OrderEvent = z.infer<typeof OrderEventSchema>;
 
-/** One per ledger tx. deposited: money arrived (held in escrow:<orderId>, or suspense when unmatched). released: paid out on ACCEPTED. */
+/** One per ledger tx. deposited: money arrived (held in escrow:<orderId>, or suspense when unmatched). released: a milestone's share paid out on approval. */
 export const EscrowEventSchema = z.object({
   event_id: z.string(),
   type: z.enum([SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]),
@@ -149,3 +173,19 @@ export const DispatchEventSchema = z.object({
   }),
 });
 export type DispatchEvent = z.infer<typeof DispatchEventSchema>;
+
+/** submitted: coder handed in a milestone. approved: customer accepted it, releasedVnd left escrow. rejected: revision asked (note). */
+export const MilestoneEventSchema = z.object({
+  event_id: z.string(),
+  type: z.enum([SUBJECTS.MILESTONE_SUBMITTED, SUBJECTS.MILESTONE_APPROVED, SUBJECTS.MILESTONE_REJECTED]),
+  occurred_at: z.string(),
+  data: z.object({
+    orderId: z.string(),
+    milestoneId: z.string(),
+    commitHash: z.string().nullable(),
+    note: z.string().nullable(),
+    /** 0 unless approved. */
+    releasedVnd: z.number().int().nonnegative(),
+  }),
+});
+export type MilestoneEvent = z.infer<typeof MilestoneEventSchema>;

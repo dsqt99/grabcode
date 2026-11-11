@@ -21,12 +21,16 @@ import {
   RepoRequestedEventSchema,
   EscrowEventSchema,
   DispatchEventSchema,
+  MilestoneEventSchema,
+  RepoHandoverRequestedEventSchema,
+  RepoHandedOverEventSchema,
   SUBJECTS,
 } from '../src/schemas/events.ts';
 import { OfferListSchema, PresenceSchema } from '../src/schemas/dispatch.ts';
 import { DevDepositSchema, PaymentInstructionsSchema, SepayWebhookSchema, WalletSchema } from '../src/schemas/payment.ts';
 import {
-  MilestoneCompleteSchema,
+  MilestoneRejectSchema,
+  MilestoneSubmitSchema,
   OrderCreateSchema,
   OrderListSchema,
   OrderSchema,
@@ -63,6 +67,7 @@ const json = (name: string) => ({ 'application/json': { schema: ref(name) } });
 const unauthorized = { description: 'No valid session', content: json('ErrorResponse') };
 const provider = { name: 'provider', in: 'path', required: true, schema: { type: 'string', enum: ['github', 'google'] } };
 const orderId = { name: 'id', in: 'path', required: true, schema: { type: 'string' } };
+const milestoneId = { name: 'milestoneId', in: 'path', required: true, schema: { type: 'string' } };
 const role = { name: 'role', in: 'query', required: false, description: 'Role for a new account (or added if missing).', schema: { type: 'string', enum: ['CUSTOMER', 'CODER'] } };
 
 write('openapi/core-api.openapi.json', {
@@ -229,7 +234,7 @@ write('openapi/core-api.openapi.json', {
     '/v1/orders/{id}': {
       get: {
         operationId: 'getOrder',
-        summary: 'Customer or assigned coder; a CODER may also read a DISPATCHED unassigned order.',
+        summary: 'Customer or assigned coder only (coders see unassigned orders inside their offers).',
         parameters: [orderId],
         responses: { '200': { description: 'OK', content: json('Order') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
       },
@@ -238,7 +243,7 @@ write('openapi/core-api.openapi.json', {
       post: {
         operationId: 'transitionOrder',
         summary:
-          'Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.',
+          'Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED hands the repo over), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.',
         parameters: [orderId],
         requestBody: { required: true, content: json('OrderTransition') },
         responses: {
@@ -251,18 +256,49 @@ write('openapi/core-api.openapi.json', {
         },
       },
     },
-    '/v1/orders/{id}/milestones/{milestoneId}/complete': {
+    '/v1/orders/{id}/milestones/{milestoneId}/submit': {
       post: {
-        operationId: 'completeMilestone',
-        summary: 'Assigned coder marks the next pending milestone COMPLETED (in order) while IN_PROGRESS.',
-        parameters: [orderId, { name: 'milestoneId', in: 'path', required: true, schema: { type: 'string' } }],
-        requestBody: { required: false, content: json('MilestoneComplete') },
+        operationId: 'submitMilestone',
+        summary: 'Assigned coder submits the current IN_PROGRESS milestone (in order) for review, optionally pinned to a commit pushed to the order repo.',
+        parameters: [orderId, milestoneId],
+        requestBody: { required: false, content: json('MilestoneSubmit') },
         responses: {
           '200': { description: 'OK', content: json('Order') },
+          '400': { description: 'Validation error or commit not in the order repo', content: json('ErrorResponse') },
           '401': unauthorized,
           '403': { description: 'Not the assigned coder', content: json('ErrorResponse') },
           '404': { description: 'Not found', content: json('ErrorResponse') },
-          '409': { description: 'Order not IN_PROGRESS or milestone out of order', content: json('ErrorResponse') },
+          '409': { description: 'Order not IN_PROGRESS or milestone not the current one', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/orders/{id}/milestones/{milestoneId}/approve': {
+      post: {
+        operationId: 'approveMilestone',
+        summary: 'Customer approves a SUBMITTED milestone: COMPLETED, its weight share of escrow is released to the coder, the next milestone starts.',
+        parameters: [orderId, milestoneId],
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '401': unauthorized,
+          '403': { description: 'Not the customer', content: json('ErrorResponse') },
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+          '409': { description: 'Order not IN_PROGRESS (e.g. DISPUTED) or milestone not SUBMITTED', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/orders/{id}/milestones/{milestoneId}/reject': {
+      post: {
+        operationId: 'rejectMilestone',
+        summary: 'Customer asks for changes on a SUBMITTED milestone: back to IN_PROGRESS with the note.',
+        parameters: [orderId, milestoneId],
+        requestBody: { required: true, content: json('MilestoneReject') },
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '403': { description: 'Not the customer', content: json('ErrorResponse') },
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+          '409': { description: 'Order not IN_PROGRESS or milestone not SUBMITTED', content: json('ErrorResponse') },
         },
       },
     },
@@ -361,7 +397,8 @@ write('openapi/core-api.openapi.json', {
       Order: schema(OrderSchema),
       OrderList: schema(OrderListSchema),
       OrderTransition: schema(OrderTransitionSchema, 'input'),
-      MilestoneComplete: schema(MilestoneCompleteSchema, 'input'),
+      MilestoneSubmit: schema(MilestoneSubmitSchema, 'input'),
+      MilestoneReject: schema(MilestoneRejectSchema, 'input'),
       PaymentInstructions: schema(PaymentInstructionsSchema),
       SepayWebhook: schema(SepayWebhookSchema, 'input'),
       DevDeposit: schema(DevDepositSchema, 'input'),
@@ -378,6 +415,9 @@ write('events/brief.failed.schema.json', schema(BriefFailedEventSchema));
 write('events/repo.requested.schema.json', schema(RepoRequestedEventSchema));
 write('events/repo.provisioned.schema.json', schema(RepoProvisionedEventSchema));
 write('events/repo.failed.schema.json', schema(RepoFailedEventSchema));
+write('events/repo.handover.requested.schema.json', schema(RepoHandoverRequestedEventSchema));
+write('events/repo.handed_over.schema.json', schema(RepoHandedOverEventSchema));
 for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.schema.json`, schema(OrderEventSchema));
 for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
 for (const subject of [SUBJECTS.DISPATCH_REQUESTED, SUBJECTS.DISPATCH_OFFERED, SUBJECTS.DISPATCH_ACCEPTED, SUBJECTS.DISPATCH_EXPIRED]) write(`events/${subject}.schema.json`, schema(DispatchEventSchema));
+for (const subject of [SUBJECTS.MILESTONE_SUBMITTED, SUBJECTS.MILESTONE_APPROVED, SUBJECTS.MILESTONE_REJECTED]) write(`events/${subject}.schema.json`, schema(MilestoneEventSchema));

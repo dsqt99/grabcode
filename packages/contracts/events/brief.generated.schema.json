@@ -93,13 +93,20 @@
                     "enum": [
                       "PENDING",
                       "IN_PROGRESS",
+                      "SUBMITTED",
                       "COMPLETED"
                     ]
+                  },
+                  "submittedAt": {
+                    "type": "string"
                   },
                   "completedAt": {
                     "type": "string"
                   },
                   "commitHash": {
+                    "type": "string"
+                  },
+                  "note": {
                     "type": "string"
                   }
                 },

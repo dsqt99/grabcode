@@ -31,6 +31,10 @@ export const OrderRepoSchema = z.object({
   /** GitHub login invited with push access; null when the coder has no GitHub account linked. */
   collaborator: z.string().nullable(),
   error: z.string().nullable(),
+  /** Set once repo-worker handed the repo over after ACCEPTED (customer admin, coder read-only). */
+  handedOverAt: z.string().nullable(),
+  /** Customer GitHub login given admin; null = customer has no GitHub login (repo stays in the org). */
+  handedOverTo: z.string().nullable(),
   /** Newest first, from the push webhook. */
   commits: z.array(RepoCommitSchema),
   createdAt: z.string(),

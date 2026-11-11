@@ -10,9 +10,13 @@ export const MilestoneSchema = z.object({
   title: z.string(),
   description: z.string(),
   weightPercent: z.number().int().min(0).max(100),
-  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED']),
+  /** IN_PROGRESS -> SUBMITTED (coder) -> COMPLETED (customer approves, releases this share of escrow) or back to IN_PROGRESS (revision). */
+  status: z.enum(['PENDING', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  submittedAt: z.string().optional(),
   completedAt: z.string().optional(),
   commitHash: z.string().optional(),
+  /** Coder's note on submit, or the customer's revision request. */
+  note: z.string().optional(),
 });
 
 export const AcceptanceCriterionSchema = z.object({

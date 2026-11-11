@@ -1,4 +1,4 @@
-export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'SUBMITTED' | 'COMPLETED';
 
 export interface Milestone {
   id: string; // e.g. "M1", "M2", "M3"
@@ -6,8 +6,10 @@ export interface Milestone {
   description: string;
   weightPercent: number; // e.g. 20, 50, 30
   status: MilestoneStatus;
+  submittedAt?: string;
   completedAt?: string;
   commitHash?: string;
+  note?: string; // coder's submit note or the customer's revision request
 }
 
 export interface AcceptanceCriterion {

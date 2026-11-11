@@ -13,6 +13,7 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
 /**
  * Allowed edges -> actor. Anything not listed is rejected with 409.
  * DELIVERED -> IN_PROGRESS is the customer's "request revision".
+ * -> DISPUTED (customer, with a reason) freezes the escrow still held: no milestone can be approved or paid until an admin resolves it.
  * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
  * FUNDED -> DISPATCHED (first wave sent) and DISPATCHED -> IN_PROGRESS (a coder accepts an offer) are taken by dispatch.
  */
@@ -20,7 +21,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, 
   DRAFT: { FUNDED: 'SYSTEM' },
   FUNDED: { DISPATCHED: 'SYSTEM' },
   DISPATCHED: { IN_PROGRESS: 'SYSTEM' },
-  IN_PROGRESS: { DELIVERED: 'CODER' },
+  IN_PROGRESS: { DELIVERED: 'CODER', DISPUTED: 'CUSTOMER' },
   DELIVERED: { ACCEPTED: 'CUSTOMER', DISPUTED: 'CUSTOMER', IN_PROGRESS: 'CUSTOMER' },
   ACCEPTED: {},
   DISPUTED: {},
@@ -37,7 +38,7 @@ export const TIER_PRICING: Record<z.infer<typeof OrderTierSchema>, { basePriceVn
   TEMPLATE: { basePriceVnd: 2_200_000, hours: 2 },
 };
 
-/** Share of the order price paid out to the coder on acceptance. */
+/** Share of the order price paid out to the coder (per approved milestone). */
 export const CODER_PAYOUT_RATE = 0.7;
 export const payoutOf = (priceVnd: number) => Math.round((priceVnd * CODER_PAYOUT_RATE) / 1000) * 1000;
 
@@ -83,11 +84,30 @@ export const OrderCreateSchema = z.object({
   brief: AIBriefSchema.extend({ milestones: AIBriefSchema.shape.milestones.min(1) }),
 });
 
-/** Body of POST /v1/orders/{id}/transitions. */
-export const OrderTransitionSchema = z.object({ status: OrderStatusSchema });
+/** Body of POST /v1/orders/{id}/transitions. `reason` is required for DISPUTED (shown to the admin). */
+export const OrderTransitionSchema = z
+  .object({ status: OrderStatusSchema, reason: z.string().trim().max(2000).optional() })
+  .refine((b) => b.status !== 'DISPUTED' || !!b.reason, { message: 'A reason is required to dispute', path: ['reason'] });
 
-/** Body of POST /v1/orders/{id}/milestones/{milestoneId}/complete. */
-export const MilestoneCompleteSchema = z.object({ commitHash: z.string().regex(/^[0-9a-f]{7,40}$/).nullish() });
+/** Body of POST /v1/orders/{id}/milestones/{milestoneId}/submit. commitHash must be a commit pushed to the order repo. */
+export const MilestoneSubmitSchema = z.object({
+  commitHash: z.string().regex(/^[0-9a-f]{7,40}$/).nullish(),
+  note: z.string().trim().max(2000).optional(),
+});
+
+/** Body of POST /v1/orders/{id}/milestones/{milestoneId}/reject (customer asks for changes). */
+export const MilestoneRejectSchema = z.object({ note: z.string().trim().min(1).max(2000) });
+
+/**
+ * Escrow released when milestone `index` is approved: cumulative weight share, so the parts always add up to
+ * exactly `total` (weights need not sum to 100). Same split for the coder payout.
+ */
+export function milestoneShare(total: number, weights: number[], index: number) {
+  const ws = weights.some((w) => w > 0) ? weights : weights.map(() => 1);
+  const sum = ws.reduce((s, w) => s + w, 0);
+  const upTo = (n: number) => Math.round((total * ws.slice(0, n).reduce((s, w) => s + w, 0)) / sum);
+  return upTo(index + 1) - upTo(index);
+}
 
 export const OrderListQuerySchema = z.object({
   /** mine: customer's own + coder's assigned orders. Coders get new orders as offers (GET /v1/me/offers). */
@@ -109,6 +129,8 @@ export const OrderSchema = z.object({
   /** What the coder receives on ACCEPTED. */
   payoutVnd: z.number().int(),
   etaHours: z.number().int(),
+  /** Set when the customer disputes; read by admins (S7). */
+  disputeReason: z.string().nullable(),
   customer: OrderPartySchema,
   coder: OrderPartySchema.extend({ stats: CoderStatsSchema }).nullable(),
   createdAt: z.string(),

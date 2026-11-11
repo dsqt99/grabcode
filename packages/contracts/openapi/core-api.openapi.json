@@ -809,7 +809,7 @@
     "/v1/orders/{id}": {
       "get": {
         "operationId": "getOrder",
-        "summary": "Customer or assigned coder; a CODER may also read a DISPATCHED unassigned order.",
+        "summary": "Customer or assigned coder only (coders see unassigned orders inside their offers).",
         "parameters": [
           {
             "name": "id",
@@ -857,7 +857,7 @@
     "/v1/orders/{id}/transitions": {
       "post": {
         "operationId": "transitionOrder",
-        "summary": "Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.",
+        "summary": "Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED hands the repo over), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.",
         "parameters": [
           {
             "name": "id",
@@ -942,10 +942,10 @@
         }
       }
     },
-    "/v1/orders/{id}/milestones/{milestoneId}/complete": {
+    "/v1/orders/{id}/milestones/{milestoneId}/submit": {
       "post": {
-        "operationId": "completeMilestone",
-        "summary": "Assigned coder marks the next pending milestone COMPLETED (in order) while IN_PROGRESS.",
+        "operationId": "submitMilestone",
+        "summary": "Assigned coder submits the current IN_PROGRESS milestone (in order) for review, optionally pinned to a commit pushed to the order repo.",
         "parameters": [
           {
             "name": "id",
@@ -969,7 +969,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MilestoneComplete"
+                "$ref": "#/components/schemas/MilestoneSubmit"
               }
             }
           }
@@ -981,6 +981,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or commit not in the order repo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1016,7 +1026,179 @@
             }
           },
           "409": {
-            "description": "Order not IN_PROGRESS or milestone out of order",
+            "description": "Order not IN_PROGRESS or milestone not the current one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}/milestones/{milestoneId}/approve": {
+      "post": {
+        "operationId": "approveMilestone",
+        "summary": "Customer approves a SUBMITTED milestone: COMPLETED, its weight share of escrow is released to the coder, the next milestone starts.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order not IN_PROGRESS (e.g. DISPUTED) or milestone not SUBMITTED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}/milestones/{milestoneId}/reject": {
+      "post": {
+        "operationId": "rejectMilestone",
+        "summary": "Customer asks for changes on a SUBMITTED milestone: back to IN_PROGRESS with the note.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "milestoneId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MilestoneReject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order not IN_PROGRESS or milestone not SUBMITTED",
             "content": {
               "application/json": {
                 "schema": {
@@ -2147,13 +2329,20 @@
                   "enum": [
                     "PENDING",
                     "IN_PROGRESS",
+                    "SUBMITTED",
                     "COMPLETED"
                   ]
+                },
+                "submittedAt": {
+                  "type": "string"
                 },
                 "completedAt": {
                   "type": "string"
                 },
                 "commitHash": {
+                  "type": "string"
+                },
+                "note": {
                   "type": "string"
                 }
               },
@@ -2335,13 +2524,20 @@
                           "enum": [
                             "PENDING",
                             "IN_PROGRESS",
+                            "SUBMITTED",
                             "COMPLETED"
                           ]
+                        },
+                        "submittedAt": {
+                          "type": "string"
                         },
                         "completedAt": {
                           "type": "string"
                         },
                         "commitHash": {
+                          "type": "string"
+                        },
+                        "note": {
                           "type": "string"
                         }
                       },
@@ -2486,6 +2682,18 @@
               "null"
             ]
           },
+          "handedOverAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "handedOverTo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "commits": {
             "type": "array",
             "items": {
@@ -2532,6 +2740,8 @@
           "cloneUrl",
           "collaborator",
           "error",
+          "handedOverAt",
+          "handedOverTo",
           "commits",
           "createdAt",
           "updatedAt"
@@ -2644,13 +2854,20 @@
                       "enum": [
                         "PENDING",
                         "IN_PROGRESS",
+                        "SUBMITTED",
                         "COMPLETED"
                       ]
+                    },
+                    "submittedAt": {
+                      "type": "string"
                     },
                     "completedAt": {
                       "type": "string"
                     },
                     "commitHash": {
+                      "type": "string"
+                    },
+                    "note": {
                       "type": "string"
                     }
                   },
@@ -2801,13 +3018,20 @@
                       "enum": [
                         "PENDING",
                         "IN_PROGRESS",
+                        "SUBMITTED",
                         "COMPLETED"
                       ]
+                    },
+                    "submittedAt": {
+                      "type": "string"
                     },
                     "completedAt": {
                       "type": "string"
                     },
                     "commitHash": {
+                      "type": "string"
+                    },
+                    "note": {
                       "type": "string"
                     }
                   },
@@ -2851,6 +3075,12 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "disputeReason": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "customer": {
             "type": "object",
@@ -2960,6 +3190,7 @@
           "priceVnd",
           "payoutVnd",
           "etaHours",
+          "disputeReason",
           "customer",
           "coder",
           "createdAt",
@@ -3088,13 +3319,20 @@
                             "enum": [
                               "PENDING",
                               "IN_PROGRESS",
+                              "SUBMITTED",
                               "COMPLETED"
                             ]
+                          },
+                          "submittedAt": {
+                            "type": "string"
                           },
                           "completedAt": {
                             "type": "string"
                           },
                           "commitHash": {
+                            "type": "string"
+                          },
+                          "note": {
                             "type": "string"
                           }
                         },
@@ -3138,6 +3376,12 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "disputeReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "customer": {
                   "type": "object",
@@ -3247,6 +3491,7 @@
                 "priceVnd",
                 "payoutVnd",
                 "etaHours",
+                "disputeReason",
                 "customer",
                 "coder",
                 "createdAt",
@@ -3275,13 +3520,17 @@
               "ACCEPTED",
               "DISPUTED"
             ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
           }
         },
         "required": [
           "status"
         ]
       },
-      "MilestoneComplete": {
+      "MilestoneSubmit": {
         "type": "object",
         "properties": {
           "commitHash": {
@@ -3294,8 +3543,25 @@
                 "type": "null"
               }
             ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
           }
         }
+      },
+      "MilestoneReject": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "note"
+        ]
       },
       "PaymentInstructions": {
         "type": "object",
@@ -3641,13 +3907,20 @@
                                 "enum": [
                                   "PENDING",
                                   "IN_PROGRESS",
+                                  "SUBMITTED",
                                   "COMPLETED"
                                 ]
+                              },
+                              "submittedAt": {
+                                "type": "string"
                               },
                               "completedAt": {
                                 "type": "string"
                               },
                               "commitHash": {
+                                "type": "string"
+                              },
+                              "note": {
                                 "type": "string"
                               }
                             },
@@ -3691,6 +3964,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "disputeReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "customer": {
                       "type": "object",
@@ -3800,6 +4079,7 @@
                     "priceVnd",
                     "payoutVnd",
                     "etaHours",
+                    "disputeReason",
                     "customer",
                     "coder",
                     "createdAt",
