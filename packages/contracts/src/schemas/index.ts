@@ -7,6 +7,7 @@ export * from './events';
 export * from './auth';
 export * from './repo';
 export * from './order';
+export * from './payment';
 
 // Compile-time guard: hand-written AIBrief interface and the runtime schema must stay identical.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;

@@ -13,9 +13,10 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
 /**
  * Allowed edges -> actor. Anything not listed is rejected with 409.
  * DELIVERED -> IN_PROGRESS is the customer's "request revision".
+ * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, OrderActor>>> = {
-  DRAFT: { FUNDED: 'CUSTOMER' },
+  DRAFT: { FUNDED: 'SYSTEM' },
   FUNDED: { DISPATCHED: 'SYSTEM' },
   DISPATCHED: { IN_PROGRESS: 'CODER' },
   IN_PROGRESS: { DELIVERED: 'CODER' },

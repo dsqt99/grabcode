@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -16,6 +16,8 @@ export const SUBJECTS = {
   REPO_REQUESTED: 'repo.requested',
   REPO_PROVISIONED: 'repo.provisioned',
   REPO_FAILED: 'repo.failed',
+  ESCROW_DEPOSITED: 'escrow.deposited',
+  ESCROW_RELEASED: 'escrow.released',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -111,3 +113,18 @@ export const OrderEventSchema = z.object({
 });
 
 export type OrderEvent = z.infer<typeof OrderEventSchema>;
+
+/** One per ledger tx. deposited: money arrived (held in escrow:<orderId>, or suspense when unmatched). released: paid out on ACCEPTED. */
+export const EscrowEventSchema = z.object({
+  event_id: z.string(),
+  type: z.enum([SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]),
+  occurred_at: z.string(),
+  data: z.object({
+    txId: z.string(),
+    orderId: z.string().nullable(),
+    amountVnd: z.number().int(),
+    /** Escrow balance of the order after this tx. */
+    escrowVnd: z.number().int(),
+  }),
+});
+export type EscrowEvent = z.infer<typeof EscrowEventSchema>;

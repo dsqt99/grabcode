@@ -858,7 +858,7 @@
     "/v1/orders/{id}/transitions": {
       "post": {
         "operationId": "transitionOrder",
-        "summary": "Move the order. DRAFT->FUNDED (customer; escrow simulated until S2, then auto DISPATCHED), DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer).",
+        "summary": "Move the order. DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED->DISPATCHED is taken by the server once the escrow holds the price.",
         "parameters": [
           {
             "name": "id",
@@ -1018,6 +1018,152 @@
           },
           "409": {
             "description": "Order not IN_PROGRESS or milestone out of order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders/{id}/payment": {
+      "get": {
+        "operationId": "getOrderPayment",
+        "summary": "Customer only: bank transfer instructions (VietQR) and how much is paid / still due.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentInstructions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/sepay/webhook": {
+      "post": {
+        "operationId": "sepayWebhook",
+        "summary": "SePay incoming-transfer webhook. Header `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`. Idempotent per SePay transaction id; funds the order once its escrow holds the price.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SepayWebhook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded (or ignored: outgoing / other account)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Bad API key"
+          }
+        }
+      }
+    },
+    "/v1/payments/dev-deposit": {
+      "post": {
+        "operationId": "devDeposit",
+        "summary": "Local development only (AUTH_DEV_LOGIN=true): the order customer simulates a transfer of the amount still due.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevDeposit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentInstructions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Disabled or order not found"
+          }
+        }
+      }
+    },
+    "/v1/me/wallet": {
+      "get": {
+        "operationId": "getWallet",
+        "summary": "Coder earnings from the escrow ledger.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
             "content": {
               "application/json": {
                 "schema": {
@@ -2938,6 +3084,197 @@
             ]
           }
         }
+      },
+      "PaymentInstructions": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "priceVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "paidVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "dueVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "content": {
+            "type": "string"
+          },
+          "bank": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "accountNumber": {
+                    "type": "string"
+                  },
+                  "accountName": {
+                    "type": "string"
+                  },
+                  "qrUrl": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "accountNumber",
+                  "accountName",
+                  "qrUrl"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "devDeposit": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "orderId",
+          "priceVnd",
+          "paidVnd",
+          "dueVnd",
+          "content",
+          "bank",
+          "devDeposit"
+        ],
+        "additionalProperties": false
+      },
+      "SepayWebhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "gateway": {
+            "type": "string"
+          },
+          "transactionDate": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content": {
+            "default": "",
+            "type": "string"
+          },
+          "transferType": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "transferAmount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "referenceCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "gateway",
+          "transactionDate",
+          "accountNumber",
+          "transferType",
+          "transferAmount"
+        ]
+      },
+      "DevDeposit": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderId"
+        ]
+      },
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "balanceVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "txId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "DEPOSIT",
+                    "RELEASE"
+                  ]
+                },
+                "orderId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amountVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "txId",
+                "kind",
+                "orderId",
+                "amountVnd",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "balanceVnd",
+          "entries"
+        ],
+        "additionalProperties": false
       }
     }
   }

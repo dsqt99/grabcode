@@ -19,7 +19,10 @@ import {
   OrderEventSchema,
   ORDER_SUBJECTS,
   RepoRequestedEventSchema,
+  EscrowEventSchema,
+  SUBJECTS,
 } from '../src/schemas/events.ts';
+import { DevDepositSchema, PaymentInstructionsSchema, SepayWebhookSchema, WalletSchema } from '../src/schemas/payment.ts';
 import {
   MilestoneCompleteSchema,
   OrderCreateSchema,
@@ -233,7 +236,7 @@ write('openapi/core-api.openapi.json', {
       post: {
         operationId: 'transitionOrder',
         summary:
-          'Move the order. DRAFT->FUNDED (customer; escrow simulated until S2, then auto DISPATCHED), DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer).',
+          'Move the order. DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED->DISPATCHED is taken by the server once the escrow holds the price.',
         parameters: [orderId],
         requestBody: { required: true, content: json('OrderTransition') },
         responses: {
@@ -260,6 +263,33 @@ write('openapi/core-api.openapi.json', {
           '409': { description: 'Order not IN_PROGRESS or milestone out of order', content: json('ErrorResponse') },
         },
       },
+    },
+    '/v1/orders/{id}/payment': {
+      get: {
+        operationId: 'getOrderPayment',
+        summary: 'Customer only: bank transfer instructions (VietQR) and how much is paid / still due.',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('PaymentInstructions') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/payments/sepay/webhook': {
+      post: {
+        operationId: 'sepayWebhook',
+        summary: 'SePay incoming-transfer webhook. Header `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`. Idempotent per SePay transaction id; funds the order once its escrow holds the price.',
+        requestBody: { required: true, content: json('SepayWebhook') },
+        responses: { '200': { description: 'Recorded (or ignored: outgoing / other account)', content: { 'application/json': { schema: { type: 'object', properties: { success: { const: true } } } } } }, '400': { description: 'Validation error' }, '401': { description: 'Bad API key' } },
+      },
+    },
+    '/v1/payments/dev-deposit': {
+      post: {
+        operationId: 'devDeposit',
+        summary: 'Local development only (AUTH_DEV_LOGIN=true): the order customer simulates a transfer of the amount still due.',
+        requestBody: { required: true, content: json('DevDeposit') },
+        responses: { '200': { description: 'OK', content: json('PaymentInstructions') }, '404': { description: 'Disabled or order not found' } },
+      },
+    },
+    '/v1/me/wallet': {
+      get: { operationId: 'getWallet', summary: 'Coder earnings from the escrow ledger.', responses: { '200': { description: 'OK', content: json('Wallet') }, '401': unauthorized } },
     },
     '/v1/github/webhook': {
       post: {
@@ -293,6 +323,10 @@ write('openapi/core-api.openapi.json', {
       OrderList: schema(OrderListSchema),
       OrderTransition: schema(OrderTransitionSchema, 'input'),
       MilestoneComplete: schema(MilestoneCompleteSchema, 'input'),
+      PaymentInstructions: schema(PaymentInstructionsSchema),
+      SepayWebhook: schema(SepayWebhookSchema, 'input'),
+      DevDeposit: schema(DevDepositSchema, 'input'),
+      Wallet: schema(WalletSchema),
     },
   },
 });
@@ -304,3 +338,4 @@ write('events/repo.requested.schema.json', schema(RepoRequestedEventSchema));
 write('events/repo.provisioned.schema.json', schema(RepoProvisionedEventSchema));
 write('events/repo.failed.schema.json', schema(RepoFailedEventSchema));
 for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.schema.json`, schema(OrderEventSchema));
+for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
