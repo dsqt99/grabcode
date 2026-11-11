@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "repo.requested"
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]{1,40}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "repoName": {
+          "type": "string"
+        },
+        "coderGithubLogin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "claudeMd": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId",
+        "title",
+        "repoName",
+        "coderGithubLogin",
+        "claudeMd"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "additionalProperties": false
+}
