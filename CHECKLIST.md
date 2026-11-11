@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S1 Order core + nợ S1 xong (chưa PR). S0 chỉ còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S2 Ledger ký quỹ.
+**Đang ở:** S2 Ledger ký quỹ (SePay) xong phần code, chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S3 Dispatch + Matching.
 
 ---
 
@@ -58,16 +58,25 @@
 - [x] Nợ S1: `OrderDto.coder.stats` (tier, số đơn, rating null tới S4) — `dcfa2a6`, `b73486c`, `c686c0a`
 - [x] Nợ S1: `POST /v1/orders` bắt brief có ≥1 milestone (400); `GENERIC_MILESTONES` chỉ còn cho đơn mock cũ — `dcfa2a6`
 
-## S2 — Ledger ký quỹ
+## S2 — Ledger ký quỹ (SePay chuyển khoản ngân hàng)
 
-- [ ] 👤 Chọn cổng thanh toán (VNPay / MoMo / Stripe) + lấy key chế độ test
-- [ ] Contract: ledger entry, events `escrow.deposited|held|released|refunded`
-- [ ] API: ledger double-entry (nạp, giữ, nhả theo mốc, hoàn) + bảng idempotency key
-- [ ] API: FUNDED chỉ khi ledger xác nhận đã giữ tiền — bỏ shortcut tự FUNDED → DISPATCHED (`orders.service.ts`, `viewOrder.ts` escrowStatus)
-- [ ] Coder: ví lấy từ ledger thay ví local (`coderStore.ts` cộng tiền khi ACCEPTED)
-- [ ] API: webhook nạp tiền từ cổng thanh toán (xác thực chữ ký)
-- [ ] Web: checkout ký quỹ thật thay `EscrowCheckout` mock
-- [ ] Test ledger: tổng luôn cân, gọi trùng không trừ / cộng 2 lần
+- [x] Chọn cổng thanh toán: SePay (webhook biến động số dư, nội dung CK = mã đơn không gạch, VD `GC1006`) — `01911ed`
+- [ ] 👤 Tạo tài khoản SePay, liên kết tài khoản ngân hàng nhận, cấu hình mã thanh toán tiền tố `GC`
+- [ ] 👤 SePay → Webhooks: URL `{API_PUBLIC_URL}/v1/payments/sepay/webhook` (cần URL public: ngrok/smee), xác thực "API Key"; điền `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME` trong `.env`
+- [ ] Test 1 giao dịch thật end-to-end (CK nhỏ → đơn DISPATCHED)
+- [x] Contract: `SepayWebhook`, `PaymentInstructions`, `Wallet`, events `escrow.deposited|released`; DRAFT → FUNDED thành cạnh SYSTEM — `01911ed`
+- [x] API: ledger double-entry `core.ledger_txs` / `core.ledger_entries` (migration 0007), tx id = idempotency key (`sepay:<id>`, `release:<orderId>`, `dev:<uuid>`) — `1ff520b`
+- [x] API: webhook SePay (`Authorization: Apikey`, so sánh constant-time, bỏ qua `out` / sai tài khoản, mã không khớp → `suspense`) — `1ff520b`
+- [x] API: FUNDED chỉ khi escrow ≥ giá → tự DISPATCHED; bỏ shortcut client tự FUNDED (`orders.service.ts`, `viewOrder.ts` escrowStatus) — `1ff520b`, `27d94c1`
+- [x] API: ACCEPTED nhả tiền: 70% vào `coder:<id>`, còn lại `platform:revenue`; `GET /v1/me/wallet` — `1ff520b`
+- [x] API: `GET /v1/orders/:id/payment` (QR `qr.sepay.vn`), `POST /v1/payments/dev-deposit` (chỉ khi `AUTH_DEV_LOGIN`) — `1ff520b`
+- [x] Web: panel chuyển khoản (QR, STK, nội dung, số còn thiếu, nút giả lập dev) thay ký quỹ giả — `27d94c1`
+- [x] Coder: ví + thu nhập hôm nay lấy từ ledger thay ví local — `27d94c1`
+- [x] Test ledger: tổng luôn cân, chia tiền nhả; smoke: CK trùng id không cộng 2 lần, CK thiếu giữ DRAFT — `1ff520b`
+- [ ] Đối soát `suspense` (CK sai nội dung / không có đơn) — màn admin S7
+- [ ] Hoàn tiền thừa / huỷ đơn DRAFT đã nạp một phần — S7 (tiền thừa hiện nằm lại escrow)
+- [ ] Nhả tiền theo mốc thay vì 1 lần khi ACCEPTED — S4
+- [ ] Coder rút tiền từ ví về ngân hàng (payout) — chưa lên kế hoạch
 
 ## S3 — Dispatch + Matching
 
