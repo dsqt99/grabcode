@@ -1,0 +1,116 @@
+import { bigserial, boolean, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import type { AIBrief } from '@grabcode/contracts';
+import type { CoderProfileDetails, NotificationPrefs } from '@grabcode/contracts/schemas';
+
+export const core = pgSchema('core');
+
+export const briefJobs = core.table('brief_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  status: text('status', { enum: ['PENDING', 'READY', 'FAILED'] }).notNull().default('PENDING'),
+  prompt: text('prompt').notNull(),
+  tier: text('tier', { enum: ['EXPRESS', 'STANDARD', 'PRO', 'TEMPLATE'] }).notNull(),
+  templateId: text('template_id'),
+  framework: text('framework').notNull(),
+  brief: jsonb('brief').$type<AIBrief>(),
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Transactional outbox: written in the same tx as the business row, drained by workers/outbox-relay.
+export const outbox = core.table('outbox', {
+  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  eventId: uuid('event_id').notNull().unique(),
+  subject: text('subject').notNull(),
+  payload: jsonb('payload').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+});
+
+export const users = core.table('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // 'github:<id>' | 'google:<sub>' | 'email:<lowercased email>' | 'dev:<login>'; stable across profile renames.
+  // shortcut: no cross-provider account linking (same email via Google and password = 2 users); add when needed.
+  providerKey: text('provider_key').notNull().unique(),
+  githubLogin: text('github_login'),
+  email: text('email'),
+  // scrypt$<salt b64>$<hash b64>; only for email/password accounts.
+  passwordHash: text('password_hash'),
+  name: text('name').notNull(),
+  avatarUrl: text('avatar_url'),
+  roles: text('roles', { enum: ['CUSTOMER', 'CODER'] }).array().notNull(),
+  currency: text('currency', { enum: ['VND', 'USD'] }).notNull().default('VND'),
+  phone: text('phone'),
+  country: text('country').notNull().default('VN'),
+  timezone: text('timezone').notNull().default('Asia/Ho_Chi_Minh'),
+  notifications: jsonb('notifications').$type<NotificationPrefs>().notNull().default({ email: true, zalo: true, push: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Only the SHA-256 of the session token is stored, so a DB leak does not leak live sessions.
+export const sessions = core.table('sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Typed columns (not one jsonb blob) so the matching engine can filter on skills/rate/availability.
+export const coderProfiles = core.table('coder_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  headline: text('headline').notNull(),
+  bio: text('bio').notNull(),
+  hourlyRateVnd: integer('hourly_rate_vnd').notNull(),
+  experienceLevel: text('experience_level', { enum: ['ENTRY', 'INTERMEDIATE', 'EXPERT'] }).notNull(),
+  skills: text('skills').array().notNull(),
+  hoursPerWeek: text('hours_per_week', { enum: ['LT_10', 'H10_30', 'GT_30'] }).notNull(),
+  languages: jsonb('languages').$type<CoderProfileDetails['languages']>().notNull(),
+  githubUrl: text('github_url'),
+  portfolioUrls: text('portfolio_urls').array().notNull(),
+  isPublic: boolean('is_public').notNull(),
+  availableForWork: boolean('available_for_work').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const customerProfiles = core.table('customer_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  companyName: text('company_name').notNull(),
+  companySize: text('company_size', { enum: ['SOLO', 'S2_10', 'S11_50', 'S51_200', 'S200_PLUS'] }).notNull(),
+  website: text('website'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// One private GitHub repo per order. orderId is text: orders are still mock ids (GC-3428) until the orders module lands.
+export const orderRepos = core.table('order_repos', {
+  orderId: text('order_id').primaryKey(),
+  coderUserId: uuid('coder_user_id')
+    .notNull()
+    .references(() => users.id),
+  status: text('status', { enum: ['PENDING', 'READY', 'FAILED'] }).notNull().default('PENDING'),
+  repoFullName: text('repo_full_name').unique(),
+  htmlUrl: text('html_url'),
+  cloneUrl: text('clone_url'),
+  collaborator: text('collaborator'),
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Commit timeline from the GitHub push webhook; sha PK makes webhook redeliveries no-ops.
+export const repoCommits = core.table('repo_commits', {
+  sha: text('sha').primaryKey(),
+  orderId: text('order_id')
+    .notNull()
+    .references(() => orderRepos.orderId, { onDelete: 'cascade' }),
+  message: text('message').notNull(),
+  author: text('author').notNull(),
+  url: text('url').notNull(),
+  pushedAt: timestamp('pushed_at', { withTimezone: true }).notNull(),
+});
