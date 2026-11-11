@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AIBriefSchema, OrderTierSchema } from './brief';
+import { AIBriefSchema, OrderTierSchema, QaResultSchema } from './brief';
 import { OrderStatusSchema, type OrderStatus } from './order';
 import { OrderIdSchema } from './repo';
 
@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -27,6 +27,12 @@ export const SUBJECTS = {
   MILESTONE_SUBMITTED: 'milestone.submitted',
   MILESTONE_APPROVED: 'milestone.approved',
   MILESTONE_REJECTED: 'milestone.rejected',
+  QA_REQUESTED: 'qa.requested',
+  QA_COMPLETED: 'qa.completed',
+  DEPLOY_REQUESTED: 'deploy.requested',
+  DEPLOY_READY: 'deploy.ready',
+  DEPLOY_FAILED: 'deploy.failed',
+  DEPLOY_EXPIRED: 'deploy.expired',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -189,3 +195,44 @@ export const MilestoneEventSchema = z.object({
   }),
 });
 export type MilestoneEvent = z.infer<typeof MilestoneEventSchema>;
+
+/** Emitted on milestone submit when the order repo is READY: qa-worker checks out the commit and runs the gate. */
+export const QaRequestedEventSchema = envelope(
+  SUBJECTS.QA_REQUESTED,
+  z.object({
+    orderId: OrderIdSchema,
+    milestoneId: z.string(),
+    repoFullName: z.string(),
+    /** null = default branch head. */
+    commitHash: z.string().nullable(),
+  }),
+);
+
+/** Ignored by core-api when the milestone was resubmitted with another commit meanwhile. */
+export const QaCompletedEventSchema = envelope(
+  SUBJECTS.QA_COMPLETED,
+  z.object({ orderId: OrderIdSchema, milestoneId: z.string(), result: QaResultSchema }),
+);
+
+/** Emitted on DELIVERED when the order repo is READY: deploy-worker builds the commit on Cloud Run. */
+export const DeployRequestedEventSchema = envelope(
+  SUBJECTS.DEPLOY_REQUESTED,
+  z.object({ orderId: OrderIdSchema, repoFullName: z.string(), commitHash: z.string().nullable() }),
+);
+
+export const DeployReadyEventSchema = envelope(
+  SUBJECTS.DEPLOY_READY,
+  z.object({ orderId: OrderIdSchema, url: z.string(), expiresAt: z.string() }),
+);
+
+export const DeployFailedEventSchema = envelope(SUBJECTS.DEPLOY_FAILED, z.object({ orderId: OrderIdSchema, error: z.string() }));
+
+/** Cleanup deleted the expired preview service. */
+export const DeployExpiredEventSchema = envelope(SUBJECTS.DEPLOY_EXPIRED, z.object({ orderId: OrderIdSchema }));
+
+export type QaRequestedEvent = z.infer<typeof QaRequestedEventSchema>;
+export type QaCompletedEvent = z.infer<typeof QaCompletedEventSchema>;
+export type DeployRequestedEvent = z.infer<typeof DeployRequestedEventSchema>;
+export type DeployReadyEvent = z.infer<typeof DeployReadyEventSchema>;
+export type DeployFailedEvent = z.infer<typeof DeployFailedEventSchema>;
+export type DeployExpiredEvent = z.infer<typeof DeployExpiredEventSchema>;

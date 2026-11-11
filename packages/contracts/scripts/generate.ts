@@ -22,6 +22,12 @@ import {
   EscrowEventSchema,
   DispatchEventSchema,
   MilestoneEventSchema,
+  QaRequestedEventSchema,
+  QaCompletedEventSchema,
+  DeployRequestedEventSchema,
+  DeployReadyEventSchema,
+  DeployFailedEventSchema,
+  DeployExpiredEventSchema,
   RepoHandoverRequestedEventSchema,
   RepoHandedOverEventSchema,
   SUBJECTS,
@@ -421,3 +427,9 @@ for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.sc
 for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
 for (const subject of [SUBJECTS.DISPATCH_REQUESTED, SUBJECTS.DISPATCH_OFFERED, SUBJECTS.DISPATCH_ACCEPTED, SUBJECTS.DISPATCH_EXPIRED]) write(`events/${subject}.schema.json`, schema(DispatchEventSchema));
 for (const subject of [SUBJECTS.MILESTONE_SUBMITTED, SUBJECTS.MILESTONE_APPROVED, SUBJECTS.MILESTONE_REJECTED]) write(`events/${subject}.schema.json`, schema(MilestoneEventSchema));
+write('events/qa.requested.schema.json', schema(QaRequestedEventSchema));
+write('events/qa.completed.schema.json', schema(QaCompletedEventSchema));
+write('events/deploy.requested.schema.json', schema(DeployRequestedEventSchema));
+write('events/deploy.ready.schema.json', schema(DeployReadyEventSchema));
+write('events/deploy.failed.schema.json', schema(DeployFailedEventSchema));
+write('events/deploy.expired.schema.json', schema(DeployExpiredEventSchema));

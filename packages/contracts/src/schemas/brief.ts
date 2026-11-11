@@ -5,6 +5,25 @@ import { z } from 'zod';
 
 export const OrderTierSchema = z.enum(['EXPRESS', 'STANDARD', 'PRO', 'TEMPLATE']);
 
+/** One QA Gate step (install, lint, typecheck, build, test, audit, secrets). */
+export const QaCheckSchema = z.object({
+  name: z.string(),
+  status: z.enum(['PASSED', 'FAILED', 'SKIPPED']),
+  /** Tail of the step output, or why it was skipped. */
+  detail: z.string(),
+});
+
+/**
+ * QA Gate result of a submitted milestone commit (qa-worker). RUNNING until qa.completed arrives;
+ * SKIPPED = not a Node project; ERROR = the gate itself could not run (clone / docker).
+ */
+export const QaResultSchema = z.object({
+  status: z.enum(['RUNNING', 'PASSED', 'FAILED', 'SKIPPED', 'ERROR']),
+  commitHash: z.string().nullable(),
+  checks: z.array(QaCheckSchema),
+  finishedAt: z.string().optional(),
+});
+
 export const MilestoneSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -17,6 +36,8 @@ export const MilestoneSchema = z.object({
   commitHash: z.string().optional(),
   /** Coder's note on submit, or the customer's revision request. */
   note: z.string().optional(),
+  /** QA Gate of the last submit; absent when the order has no repo. */
+  qa: QaResultSchema.optional(),
 });
 
 export const AcceptanceCriterionSchema = z.object({

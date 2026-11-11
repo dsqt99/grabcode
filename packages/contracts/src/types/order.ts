@@ -37,7 +37,9 @@ export interface Order {
   status: OrderStatus;
   brief: AIBrief;
   assignedCoder?: CoderProfile;
-  demoUrl?: string;
+  demoUrl?: string; // live Cloud Run preview (sandbox READY)
+  sandboxStatus?: 'PENDING' | 'READY' | 'FAILED' | 'EXPIRED';
+  sandboxError?: string;
   repoUrl?: string;
   createdAt: string;
   etaHours: number;

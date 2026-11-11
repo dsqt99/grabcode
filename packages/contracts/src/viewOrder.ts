@@ -46,6 +46,9 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
         }
       : undefined,
     repoUrl: repo?.htmlUrl ?? undefined,
+    demoUrl: o.sandbox?.status === 'READY' ? (o.sandbox.url ?? undefined) : undefined,
+    sandboxStatus: o.sandbox?.status,
+    sandboxError: o.sandbox?.error ?? undefined,
     createdAt: o.createdAt,
     etaHours: o.etaHours,
     completedAt: o.status === 'ACCEPTED' ? o.updatedAt : undefined,

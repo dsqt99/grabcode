@@ -116,6 +116,16 @@ export const OrderListQuerySchema = z.object({
 
 export const OrderPartySchema = z.object({ id: z.string().uuid(), name: z.string(), avatarUrl: z.string().nullable() });
 
+/** Cloud Run preview of the delivered commit (deploy-worker). PENDING from DELIVERED until deploy.ready / deploy.failed. */
+export const SandboxSchema = z.object({
+  status: z.enum(['PENDING', 'READY', 'FAILED', 'EXPIRED']),
+  url: z.string().nullable(),
+  error: z.string().nullable(),
+  /** Cleanup deletes the service after this. */
+  expiresAt: z.string().nullable(),
+});
+export type Sandbox = z.infer<typeof SandboxSchema>;
+
 export const OrderSchema = z.object({
   id: z.string(),
   status: OrderStatusSchema,
@@ -131,6 +141,8 @@ export const OrderSchema = z.object({
   etaHours: z.number().int(),
   /** Set when the customer disputes; read by admins (S7). */
   disputeReason: z.string().nullable(),
+  /** null until the order is first DELIVERED with a READY repo. */
+  sandbox: SandboxSchema.nullable(),
   customer: OrderPartySchema,
   coder: OrderPartySchema.extend({ stats: CoderStatsSchema }).nullable(),
   createdAt: z.string(),

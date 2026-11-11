@@ -108,6 +108,64 @@
                   },
                   "note": {
                     "type": "string"
+                  },
+                  "qa": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "RUNNING",
+                          "PASSED",
+                          "FAILED",
+                          "SKIPPED",
+                          "ERROR"
+                        ]
+                      },
+                      "commitHash": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PASSED",
+                                "FAILED",
+                                "SKIPPED"
+                              ]
+                            },
+                            "detail": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "status",
+                            "detail"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "finishedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "commitHash",
+                      "checks"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [

@@ -2344,6 +2344,64 @@
                 },
                 "note": {
                   "type": "string"
+                },
+                "qa": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "RUNNING",
+                        "PASSED",
+                        "FAILED",
+                        "SKIPPED",
+                        "ERROR"
+                      ]
+                    },
+                    "commitHash": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PASSED",
+                              "FAILED",
+                              "SKIPPED"
+                            ]
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "status",
+                          "detail"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "finishedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "commitHash",
+                    "checks"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -2539,6 +2597,64 @@
                         },
                         "note": {
                           "type": "string"
+                        },
+                        "qa": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "RUNNING",
+                                "PASSED",
+                                "FAILED",
+                                "SKIPPED",
+                                "ERROR"
+                              ]
+                            },
+                            "commitHash": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "checks": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "PASSED",
+                                      "FAILED",
+                                      "SKIPPED"
+                                    ]
+                                  },
+                                  "detail": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "status",
+                                  "detail"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "finishedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "commitHash",
+                            "checks"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -2869,6 +2985,62 @@
                     },
                     "note": {
                       "type": "string"
+                    },
+                    "qa": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "RUNNING",
+                            "PASSED",
+                            "FAILED",
+                            "SKIPPED",
+                            "ERROR"
+                          ]
+                        },
+                        "commitHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PASSED",
+                                  "FAILED",
+                                  "SKIPPED"
+                                ]
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "status",
+                              "detail"
+                            ]
+                          }
+                        },
+                        "finishedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "commitHash",
+                        "checks"
+                      ]
                     }
                   },
                   "required": [
@@ -3033,6 +3205,64 @@
                     },
                     "note": {
                       "type": "string"
+                    },
+                    "qa": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "RUNNING",
+                            "PASSED",
+                            "FAILED",
+                            "SKIPPED",
+                            "ERROR"
+                          ]
+                        },
+                        "commitHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PASSED",
+                                  "FAILED",
+                                  "SKIPPED"
+                                ]
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "status",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "finishedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "commitHash",
+                        "checks"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -3080,6 +3310,52 @@
             "type": [
               "string",
               "null"
+            ]
+          },
+          "sandbox": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "READY",
+                      "FAILED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "error": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "expiresAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "url",
+                  "error",
+                  "expiresAt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "customer": {
@@ -3191,6 +3467,7 @@
           "payoutVnd",
           "etaHours",
           "disputeReason",
+          "sandbox",
           "customer",
           "coder",
           "createdAt",
@@ -3334,6 +3611,64 @@
                           },
                           "note": {
                             "type": "string"
+                          },
+                          "qa": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PASSED",
+                                  "FAILED",
+                                  "SKIPPED",
+                                  "ERROR"
+                                ]
+                              },
+                              "commitHash": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "checks": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "PASSED",
+                                        "FAILED",
+                                        "SKIPPED"
+                                      ]
+                                    },
+                                    "detail": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "status",
+                                    "detail"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "finishedAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "commitHash",
+                              "checks"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -3381,6 +3716,52 @@
                   "type": [
                     "string",
                     "null"
+                  ]
+                },
+                "sandbox": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED",
+                            "EXPIRED"
+                          ]
+                        },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "error": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "url",
+                        "error",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
                 },
                 "customer": {
@@ -3492,6 +3873,7 @@
                 "payoutVnd",
                 "etaHours",
                 "disputeReason",
+                "sandbox",
                 "customer",
                 "coder",
                 "createdAt",
@@ -3922,6 +4304,64 @@
                               },
                               "note": {
                                 "type": "string"
+                              },
+                              "qa": {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "RUNNING",
+                                      "PASSED",
+                                      "FAILED",
+                                      "SKIPPED",
+                                      "ERROR"
+                                    ]
+                                  },
+                                  "commitHash": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "checks": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "PASSED",
+                                            "FAILED",
+                                            "SKIPPED"
+                                          ]
+                                        },
+                                        "detail": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "status",
+                                        "detail"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "finishedAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "commitHash",
+                                  "checks"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -3969,6 +4409,52 @@
                       "type": [
                         "string",
                         "null"
+                      ]
+                    },
+                    "sandbox": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "READY",
+                                "FAILED",
+                                "EXPIRED"
+                              ]
+                            },
+                            "url": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "error": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "expiresAt": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "url",
+                            "error",
+                            "expiresAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     },
                     "customer": {
@@ -4080,6 +4566,7 @@
                     "payoutVnd",
                     "etaHours",
                     "disputeReason",
+                    "sandbox",
                     "customer",
                     "coder",
                     "createdAt",
