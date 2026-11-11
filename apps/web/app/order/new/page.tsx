@@ -6,7 +6,7 @@ import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/co
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
 import Navbar from '../../../components/Navbar';
-import { createOrder, ordersApiEnabled, requestBrief, transitionOrder } from '../../../lib/api';
+import { createOrder, ordersApiEnabled, requestBrief } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
@@ -65,11 +65,10 @@ function NewOrder() {
     if (!brief) return;
     setSubmitting(true);
     if (ordersApiEnabled) {
-      // Server prices the order and dispatches it; escrow is simulated until S2.
+      // Server prices the order (DRAFT); the order page shows the bank transfer that funds and dispatches it.
       setError(null);
       try {
         const created = await createOrder({ prompt, tier, templateId, framework, brief });
-        await transitionOrder(created.id, 'FUNDED');
         router.push(`/order/${created.id}`);
       } catch (e) {
         console.error(e);

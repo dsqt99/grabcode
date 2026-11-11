@@ -12,7 +12,7 @@ import {
   type Order,
   type WaveOffer,
 } from '@grabcode/contracts';
-import type { OrderDto, OrderList, OrderStatus } from '@grabcode/contracts/schemas';
+import type { OrderDto, OrderList, OrderStatus, Wallet } from '@grabcode/contracts/schemas';
 import { API_URL, useAuth } from './auth';
 
 const STORAGE_KEY = 'grabcode_coder_state';
@@ -218,7 +218,7 @@ export function useCoder() {
     []
   );
 
-  /** Mirror a server order into the job workspace; credits the (mock) wallet once when it turns ACCEPTED. */
+  /** Mirror a server order into the job workspace. Balance comes from the ledger (sync); this only logs history once. */
   const applyDto = useCallback(
     (o: OrderDto) => {
       const s = stateRef.current;
@@ -234,9 +234,6 @@ export function useCoder() {
         completed,
         chat: same ? s.chat : [],
         ...(paid && {
-          // shortcut: wallet is local until the S2 ledger pays out.
-          walletVnd: s.walletVnd + o.payoutVnd,
-          todayEarningsVnd: s.todayEarningsVnd + o.payoutVnd,
           history: [{ orderId: o.id, title: o.title, payoutVnd: o.payoutVnd, at: nowIso() }, ...s.history].slice(0, 20),
         }),
       });
@@ -246,8 +243,13 @@ export function useCoder() {
   );
 
   const sync = useCallback(async () => {
+    const [{ orders: mine }, wallet] = await Promise.all([api<OrderList>('/v1/orders?scope=mine'), api<Wallet>('/v1/me/wallet')]);
+    const today = todayKey();
+    patch({
+      walletVnd: wallet.balanceVnd,
+      todayEarningsVnd: wallet.entries.filter((e) => e.createdAt.startsWith(today)).reduce((sum, e) => sum + e.amountVnd, 0),
+    });
     const s = stateRef.current;
-    const { orders: mine } = await api<OrderList>('/v1/orders?scope=mine');
     const assigned = mine.filter((o) => o.coder?.id === meId);
     const job =
       assigned.find((o) => o.id === s.activeOrder?.id) ?? assigned.find((o) => o.status === 'IN_PROGRESS' || o.status === 'DELIVERED');

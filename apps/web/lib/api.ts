@@ -1,5 +1,5 @@
 import type { AIBrief, OrderTier } from '@grabcode/contracts';
-import type { BriefJob, OrderCreate, OrderDto, OrderRepo, OrderStatus } from '@grabcode/contracts/schemas';
+import type { BriefJob, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const POLL_MS = 1500;
@@ -53,3 +53,8 @@ export const transitionOrder = (id: string, status: OrderStatus) =>
   api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/transitions`, { method: 'POST', body: JSON.stringify({ status }) });
 /** Repo + commits of the order; null until the coder has opened one. */
 export const getOrderRepo = (id: string) => api<OrderRepo>(`/v1/repos/${encodeURIComponent(id)}`).catch(() => null);
+
+// ---- Escrow (S2): customer pays by bank transfer, SePay webhook funds the order. ----
+export const getOrderPayment = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment`);
+/** Dev only (AUTH_DEV_LOGIN): simulate the transfer of the remaining amount. */
+export const devDeposit = (orderId: string) => api<PaymentInstructions>('/v1/payments/dev-deposit', { method: 'POST', body: JSON.stringify({ orderId }) });

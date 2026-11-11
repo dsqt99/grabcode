@@ -8,6 +8,7 @@ import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
 import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
+import PaymentPanel from '../../../components/PaymentPanel';
 import SandboxFrame from '../../../components/SandboxFrame';
 import { getOrder, getOrderRepo, ordersApiEnabled, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
@@ -21,6 +22,7 @@ const fetchView = async (id: string) => {
 };
 /** System chat line when the server moves the order (API mode). */
 const STATUS_MSG: Partial<Record<Order['status'], (o: Order) => string>> = {
+  DISPATCHING: (o) => `Đã nhận đủ ${o.priceVnd.toLocaleString('de-DE')} đ ký quỹ. Đang tìm Coder.`,
   BUILDING: (o) => `Coder ${o.assignedCoder?.name ?? ''} đang triển khai đơn của bạn.`,
   DELIVERED: () => 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.',
 };
@@ -93,7 +95,14 @@ export default function OrderPage() {
     setOrder(found);
     let msgs = loadChat(found.id);
     if (msgs.length === 0) {
-      msgs = [systemMsg(found.id, `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`)];
+      msgs = [
+        systemMsg(
+          found.id,
+          found.escrowStatus === 'UNPAID'
+            ? `Đơn ${found.id} đã tạo. Chuyển khoản ${found.priceVnd.toLocaleString('de-DE')} đ để ký quỹ và dispatch.`
+            : `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`,
+        ),
+      ];
       if (found.assignedCoder) {
         msgs.push({
           id: uid(),
@@ -253,19 +262,23 @@ export default function OrderPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="chip-dark">{order.id}</span>
-              <span className={completed ? 'chip-ok' : 'chip-warn'}>{completed ? 'Đã nghiệm thu' : delivered ? 'Chờ nghiệm thu' : 'Đang thực hiện'}</span>
+              <span className={completed ? 'chip-ok' : 'chip-warn'}>
+                {completed ? 'Đã nghiệm thu' : delivered ? 'Chờ nghiệm thu' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang thực hiện'}
+              </span>
               <span className="chip bg-slate-100 text-slate-600">{order.tier}</span>
             </div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
           </div>
           <dl className="flex gap-6 text-sm">
             <div><dt className="text-slate-500">Ký quỹ</dt><dd className="font-display font-extrabold text-emerald-dark">{money(order.priceVnd)}</dd></div>
-            <div><dt className="text-slate-500">Trạng thái ký quỹ</dt><dd className="font-semibold">{order.escrowStatus === 'RELEASED' ? 'Đã giải ngân' : 'Đang giữ an toàn'}</dd></div>
+            <div><dt className="text-slate-500">Trạng thái ký quỹ</dt><dd className="font-semibold">{order.escrowStatus === 'RELEASED' ? 'Đã giải ngân' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang giữ an toàn'}</dd></div>
             <div><dt className="text-slate-500">ETA</dt><dd className="font-semibold">~{order.etaHours}h</dd></div>
           </dl>
         </header>
 
         <LiveStepper status={order.status} percent={percent} />
+
+        {ordersApiEnabled && order.escrowStatus === 'UNPAID' && <PaymentPanel orderId={order.id} />}
 
         {order.status === 'DISPATCHING' && (
           <div className="card flex items-center gap-4 border-emerald/40 bg-emerald-mint/50 shadow-l2" role="status">
