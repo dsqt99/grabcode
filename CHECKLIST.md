@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S0 xong phần code, chờ cấu hình GitHub App thật + PR. **Tiếp theo:** S1 Order core.
+**Đang ở:** S1 Order core xong (chưa PR). S0 vẫn chờ cấu hình GitHub App thật. **Tiếp theo:** S2 Ledger ký quỹ.
 
 ---
 
@@ -42,17 +42,25 @@
 
 ## S1 — Order core (thay mock đơn hàng)
 
-- [ ] Contract: `Order`, `OrderStatus`, `OrderCreate`, events `order.created|funded|dispatched|delivered|accepted|disputed`
-- [ ] API: bảng `core.orders` (+ milestones của đơn) + migration
-- [ ] API: state machine DRAFT → FUNDED → DISPATCHED → IN_PROGRESS → DELIVERED → ACCEPTED / DISPUTED, chặn chuyển trạng thái sai (409)
-- [ ] API: `POST /v1/orders`, `GET /v1/orders/:id`, `GET /v1/orders` (khách: đơn của mình; coder: đơn được giao)
-- [ ] API: tách module NestJS theo domain (auth, briefs, repos, orders) — hết shortcut `main.ts:15`
-- [ ] Phân quyền `GET /v1/repos/:orderId` chỉ khách + coder của đơn — hết shortcut `repos.controller.ts:48`
-- [ ] `POST /v1/repos` kiểm coder đúng là người được giao đơn
-- [ ] Web: đặt đơn + trang đơn gọi API, bỏ localStorage (`ORDERS_KEY`, `loadOrders`)
-- [ ] Coder: đơn đang làm lấy từ API, bỏ `coderStore` mock
-- [ ] Coder: tier/rating lấy từ hồ sơ Coder trong core-api — hết shortcut `DriverHeader.tsx:28`
-- [ ] Test state machine (chuyển hợp lệ / bị chặn)
+- [x] Contract: `Order`, `OrderStatus`, `OrderCreate`, events `order.created|funded|dispatched|delivered|accepted|disputed` — `e449228`
+- [x] API: bảng `core.orders` (+ milestones của đơn) + migration — `f8665de`
+- [x] API: state machine DRAFT → FUNDED → DISPATCHED → IN_PROGRESS → DELIVERED → ACCEPTED / DISPUTED, chặn chuyển trạng thái sai (409) — `f8665de`
+- [x] API: `POST /v1/orders`, `GET /v1/orders/:id`, `GET /v1/orders` (khách: đơn của mình; coder: đơn được giao) — `f8665de`
+- [x] API: tách module NestJS theo domain (auth, briefs, repos, orders) — hết shortcut `main.ts:15` — `f8665de`
+- [x] Phân quyền `GET /v1/repos/:orderId` chỉ khách + coder của đơn — hết shortcut `repos.controller.ts:48` — `f8665de`
+- [x] `POST /v1/repos` kiểm coder đúng là người được giao đơn — `f8665de`
+- [x] Web: đặt đơn + trang đơn gọi API, bỏ localStorage (`ORDERS_KEY`, `loadOrders`) — `cdcb2f2`
+- [x] Coder: đơn đang làm lấy từ API, bỏ `coderStore` mock — `cdcb2f2`
+- [x] Coder: tier/rating lấy từ hồ sơ Coder trong core-api — hết shortcut `DriverHeader.tsx:28` — `cdcb2f2`
+- [x] Test state machine (chuyển hợp lệ / bị chặn) — `f8665de`
+- [ ] Nợ S1: `core.order_repos` chưa FK sang `core.orders`
+- [ ] Nợ S1: ký quỹ giả lập, FUNDED tự chuyển DISPATCHED (thay ở S2)
+- [ ] Nợ S1: coder tự nhận đơn từ open pool (`scope=open`), ai nhận trước thắng (thay ở S3)
+- [ ] Nợ S1: milestones lưu trong `brief` jsonb, chưa bảng riêng
+- [ ] Nợ S1: checkout web hiện phí nền tảng 5%, giá server không có phí — thống nhất ở S2
+- [ ] Nợ S1: chat đơn vẫn localStorage/eventBus (S4)
+- [ ] Nợ S1: `OrderDto` chưa có tier/rating coder được giao; ví coder vẫn local
+- [ ] Nợ S1: đơn rỗng milestones → coder fallback `GENERIC_MILESTONES`, lệch server
 
 ## S2 — Ledger ký quỹ
 
