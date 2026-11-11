@@ -2,13 +2,19 @@
   "name": "grabcode",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint"
+    "dev": "pnpm -r --parallel --stream run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r --if-present run test",
+    "generate": "pnpm --filter @grabcode/contracts run generate"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
     "typescript": "^5.7.3"
   },
-  "packageManager": "pnpm@10.15.1"
+  "packageManager": "pnpm@10.15.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

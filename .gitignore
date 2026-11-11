@@ -10,8 +10,6 @@ out/
 dist/
 build/
 
-# Turborepo
-.turbo/
 
 # Environment files
 .env
@@ -36,3 +34,10 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local secrets (OAuth client JSON, GitHub App key)
+credentials/
+*.private-key.pem
+
+# Build caches
+.turbo/

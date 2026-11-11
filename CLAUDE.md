@@ -19,7 +19,7 @@ grabcode / multi-repo
 │   ├── core-api/                # NestJS Modular Monolith: Auth (GitHub OAuth), State Machine đơn hàng, Ledger ký quỹ, Idempotency, Dispatch job
 │   └── matching/                # Go Service: Matching engine thuật toán chấm điểm và gửi Wave offer (đường nóng latency thấp)
 ├── [4] workers/ (hoặc repo-worker)
-│   ├── brief-worker/            # Gọi Claude Sonnet 3.5 phân tích brief, tạo spec & milestones JSON
+│   ├── brief-worker/            # Gọi LLM OpenAI-compatible (vLLM, Qwen) phân tích brief, tạo spec & milestones JSON
 │   ├── repo-worker/             # GitHub App bot: Tạo private repo, gán collaborator, khởi tạo CLAUDE.md cho Coder, parse webhook commit
 │   ├── qa-worker/               # QA Gate: Chạy build test, static analysis, security scan trước khi bàn giao
 │   ├── deploy-worker/           # Tạo sandbox preview trên Cloud Run
@@ -90,7 +90,8 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 
 ## 5. Quy chuẩn phát triển (Development Guidelines)
 
-### Lệnh chạy phổ biến (Turborepo / Monorepo)
+### Lệnh chạy phổ biến (pnpm workspace)
+- Root script gọi `pnpm -r` bên trong nên `npm run dev` hay `pnpm dev` đều được; cài deps vẫn bắt buộc `pnpm install` (repo dùng `workspace:*`).
 - **Cài đặt dependencies**: `pnpm install`
 - **Sinh mã từ Contract**: `pnpm --filter @grabcode/contracts run generate`
 - **Chạy môi trường Dev toàn bộ**: `pnpm dev`
@@ -102,6 +103,32 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
   * Chạy Worker: `pnpm --filter @grabcode/brief-worker dev`
 - **Kiểm tra Lint & Typecheck**: `pnpm lint && pnpm typecheck`
 - **Chạy Unit Test**: `pnpm test`
+
+### Chạy luồng AI Brief local (S0)
+1. `cp .env.example .env` rồi điền `LLM_API_KEY` (endpoint `LLM_BASE_URL`, model `LLM_MODEL`) (thiếu key: job thành `FAILED`, web tự fallback brief mẫu).
+2. `docker compose up -d` — Postgres `127.0.0.1:5433`, NATS `127.0.0.1:4223`.
+3. `pnpm --filter @grabcode/core-api db:migrate`
+4. Chạy 3 tiến trình: `pnpm --filter @grabcode/core-api dev`, `pnpm --filter @grabcode/outbox-relay dev`, `pnpm --filter @grabcode/brief-worker dev`.
+5. Web gọi API khi có `NEXT_PUBLIC_API_URL=http://localhost:4000` trong `apps/web/.env.local`; origin web phải nằm trong `WEB_ORIGIN` (CORS).
+- Luồng: `POST /v1/briefs` → `core.outbox` → outbox-relay → NATS `brief.requested` → brief-worker (LLM) → `brief.generated|failed` → core-api cập nhật `core.brief_jobs` → web poll `GET /v1/briefs/:id`.
+
+### Repo GitHub riêng cho mỗi đơn (repo-worker)
+- GitHub App cài trên org `GITHUB_ORG` (mặc định `grabcode-sandbox`). Quyền: Administration RW, Contents RW, Metadata R. Webhook event Push → `{API_PUBLIC_URL}/v1/github/webhook` (cần URL public: smee.io/ngrok).
+- `.env`: `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY` (hoặc `GITHUB_APP_PRIVATE_KEY_PATH`), `GITHUB_APP_WEBHOOK_SECRET`. Thiếu → job thành `FAILED`, coder app hiện lỗi + nút Thử lại.
+- Chạy: `pnpm --filter @grabcode/repo-worker dev` (cùng core-api + outbox-relay).
+- Luồng: coder nhận đơn → `POST /v1/repos` (idempotent theo `orderId`, FAILED thì xếp lại) → outbox `repo.requested` → repo-worker: tạo repo private (`gc-<số đơn>`), commit `CLAUDE.md`, branch protection (chặn force-push; org Free + repo private sẽ bị 403, chỉ cảnh báo), mời coder quyền push → `repo.provisioned|failed` → `core.order_repos`. Push webhook → `core.repo_commits` → `GET /v1/repos/:orderId`.
+- Coder được mời theo `users.github_login` (login GitHub) hoặc link GitHub trong hồ sơ Coder; không có thì repo vẫn tạo nhưng chưa mời.
+
+### Đăng nhập (Auth) local
+- core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
+- GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
+- Google OAuth: Google Cloud Console → OAuth client (Web application), Authorized redirect URI `{API_PUBLIC_URL}/v1/auth/google/callback`, điền `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Provider chưa cấu hình thì nút ẩn, `/v1/auth/{provider}` trả 404.
+- Email/mật khẩu: `POST /v1/auth/register` (409 nếu trùng email), `POST /v1/auth/login` (401 chung cho sai email/mật khẩu); hash scrypt. Mỗi provider là 1 user riêng (chưa link tài khoản theo email).
+- Dev login không cần GitHub: `AUTH_DEV_LOGIN=true` (tự tắt khi `NODE_ENV=production`).
+- `apps/web` và `apps/coder` cần `NEXT_PUBLIC_API_URL` trong `.env.local`; không có biến này = chế độ mock, bỏ qua đăng nhập.
+- Một trang login duy nhất: web `/login` cho cả 2 vai trò. Role chỉ chọn lúc đăng ký (thẻ Khách hàng/Coder), 1 tài khoản có thể có cả 2 role. Sau login: về `?next=` hoặc theo role (CUSTOMER → `/`, chỉ CODER → `/coder`).
+- Gate: web `/order/*` (role CUSTOMER), `/profile` (mọi user đã login); coder toàn app (role CODER). Chưa login → redirect `/login?next=...` (coder phải mở qua web `:3100/coder`, không mở trực tiếp `:3001`). Thiếu role → thẻ "Kích hoạt" gọi `POST /v1/me/roles`.
+- `/profile` (kiểu Upwork): thông tin liên hệ (`PATCH /v1/me`), hồ sơ Coder (`PUT /v1/me/coder-profile`), hồ sơ doanh nghiệp (`PUT /v1/me/customer-profile`), thông báo + tiền tệ, đổi mật khẩu (`POST /v1/me/password`, đăng xuất các phiên khác).
 
 ### Quy ước Git & Commit
 - Tiền tố theo component:
