@@ -14,11 +14,12 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
  * Allowed edges -> actor. Anything not listed is rejected with 409.
  * DELIVERED -> IN_PROGRESS is the customer's "request revision".
  * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
+ * FUNDED -> DISPATCHED (first wave sent) and DISPATCHED -> IN_PROGRESS (a coder accepts an offer) are taken by dispatch.
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, OrderActor>>> = {
   DRAFT: { FUNDED: 'SYSTEM' },
   FUNDED: { DISPATCHED: 'SYSTEM' },
-  DISPATCHED: { IN_PROGRESS: 'CODER' },
+  DISPATCHED: { IN_PROGRESS: 'SYSTEM' },
   IN_PROGRESS: { DELIVERED: 'CODER' },
   DELIVERED: { ACCEPTED: 'CUSTOMER', DISPUTED: 'CUSTOMER', IN_PROGRESS: 'CUSTOMER' },
   ACCEPTED: {},
@@ -89,8 +90,8 @@ export const OrderTransitionSchema = z.object({ status: OrderStatusSchema });
 export const MilestoneCompleteSchema = z.object({ commitHash: z.string().regex(/^[0-9a-f]{7,40}$/).nullish() });
 
 export const OrderListQuerySchema = z.object({
-  /** mine: customer's own + coder's assigned orders. open: DISPATCHED, unassigned (CODER role; until S3 wave offers). */
-  scope: z.enum(['mine', 'open']).default('mine'),
+  /** mine: customer's own + coder's assigned orders. Coders get new orders as offers (GET /v1/me/offers). */
+  scope: z.enum(['mine']).default('mine'),
 });
 
 export const OrderPartySchema = z.object({ id: z.string().uuid(), name: z.string(), avatarUrl: z.string().nullable() });

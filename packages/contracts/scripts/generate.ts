@@ -20,8 +20,10 @@ import {
   ORDER_SUBJECTS,
   RepoRequestedEventSchema,
   EscrowEventSchema,
+  DispatchEventSchema,
   SUBJECTS,
 } from '../src/schemas/events.ts';
+import { OfferListSchema, PresenceSchema } from '../src/schemas/dispatch.ts';
 import { DevDepositSchema, PaymentInstructionsSchema, SepayWebhookSchema, WalletSchema } from '../src/schemas/payment.ts';
 import {
   MilestoneCompleteSchema,
@@ -219,8 +221,8 @@ write('openapi/core-api.openapi.json', {
       },
       get: {
         operationId: 'listOrders',
-        summary: 'scope=mine: own orders as customer + assigned orders as coder. scope=open: DISPATCHED unassigned orders (CODER role, until S3 wave offers).',
-        parameters: [{ name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['mine', 'open'], default: 'mine' } }],
+        summary: 'scope=mine: own orders as customer + assigned orders as coder. Coders receive new orders as wave offers (GET /v1/me/offers).',
+        parameters: [{ name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['mine'], default: 'mine' } }],
         responses: { '200': { description: 'OK', content: json('OrderList') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
       },
     },
@@ -236,7 +238,7 @@ write('openapi/core-api.openapi.json', {
       post: {
         operationId: 'transitionOrder',
         summary:
-          'Move the order. DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED->DISPATCHED is taken by the server once the escrow holds the price.',
+          'Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.',
         parameters: [orderId],
         requestBody: { required: true, content: json('OrderTransition') },
         responses: {
@@ -291,6 +293,43 @@ write('openapi/core-api.openapi.json', {
     '/v1/me/wallet': {
       get: { operationId: 'getWallet', summary: 'Coder earnings from the escrow ledger.', responses: { '200': { description: 'OK', content: json('Wallet') }, '401': unauthorized } },
     },
+    '/v1/me/offers': {
+      get: {
+        operationId: 'listMyOffers',
+        summary: 'Coder: open wave offers (PENDING, unexpired). Polling it is the presence heartbeat while online.',
+        responses: { '200': { description: 'OK', content: json('OfferList') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/me/presence': {
+      get: { operationId: 'getPresence', summary: 'Coder online toggle.', responses: { '200': { description: 'OK', content: json('Presence') }, '401': unauthorized } },
+      put: {
+        operationId: 'setPresence',
+        summary: 'Coder goes online/offline. Offline coders get no new waves.',
+        requestBody: { required: true, content: json('Presence') },
+        responses: { '200': { description: 'OK', content: json('Presence') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/offers/{id}/accept': {
+      post: {
+        operationId: 'acceptOffer',
+        summary: 'Coder accepts their offer. First accept wins: the order moves to IN_PROGRESS and the other offers become LOST.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '401': unauthorized,
+          '404': { description: 'Not your offer', content: json('ErrorResponse') },
+          '409': { description: 'Offer expired, declined or taken by another coder', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/offers/{id}/decline': {
+      post: {
+        operationId: 'declineOffer',
+        summary: 'Coder declines; they are not offered this order again.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '204': { description: 'Declined (no-op if no longer pending)' }, '401': unauthorized, '404': { description: 'Not your offer', content: json('ErrorResponse') } },
+      },
+    },
     '/v1/github/webhook': {
       post: {
         operationId: 'githubWebhook',
@@ -327,6 +366,8 @@ write('openapi/core-api.openapi.json', {
       SepayWebhook: schema(SepayWebhookSchema, 'input'),
       DevDeposit: schema(DevDepositSchema, 'input'),
       Wallet: schema(WalletSchema),
+      OfferList: schema(OfferListSchema),
+      Presence: schema(PresenceSchema),
     },
   },
 });
@@ -339,3 +380,4 @@ write('events/repo.provisioned.schema.json', schema(RepoProvisionedEventSchema))
 write('events/repo.failed.schema.json', schema(RepoFailedEventSchema));
 for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.schema.json`, schema(OrderEventSchema));
 for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
+for (const subject of [SUBJECTS.DISPATCH_REQUESTED, SUBJECTS.DISPATCH_OFFERED, SUBJECTS.DISPATCH_ACCEPTED, SUBJECTS.DISPATCH_EXPIRED]) write(`events/${subject}.schema.json`, schema(DispatchEventSchema));

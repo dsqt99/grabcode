@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -18,6 +18,10 @@ export const SUBJECTS = {
   REPO_FAILED: 'repo.failed',
   ESCROW_DEPOSITED: 'escrow.deposited',
   ESCROW_RELEASED: 'escrow.released',
+  DISPATCH_REQUESTED: 'dispatch.requested',
+  DISPATCH_OFFERED: 'dispatch.offered',
+  DISPATCH_ACCEPTED: 'dispatch.accepted',
+  DISPATCH_EXPIRED: 'dispatch.expired',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -128,3 +132,20 @@ export const EscrowEventSchema = z.object({
   }),
 });
 export type EscrowEvent = z.infer<typeof EscrowEventSchema>;
+
+/**
+ * requested: order funded, waiting for a wave. offered: wave sent to coderUserIds.
+ * accepted: coderUserIds[0] won the order. expired: these coders' offers timed out.
+ */
+export const DispatchEventSchema = z.object({
+  event_id: z.string(),
+  type: z.enum([SUBJECTS.DISPATCH_REQUESTED, SUBJECTS.DISPATCH_OFFERED, SUBJECTS.DISPATCH_ACCEPTED, SUBJECTS.DISPATCH_EXPIRED]),
+  occurred_at: z.string(),
+  data: z.object({
+    orderId: z.string(),
+    /** 0 for requested. */
+    wave: z.number().int().nonnegative(),
+    coderUserIds: z.array(z.string().uuid()),
+  }),
+});
+export type DispatchEvent = z.infer<typeof DispatchEventSchema>;

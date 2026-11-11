@@ -757,7 +757,7 @@
       },
       "get": {
         "operationId": "listOrders",
-        "summary": "scope=mine: own orders as customer + assigned orders as coder. scope=open: DISPATCHED unassigned orders (CODER role, until S3 wave offers).",
+        "summary": "scope=mine: own orders as customer + assigned orders as coder. Coders receive new orders as wave offers (GET /v1/me/offers).",
         "parameters": [
           {
             "name": "scope",
@@ -766,8 +766,7 @@
             "schema": {
               "type": "string",
               "enum": [
-                "mine",
-                "open"
+                "mine"
               ],
               "default": "mine"
             }
@@ -858,7 +857,7 @@
     "/v1/orders/{id}/transitions": {
       "post": {
         "operationId": "transitionOrder",
-        "summary": "Move the order. DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED->DISPATCHED is taken by the server once the escrow holds the price.",
+        "summary": "Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer; ACCEPTED releases escrow to the coder). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.",
         "parameters": [
           {
             "name": "id",
@@ -1164,6 +1163,219 @@
           },
           "401": {
             "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/offers": {
+      "get": {
+        "operationId": "listMyOffers",
+        "summary": "Coder: open wave offers (PENDING, unexpired). Polling it is the presence heartbeat while online.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing CODER role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/presence": {
+      "get": {
+        "operationId": "getPresence",
+        "summary": "Coder online toggle.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Presence"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setPresence",
+        "summary": "Coder goes online/offline. Offline coders get no new waves.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Presence"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Presence"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing CODER role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/offers/{id}/accept": {
+      "post": {
+        "operationId": "acceptOffer",
+        "summary": "Coder accepts their offer. First accept wins: the order moves to IN_PROGRESS and the other offers become LOST.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not your offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Offer expired, declined or taken by another coder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/offers/{id}/decline": {
+      "post": {
+        "operationId": "declineOffer",
+        "summary": "Coder declines; they are not offered this order again.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Declined (no-op if no longer pending)"
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not your offer",
             "content": {
               "application/json": {
                 "schema": {
@@ -3273,6 +3485,356 @@
         "required": [
           "balanceVnd",
           "entries"
+        ],
+        "additionalProperties": false
+      },
+      "OfferList": {
+        "type": "object",
+        "properties": {
+          "offers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "orderId": {
+                  "type": "string"
+                },
+                "wave": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "ACCEPTED",
+                    "DECLINED",
+                    "EXPIRED",
+                    "LOST"
+                  ]
+                },
+                "expiresAt": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "order": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "FUNDED",
+                        "DISPATCHED",
+                        "IN_PROGRESS",
+                        "DELIVERED",
+                        "ACCEPTED",
+                        "DISPUTED"
+                      ]
+                    },
+                    "tier": {
+                      "type": "string",
+                      "enum": [
+                        "EXPRESS",
+                        "STANDARD",
+                        "PRO",
+                        "TEMPLATE"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "templateId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "framework": {
+                      "type": "string"
+                    },
+                    "brief": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "scopeSummary": {
+                          "type": "string"
+                        },
+                        "features": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "inScope": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "outOfScope": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "acceptanceCriteria": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "passed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "text",
+                              "passed"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "milestones": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "weightPercent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PENDING",
+                                  "IN_PROGRESS",
+                                  "COMPLETED"
+                                ]
+                              },
+                              "completedAt": {
+                                "type": "string"
+                              },
+                              "commitHash": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "description",
+                              "weightPercent",
+                              "status"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "claudeMdContent": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "scopeSummary",
+                        "features",
+                        "inScope",
+                        "outOfScope",
+                        "acceptanceCriteria",
+                        "milestones",
+                        "claudeMdContent"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "priceVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "payoutVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "etaHours": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "customer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "coder": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "avatarUrl": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "stats": {
+                              "type": "object",
+                              "properties": {
+                                "tier": {
+                                  "type": "string",
+                                  "enum": [
+                                    "BRONZE",
+                                    "SILVER",
+                                    "GOLD",
+                                    "DIAMOND"
+                                  ]
+                                },
+                                "completedOrders": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "rating": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "tier",
+                                "completedOrders",
+                                "rating"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "avatarUrl",
+                            "stats"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "status",
+                    "tier",
+                    "title",
+                    "prompt",
+                    "templateId",
+                    "framework",
+                    "brief",
+                    "priceVnd",
+                    "payoutVnd",
+                    "etaHours",
+                    "customer",
+                    "coder",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "orderId",
+                "wave",
+                "status",
+                "expiresAt",
+                "createdAt",
+                "order"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "offers"
+        ],
+        "additionalProperties": false
+      },
+      "Presence": {
+        "type": "object",
+        "properties": {
+          "online": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "online"
         ],
         "additionalProperties": false
       }
