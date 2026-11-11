@@ -6,12 +6,15 @@ import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/co
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
 import Navbar from '../../../components/Navbar';
+import { requestBrief } from '../../../lib/api';
+import { useAuth } from '../../../lib/auth';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
 import { FRAMEWORKS, estimate, getTemplate, getTier, isTier } from '../../../lib/pricing';
 
 function NewOrder() {
   const router = useRouter();
+  const { me } = useAuth();
   const sp = useSearchParams();
   const tierParam = sp.get('tier');
   const tier = isTier(tierParam) ? tierParam : 'EXPRESS';
@@ -32,11 +35,23 @@ function NewOrder() {
       return;
     }
     setAnalyzing(true);
-    const t = setTimeout(() => {
-      setBrief(genBrief(prompt, tier, templateId, framework));
-      setAnalyzing(false);
-    }, 2000);
-    return () => clearTimeout(t);
+    const ctrl = new AbortController();
+    const local = () => genBrief(prompt, tier, templateId, framework);
+    requestBrief({ prompt, tier, templateId, framework }, ctrl.signal)
+      // No API configured: keep the POC's simulated 2s analysis.
+      .then((b) => b ?? new Promise<AIBrief>((r) => setTimeout(() => r(local()), 2000)))
+      .catch((err) => {
+        if (ctrl.signal.aborted) throw err;
+        console.warn('AI brief unavailable, using local template:', err);
+        return local();
+      })
+      .then((b) => {
+        if (ctrl.signal.aborted) return;
+        setBrief(b);
+        setAnalyzing(false);
+      })
+      .catch(() => {}); // aborted by a newer run
+    return () => ctrl.abort();
     // Re-run only when the user requests a new analysis (run) or inputs from URL change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run, tier, templateId, framework]);
@@ -54,7 +69,7 @@ function NewOrder() {
       id,
       tier,
       title: brief.title.replace(/^Đặc tả kỹ thuật:\s*/, ''),
-      customerName: 'Khách hàng Demo',
+      customerName: me?.name ?? 'Khách hàng Demo',
       customerPrompt: prompt,
       templateId: tpl?.id,
       templateName: tpl?.title,

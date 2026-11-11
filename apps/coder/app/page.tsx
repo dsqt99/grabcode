@@ -32,6 +32,7 @@ export default function Page() {
         todayEarningsVnd={state.todayEarningsVnd}
         isOnline={state.isOnline}
         walletFlash={walletFlash}
+        compact={hasJob}
       />
 
       <div className="-mt-3 flex flex-col gap-4 rounded-t-xl bg-[#f8fafc] px-4 pt-4">
