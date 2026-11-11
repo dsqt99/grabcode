@@ -429,8 +429,9 @@ export function useCoder() {
     [patch, setPending]
   );
 
+  /** API mode: submit for customer review (commit = latest pushed sha); mock mode: completes at once. */
   const completeMilestone = useCallback(
-    (milestoneId: string) => {
+    (milestoneId: string, commitHash?: string) => {
       const s = stateRef.current;
       const order = s.activeOrder;
       if (!order || s.delivered) return;
@@ -440,8 +441,7 @@ export function useCoder() {
       if (idx < 0 || idx !== expected) return; // enforce order
       const m = ms[idx];
       if (API_URL) {
-        // Commit hashes come from the GitHub push webhook, not from here.
-        api<OrderDto>(`${orderPath(order.id)}/milestones/${encodeURIComponent(m.id)}/complete`, {}).then(applyDto, apiFail);
+        api<OrderDto>(`${orderPath(order.id)}/milestones/${encodeURIComponent(m.id)}/submit`, commitHash ? { commitHash } : {}).then(applyDto, apiFail);
         return;
       }
       patch({ completedMilestones: [...s.completedMilestones, m.id] });

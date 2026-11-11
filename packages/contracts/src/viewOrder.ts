@@ -49,6 +49,7 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     createdAt: o.createdAt,
     etaHours: o.etaHours,
     completedAt: o.status === 'ACCEPTED' ? o.updatedAt : undefined,
+    disputeReason: o.status === 'DISPUTED' ? (o.disputeReason ?? '') : undefined,
     commits: (repo?.commits ?? [])
       .map((c) => ({ hash: c.sha.slice(0, 7), message: c.message, timestamp: c.pushedAt, author: c.author }))
       .reverse(), // repo is newest-first, the terminal log reads oldest-first

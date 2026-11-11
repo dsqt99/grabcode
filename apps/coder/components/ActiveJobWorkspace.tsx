@@ -14,7 +14,7 @@ export default function ActiveJobWorkspace({
   onDismiss,
 }: {
   state: CoderState;
-  onCompleteMilestone: (id: string) => void;
+  onCompleteMilestone: (id: string, commitHash?: string) => void;
   onDeliver: () => void;
   onSendChat: (text: string) => void;
   onDismiss: () => void;
@@ -135,6 +135,8 @@ export default function ActiveJobWorkspace({
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-ink">{m.title}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{m.description}</p>
+                    {m.status === 'SUBMITTED' && <p className="mt-1 text-xs font-semibold text-amber-700">Đã nộp{m.commitHash ? ` @${m.commitHash.slice(0, 7)}` : ''} — chờ khách duyệt</p>}
+                    {m.status === 'IN_PROGRESS' && m.note && <p className="mt-1 text-xs font-semibold text-red-600">Khách yêu cầu sửa: {m.note}</p>}
                   </div>
                   <span className="chip-warn shrink-0">{m.weightPercent}%</span>
                 </div>
@@ -164,8 +166,14 @@ export default function ActiveJobWorkspace({
               </p>
               <p className="truncate font-display text-sm font-bold text-ink">{milestones[nextIdx].title}</p>
             </div>
-            <button type="button" onClick={() => onCompleteMilestone(milestones[nextIdx].id)} className="btn-primary min-h-[52px] shrink-0 !px-5">
-              <span className="material-symbols-outlined" aria-hidden>task_alt</span> Xong {milestones[nextIdx].id}
+            <button
+              type="button"
+              disabled={milestones[nextIdx].status === 'SUBMITTED'}
+              onClick={() => onCompleteMilestone(milestones[nextIdx].id, gh?.commits[0]?.sha)}
+              className="btn-primary min-h-[52px] shrink-0 !px-5"
+            >
+              <span className="material-symbols-outlined" aria-hidden>task_alt</span>
+              {milestones[nextIdx].status === 'SUBMITTED' ? 'Chờ duyệt' : real ? `Nộp ${milestones[nextIdx].id}` : `Xong ${milestones[nextIdx].id}`}
             </button>
           </div>
         )}

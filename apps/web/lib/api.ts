@@ -49,8 +49,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const createOrder = (input: OrderCreate) => api<OrderDto>('/v1/orders', { method: 'POST', body: JSON.stringify(input) });
 export const getOrder = (id: string) => api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}`);
-export const transitionOrder = (id: string, status: OrderStatus) =>
-  api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/transitions`, { method: 'POST', body: JSON.stringify({ status }) });
+export const transitionOrder = (id: string, status: OrderStatus, reason?: string) =>
+  api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/transitions`, { method: 'POST', body: JSON.stringify({ status, reason }) });
+/** S4: customer approves (releases the milestone's escrow share) or sends it back with a note. */
+export const reviewMilestone = (id: string, milestoneId: string, approve: boolean, note?: string) =>
+  api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/milestones/${encodeURIComponent(milestoneId)}/${approve ? 'approve' : 'reject'}`, {
+    method: 'POST',
+    body: JSON.stringify(approve ? {} : { note }),
+  });
 /** Repo + commits of the order; null until the coder has opened one. */
 export const getOrderRepo = (id: string) => api<OrderRepo>(`/v1/repos/${encodeURIComponent(id)}`).catch(() => null);
 

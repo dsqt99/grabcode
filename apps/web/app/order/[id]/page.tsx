@@ -10,7 +10,7 @@ import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
 import SandboxFrame from '../../../components/SandboxFrame';
-import { getOrder, getOrderRepo, ordersApiEnabled, transitionOrder } from '../../../lib/api';
+import { getOrder, getOrderRepo, ordersApiEnabled, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
@@ -254,6 +254,31 @@ export default function OrderPage() {
     sendChat('Mình muốn yêu cầu chỉnh sửa một số điểm trên bản demo, bạn xem giúp nhé.');
   };
 
+  const review = async (milestoneId: string, approve: boolean, note?: string) => {
+    try {
+      showOrder(toViewOrder(await reviewMilestone(order.id, milestoneId, approve, note), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, approve ? `Đã duyệt mốc ${milestoneId}, giải ngân phần ký quỹ của mốc cho Coder.` : `Đã yêu cầu Coder sửa mốc ${milestoneId}: ${note}`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, `Thao tác mốc ${milestoneId} chưa thành công, vui lòng thử lại.`));
+    }
+  };
+
+  // Freezes the escrow still held; ops resolve it from admin (S6).
+  const dispute = async () => {
+    const reason = window.prompt('Lý do mở tranh chấp (ký quỹ còn lại sẽ bị giữ cho tới khi xử lý xong):')?.trim();
+    if (!reason) return;
+    try {
+      showOrder(toViewOrder(await transitionOrder(order.id, 'DISPUTED', reason), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, `Đã mở tranh chấp: ${reason}`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, 'Mở tranh chấp chưa thành công, vui lòng thử lại.'));
+    }
+  };
+  const disputed = order.disputeReason !== undefined;
+  const canDispute = ordersApiEnabled && ['BUILDING', 'QA_TESTING', 'DELIVERED'].includes(order.status);
+
   return (
     <>
       <Navbar />
@@ -277,6 +302,13 @@ export default function OrderPage() {
         </header>
 
         <LiveStepper status={order.status} percent={percent} />
+
+        {disputed && (
+          <div className="card border-red-200 bg-red-50 text-sm text-red-800" role="status">
+            <p className="font-display font-bold">Đơn đang tranh chấp — ký quỹ còn lại được giữ tới khi vận hành xử lý.</p>
+            {order.disputeReason && <p className="mt-1">Lý do: {order.disputeReason}</p>}
+          </div>
+        )}
 
         {ordersApiEnabled && order.escrowStatus === 'UNPAID' && <PaymentPanel orderId={order.id} />}
 
@@ -320,13 +352,18 @@ export default function OrderPage() {
               <button type="button" className="btn-secondary w-full" disabled={order.status !== 'DELIVERED' || revisions <= 0} onClick={requestRevision}>
                 Yêu cầu sửa (Còn {revisions} lượt)
               </button>
+              {canDispute && (
+                <button type="button" className="w-full text-center text-sm font-semibold text-red-600 hover:underline" onClick={dispute}>
+                  Mở tranh chấp
+                </button>
+              )}
               {order.repoUrl && delivered && (
                 <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
                   Xem repo bàn giao
                 </a>
               )}
             </div>
-            <MilestoneList milestones={order.brief.milestones} />
+            <MilestoneList milestones={order.brief.milestones} onReview={ordersApiEnabled && !disputed ? review : undefined} />
             <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
           </div>
         </div>

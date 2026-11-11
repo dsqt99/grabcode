@@ -43,4 +43,5 @@ export interface Order {
   etaHours: number;
   completedAt?: string;
   commits?: CommitLogItem[];
+  disputeReason?: string; // set while the order is DISPUTED (shown as CANCELLED)
 }
