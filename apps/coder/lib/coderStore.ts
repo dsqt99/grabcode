@@ -103,6 +103,7 @@ const initialState = (): CoderState => ({
 export const formatVnd = (n: number): string =>
   `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
 
+// Only for mock-mode orders saved before briefs had milestones; core-api orders always carry at least one.
 const GENERIC_MILESTONES: Milestone[] = [
   { id: 'M1', title: 'Khởi tạo dự án & dữ liệu mẫu', description: 'Dựng khung dự án, schema và seed data.', weightPercent: 20, status: 'PENDING' },
   { id: 'M2', title: 'Hoàn thiện giao diện & tính năng chính', description: 'Làm các màn hình và luồng chính theo brief.', weightPercent: 50, status: 'PENDING' },
