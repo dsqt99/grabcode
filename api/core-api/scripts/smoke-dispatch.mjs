@@ -23,8 +23,8 @@ async function client(login, role) {
   return call;
 }
 
-/** Polls a coder's offers (heartbeat), declining offers for other orders, until one for `orderId` shows up. */
-async function offerFor(coder, orderId, tries = 8) {
+/** Polls a coder's offers (heartbeat), declining offers for other (leftover) orders, until one for `orderId` shows up. */
+async function offerFor(coder, orderId, tries = 40) {
   for (let i = 0; i < tries; i++) {
     const { offers } = (await coder('GET', '/v1/me/offers')).body;
     const mine = offers.find((o) => o.orderId === orderId);
@@ -35,8 +35,10 @@ async function offerFor(coder, orderId, tries = 8) {
   return null;
 }
 
+// Fresh coders per run: winners of earlier runs stay busy (IN_PROGRESS) and are skipped by matching.
+const run = Date.now().toString(36);
 const cust = await client('s3cust', 'CUSTOMER');
-const [a, b, c] = await Promise.all(['s3a', 's3b', 's3c'].map((l) => client(l, 'CODER')));
+const [a, b, c] = await Promise.all(['s3a', 's3b', 's3c'].map((l) => client(`${l}-${run}`, 'CODER')));
 await a('PUT', '/v1/me/presence', { online: true });
 await b('PUT', '/v1/me/presence', { online: true });
 await c('PUT', '/v1/me/presence', { online: false });
