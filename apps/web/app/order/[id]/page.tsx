@@ -2,16 +2,28 @@
 
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { INITIAL_DEMO_ORDER, eventBus, type ChatMessage, type Order } from '@grabcode/contracts';
+import { INITIAL_DEMO_ORDER, eventBus, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
 import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
 import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import SandboxFrame from '../../../components/SandboxFrame';
+import { getOrder, getOrderRepo, ordersApiEnabled, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
+
+const POLL_MS = 3000;
+const fetchView = async (id: string) => {
+  const [o, repo] = await Promise.all([getOrder(id), getOrderRepo(id)]);
+  return toViewOrder(o, repo);
+};
+/** System chat line when the server moves the order (API mode). */
+const STATUS_MSG: Partial<Record<Order['status'], (o: Order) => string>> = {
+  BUILDING: (o) => `Coder ${o.assignedCoder?.name ?? ''} đang triển khai đơn của bạn.`,
+  DELIVERED: () => 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.',
+};
 
 const uid = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -25,6 +37,7 @@ export default function OrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [revisions, setRevisions] = useState(2);
+  const [missing, setMissing] = useState(false);
   const orderRef = useRef<Order | null>(null);
   const chatRef = useRef<ChatMessage[]>([]);
 
@@ -45,9 +58,37 @@ export default function OrderPage() {
     setChat(next);
   }, []);
 
+  const showOrder = useCallback((next: Order) => {
+    orderRef.current = next;
+    setOrder(next);
+  }, []);
+
   // Initial load
   useEffect(() => {
-    const found = loadOrder(id) ?? INITIAL_DEMO_ORDER;
+    if (ordersApiEnabled) {
+      fetchView(id).then(initChat, () => setMissing(true));
+      return;
+    }
+    initChat(loadOrder(id) ?? INITIAL_DEMO_ORDER);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // API mode: the server is the source of truth, poll it.
+  useEffect(() => {
+    if (!ordersApiEnabled || !order) return;
+    const t = setInterval(() => {
+      fetchView(order.id).then((next) => {
+        const prev = orderRef.current;
+        if (prev && prev.status !== next.status) {
+          const msg = STATUS_MSG[next.status]?.(next);
+          if (msg) pushChat(systemMsg(next.id, msg));
+        }
+        showOrder(next);
+      }, console.warn);
+    }, POLL_MS);
+    return () => clearInterval(t);
+  }, [order?.id, pushChat, showOrder]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function initChat(found: Order) {
     orderRef.current = found;
     setOrder(found);
     let msgs = loadChat(found.id);
@@ -67,7 +108,7 @@ export default function OrderPage() {
     }
     chatRef.current = msgs;
     setChat(msgs);
-  }, [id]);
+  }
 
   // Real-time subscriptions
   useEffect(() => {
@@ -149,7 +190,7 @@ export default function OrderPage() {
     return (
       <>
         <Navbar />
-        <p className="p-10 text-center text-slate-500">Đang tải đơn hàng...</p>
+        <p className="p-10 text-center text-slate-500">{missing ? 'Không tìm thấy đơn hàng.' : 'Đang tải đơn hàng...'}</p>
       </>
     );
   }
@@ -172,14 +213,34 @@ export default function OrderPage() {
     pushChat(msg); // no-op if the local listener already added it
   };
 
-  const accept = () => {
+  const accept = async () => {
+    if (ordersApiEnabled) {
+      try {
+        await transitionOrder(order.id, 'ACCEPTED');
+        showOrder(await fetchView(order.id));
+        pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
+      } catch (e) {
+        console.error(e);
+        pushChat(systemMsg(order.id, 'Nghiệm thu chưa thành công, vui lòng thử lại.'));
+      }
+      return;
+    }
     applyOrder((o) => ({ ...o, status: 'COMPLETED', escrowStatus: 'RELEASED', completedAt: new Date().toISOString() }));
     eventBus.publish({ type: 'ORDER_COMPLETED', payload: { orderId: order.id, payoutVnd: payout }, timestamp: new Date().toISOString() });
     pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
   };
 
-  const requestRevision = () => {
+  const requestRevision = async () => {
     if (revisions <= 0) return;
+    if (ordersApiEnabled) {
+      try {
+        // Sends the order back to the coder (DELIVERED -> IN_PROGRESS).
+        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS'), await getOrderRepo(order.id)));
+      } catch (e) {
+        console.error(e);
+        return;
+      }
+    }
     setRevisions((r) => r - 1);
     sendChat('Mình muốn yêu cầu chỉnh sửa một số điểm trên bản demo, bạn xem giúp nhé.');
   };
@@ -233,7 +294,9 @@ export default function OrderPage() {
                   </span>
                   <div>
                     <p className="font-display text-sm font-bold text-ink">{order.assignedCoder.name}</p>
-                    <p className="text-xs text-slate-500">{order.assignedCoder.tier} • {order.assignedCoder.rating} sao • {order.assignedCoder.completedOrders} đơn</p>
+                    {order.assignedCoder.rating > 0 && (
+                      <p className="text-xs text-slate-500">{order.assignedCoder.tier} • {order.assignedCoder.rating} sao • {order.assignedCoder.completedOrders} đơn</p>
+                    )}
                   </div>
                 </div>
               )}

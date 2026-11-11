@@ -25,11 +25,11 @@ export default function DriverHeader({
   /** During an active job: one row only, the job owns the screen. */
   compact?: boolean;
 }) {
-  // shortcut: tier/rating still come from SEED_CODER until coder profiles exist in core-api.
-  const c = SEED_CODER;
   const { me, logout } = useAuth();
-  const name = me?.name ?? c.name;
-  const avatar = me ? me.avatarUrl : c.avatar;
+  // Signed in: tier/rating from core-api (rating null until reviews exist); mock mode: SEED_CODER.
+  const c = me ? { tier: me.coderStats?.tier ?? "BRONZE", rating: me.coderStats?.rating ?? null } : SEED_CODER;
+  const name = me?.name ?? SEED_CODER.name;
+  const avatar = me ? me.avatarUrl : SEED_CODER.avatar;
   return (
     <header
       className={`bg-ink px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white ${compact ? "pb-5" : "pb-6"}`}
@@ -66,6 +66,7 @@ export default function DriverHeader({
               </span>
               {TIER_LABEL[c.tier]} · {c.tier}
             </span>
+            {c.rating !== null && (
             <span className="flex items-center gap-0.5 font-display text-sm font-semibold text-amber">
               <span
                 className="material-symbols-outlined !text-[16px]"
@@ -75,6 +76,7 @@ export default function DriverHeader({
               </span>
               {c.rating.toFixed(2)}
             </span>
+            )}
           </div>
         </div>
         {me && (

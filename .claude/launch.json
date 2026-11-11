@@ -4,8 +4,26 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@grabcode/web", "exec", "next", "dev", "-p", "3100"],
+      "runtimeArgs": [
+        "--filter",
+        "@grabcode/web",
+        "exec",
+        "next",
+        "dev",
+        "-p",
+        "3100"
+      ],
       "port": 3100
+    },
+    {
+      "name": "coder",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@grabcode/coder",
+        "dev"
+      ],
+      "port": 3001
     }
   ]
 }

@@ -1,0 +1,46 @@
+import { SEED_TEMPLATES } from './mock/seedData';
+import type { OrderDto, OrderRepo } from './schemas';
+import type { Order, OrderStatus } from './types/order';
+
+/**
+ * Maps the core-api order (S1 state machine) to the UI `Order` the POC components render.
+ * shortcut: UI keeps its own status vocabulary; drop this adapter once components read OrderDto directly.
+ */
+export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
+  const allDone = o.brief.milestones.every((m) => m.status === 'COMPLETED');
+  const status: Record<OrderDto['status'], OrderStatus> = {
+    DRAFT: 'DRAFT',
+    FUNDED: 'DISPATCHING',
+    DISPATCHED: 'DISPATCHING',
+    IN_PROGRESS: allDone ? 'QA_TESTING' : 'BUILDING',
+    DELIVERED: 'DELIVERED',
+    ACCEPTED: 'COMPLETED',
+    DISPUTED: 'CANCELLED',
+  };
+  return {
+    id: o.id,
+    tier: o.tier,
+    title: o.title,
+    customerName: o.customer.name,
+    customerPrompt: o.prompt,
+    templateId: o.templateId ?? undefined,
+    templateName: SEED_TEMPLATES.find((t) => t.id === o.templateId)?.title,
+    framework: o.framework,
+    priceVnd: o.priceVnd,
+    // shortcut: escrow is simulated until the S2 ledger.
+    escrowStatus: o.status === 'DRAFT' ? 'UNPAID' : o.status === 'ACCEPTED' ? 'RELEASED' : 'ESCROW_LOCKED',
+    status: status[o.status],
+    brief: o.brief,
+    // Stats are not on the order; rating 0 means unknown.
+    assignedCoder: o.coder
+      ? { id: o.coder.id, name: o.coder.name, avatar: o.coder.avatarUrl ?? '', tier: 'BRONZE', rating: 0, completedOrders: 0, walletBalanceVnd: 0, isOnline: true, specialties: [] }
+      : undefined,
+    repoUrl: repo?.htmlUrl ?? undefined,
+    createdAt: o.createdAt,
+    etaHours: o.etaHours,
+    completedAt: o.status === 'ACCEPTED' ? o.updatedAt : undefined,
+    commits: (repo?.commits ?? [])
+      .map((c) => ({ hash: c.sha.slice(0, 7), message: c.message, timestamp: c.pushedAt, author: c.author }))
+      .reverse(), // repo is newest-first, the terminal log reads oldest-first
+  };
+}

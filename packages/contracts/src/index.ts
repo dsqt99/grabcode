@@ -9,3 +9,6 @@ export * from './mock/seedData';
 
 // Export Real-time Event Bus
 export * from './events/eventBus';
+
+// core-api order -> UI order
+export * from './viewOrder';

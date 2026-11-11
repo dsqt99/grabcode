@@ -6,7 +6,7 @@ import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/co
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
 import Navbar from '../../../components/Navbar';
-import { requestBrief } from '../../../lib/api';
+import { createOrder, ordersApiEnabled, requestBrief, transitionOrder } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
@@ -27,6 +27,7 @@ function NewOrder() {
   const [analyzing, setAnalyzing] = useState(true);
   const [run, setRun] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!prompt.trim() && tier !== 'TEMPLATE') {
@@ -60,9 +61,23 @@ function NewOrder() {
   const tpl = getTemplate(templateId);
   const est = estimate(tier, prompt, templateId);
 
-  const dispatch = () => {
+  const dispatch = async () => {
     if (!brief) return;
     setSubmitting(true);
+    if (ordersApiEnabled) {
+      // Server prices the order and dispatches it; escrow is simulated until S2.
+      setError(null);
+      try {
+        const created = await createOrder({ prompt, tier, templateId, framework, brief });
+        await transitionOrder(created.id, 'FUNDED');
+        router.push(`/order/${created.id}`);
+      } catch (e) {
+        console.error(e);
+        setError('Không tạo được đơn. Vui lòng thử lại.');
+        setSubmitting(false);
+      }
+      return;
+    }
     const id = newOrderId();
     const now = new Date().toISOString();
     const order: Order = {
@@ -107,6 +122,7 @@ function NewOrder() {
         <div className="mb-6">
           <span className="chip-ok">Gói {cfg.label} • ~{est.etaHours}h</span>
           <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">Xác nhận đặc tả & ký quỹ</h1>
+          {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-600">{error}</p>}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">

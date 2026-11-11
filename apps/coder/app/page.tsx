@@ -5,6 +5,7 @@ import DriverHeader from '../components/DriverHeader';
 import OnlineRadar from '../components/OnlineRadar';
 import WaveOfferModal from '../components/WaveOfferModal';
 import ActiveJobWorkspace from '../components/ActiveJobWorkspace';
+import { API_URL } from '../lib/auth';
 import { formatVnd, useCoder } from '../lib/coderStore';
 
 export default function Page() {
@@ -63,9 +64,10 @@ export default function Page() {
           </>
         )}
 
-        <button type="button" onClick={c.simulateDispatch} className="btn-secondary min-h-[48px] self-center !px-4 !py-2 text-xs">
+        {/* Mock mode only: with core-api, offers come from real orders. */}
+        {!API_URL && <button type="button" onClick={c.simulateDispatch} className="btn-secondary min-h-[48px] self-center !px-4 !py-2 text-xs">
           <span className="material-symbols-outlined !text-[16px]">science</span> Giả lập đơn đến
-        </button>
+        </button>}
       </div>
 
       {c.offer && <WaveOfferModal key={c.offer.order.id} pending={c.offer} onAccept={c.acceptOffer} onReject={c.rejectOffer} />}

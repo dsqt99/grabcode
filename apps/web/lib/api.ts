@@ -1,5 +1,5 @@
 import type { AIBrief, OrderTier } from '@grabcode/contracts';
-import type { BriefJob } from '@grabcode/contracts/schemas';
+import type { BriefJob, OrderCreate, OrderDto, OrderRepo, OrderStatus } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const POLL_MS = 1500;
@@ -36,3 +36,20 @@ export async function requestBrief(
   if (job.status === 'FAILED' || !job.brief) throw new Error(job.error ?? 'brief failed');
   return job.brief;
 }
+
+// ---- Orders (S1). All need the gc_session cookie; only used when API_URL is set. ----
+
+export const ordersApiEnabled = !!API_URL;
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { ...init, credentials: 'include', headers: { 'content-type': 'application/json' } });
+  if (!res.ok) throw Object.assign(new Error(`core-api ${res.status}`), { status: res.status });
+  return res.json();
+}
+
+export const createOrder = (input: OrderCreate) => api<OrderDto>('/v1/orders', { method: 'POST', body: JSON.stringify(input) });
+export const getOrder = (id: string) => api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}`);
+export const transitionOrder = (id: string, status: OrderStatus) =>
+  api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/transitions`, { method: 'POST', body: JSON.stringify({ status }) });
+/** Repo + commits of the order; null until the coder has opened one. */
+export const getOrderRepo = (id: string) => api<OrderRepo>(`/v1/repos/${encodeURIComponent(id)}`).catch(() => null);

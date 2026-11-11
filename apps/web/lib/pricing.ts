@@ -1,4 +1,5 @@
 import { OrderTier, SEED_TEMPLATES } from '@grabcode/contracts';
+import { TIER_PRICING, estimateOrder } from '@grabcode/contracts/schemas';
 
 export const USD_RATE = 25000;
 
@@ -12,10 +13,10 @@ export interface TierConfig {
 }
 
 export const TIERS: TierConfig[] = [
-  { id: 'EXPRESS', label: 'Express', hours: 3, basePriceVnd: 2800000, blurb: 'POC gọn, giao link demo trong 3 giờ', icon: 'bolt' },
-  { id: 'STANDARD', label: 'Standard', hours: 8, basePriceVnd: 2000000, blurb: 'Cân bằng giá và tốc độ, giao trong 8 giờ', icon: 'schedule' },
-  { id: 'PRO', label: 'Enterprise', hours: 24, basePriceVnd: 6500000, blurb: 'Luồng nghiệp vụ phức tạp, QA kỹ, giao trong 24 giờ', icon: 'domain' },
-  { id: 'TEMPLATE', label: 'Mua Template', hours: 2, basePriceVnd: 2200000, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
+  { id: 'EXPRESS', label: 'Express', ...TIER_PRICING.EXPRESS, blurb: 'POC gọn, giao link demo trong 3 giờ', icon: 'bolt' },
+  { id: 'STANDARD', label: 'Standard', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, giao trong 8 giờ', icon: 'schedule' },
+  { id: 'PRO', label: 'Enterprise', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp, QA kỹ, giao trong 24 giờ', icon: 'domain' },
+  { id: 'TEMPLATE', label: 'Mua Template', ...TIER_PRICING.TEMPLATE, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
 ];
 
 export const FRAMEWORKS = ['Next.js 15 + Tailwind CSS', 'FastAPI + React', 'Flutter', 'Node.js + Express', 'Laravel'];
@@ -37,22 +38,8 @@ export interface Estimate {
   etaHours: number;
 }
 
-export function estimate(tier: OrderTier, prompt: string, templateId?: string | null): Estimate {
-  const cfg = getTier(tier);
-  const tpl = getTemplate(templateId);
-  let price = cfg.basePriceVnd;
-  let eta = cfg.hours;
-  if (tier === 'TEMPLATE' && tpl) {
-    price = tpl.basePriceVnd;
-    eta = tpl.etaHours;
-  } else if (tpl) {
-    price = Math.round(price * 0.85);
-  }
-  // Longer prompts imply more scope: +100k per 80 chars beyond 120, capped.
-  const extra = Math.min(Math.max(0, prompt.length - 120) / 80, 10);
-  price += Math.round(extra) * 100000;
-  return { priceVnd: Math.round(price / 10000) * 10000, etaHours: eta };
-}
+/** Same formula the server charges with. */
+export const estimate: (tier: OrderTier, prompt: string, templateId?: string | null) => Estimate = estimateOrder;
 
 export type Currency = 'VND' | 'USD';
 
