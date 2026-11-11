@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S2 Ledger ký quỹ (SePay) xong phần code, chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S3 Dispatch + Matching.
+**Đang ở:** S3 Dispatch + Matching xong (matching chạy in-process TS, Go service hoãn). S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S4 Milestone & nghiệm thu.
 
 ---
 
@@ -76,12 +76,17 @@
 
 ## S3 — Dispatch + Matching
 
-- [ ] Contract: `WaveOffer`, events `dispatch.requested|offered|accepted|expired`
-- [ ] `api/matching` (Go 1.23, `pgx`, `go-redis`): chấm điểm coder, gửi wave offer
-- [ ] API: coder nhận / từ chối offer; hết hạn → wave sau; chỉ 1 coder nhận được
-- [ ] Coder: offer thật thay giả lập (`WaveOfferModal`, `OnlineRadar`) — bỏ open pool `GET /v1/orders?scope=open` + ai nhận trước thắng (`transition.ts`)
-- [ ] Coder: trạng thái online/offline lưu server
-- [ ] Test: 2 coder nhận cùng lúc → chỉ 1 thắng
+- [x] Contract: `DispatchOffer`/`OfferList`/`Presence`, events `dispatch.requested|offered|accepted|expired` (475ea2c)
+- [x] Matching: chấm điểm coder (online + heartbeat 60s, chưa bận, chưa từ chối; ưu tiên chưa hỏi → nhận nhiều → hoạt động gần nhất), wave 3 coder / 30s (6eeec73)
+  - Lệch kế hoạch: chạy in-process trong core-api (TS, sweep 2s, `FOR UPDATE SKIP LOCKED`) thay vì Go `api/matching` — máy chưa có Go/Redis
+- [ ] `api/matching` Go 1.23 + Redis (tách ra khi cần latency thấp / nhiều coder)
+- [x] API: `GET /v1/me/offers`, `POST /v1/offers/:id/accept|decline`; hết hạn → wave sau; chỉ 1 coder nhận được; bỏ claim `DISPATCHED→IN_PROGRESS` + open pool (6eeec73)
+- [x] Coder: offer thật thay giả lập (`WaveOfferModal`) — poll `/v1/me/offers` (kiêm heartbeat) (da40a03)
+- [x] Coder: trạng thái online/offline lưu server `PUT /v1/me/presence` (6eeec73, da40a03)
+- [x] Test: 2 coder nhận cùng lúc → chỉ 1 thắng — `pnpm --filter @grabcode/core-api smoke:dispatch` 17 check (6eeec73, 87a517e)
+- [ ] Push offer qua Centrifugo thay vì poll
+- [ ] Đơn không có coder nào online: chờ vô hạn — cần cảnh báo khách / admin, hoàn tiền sau N giờ
+- [ ] Đồng hồ offer: client kẹp theo 30s; nên trả `secondsLeft` từ API nếu lệch giờ client/DB
 
 ## S4 — Milestone & nghiệm thu
 
