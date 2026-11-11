@@ -4,6 +4,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import {
   ORDER_SUBJECTS,
+  coderTierFor,
   estimateOrder,
   payoutOf,
   type OrderCreateSchema,
@@ -129,14 +130,19 @@ export class OrdersService {
 
   private async load(where: SQL | undefined, limit = 1): Promise<OrderDto[]> {
     const rows = await this.db
-      .select({ o: orders, customer, coder })
+      .select({
+        o: orders,
+        customer,
+        coder,
+        coderAccepted: sql<number>`(select count(*)::int from ${orders} x where x.coder_user_id = ${orders.coderUserId} and x.status = 'ACCEPTED')`,
+      })
       .from(orders)
       .innerJoin(customer, eq(customer.id, orders.customerUserId))
       .leftJoin(coder, eq(coder.id, orders.coderUserId))
       .where(where)
       .orderBy(desc(orders.createdAt))
       .limit(limit);
-    return rows.map(({ o, customer: c, coder: k }) => ({
+    return rows.map(({ o, customer: c, coder: k, coderAccepted }) => ({
       id: o.id,
       status: o.status,
       tier: o.tier,
@@ -149,7 +155,8 @@ export class OrdersService {
       payoutVnd: payoutOf(o.priceVnd),
       etaHours: o.etaHours,
       customer: party(c),
-      coder: k && party(k),
+      // rating stays null until customer reviews exist (S4), same as /v1/me.
+      coder: k && { ...party(k), stats: { tier: coderTierFor(coderAccepted), completedOrders: coderAccepted, rating: null } },
       createdAt: o.createdAt.toISOString(),
       updatedAt: o.updatedAt.toISOString(),
     }));

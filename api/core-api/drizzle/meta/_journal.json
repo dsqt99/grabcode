@@ -43,6 +43,13 @@
       "when": 1794405347280,
       "tag": "0005_unique_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794407580788,
+      "tag": "0006_smart_master_chief",
+      "breakpoints": true
     }
   ]
 }

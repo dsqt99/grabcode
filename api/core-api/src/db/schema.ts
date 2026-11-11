@@ -115,9 +115,10 @@ export const orders = core.table(
 );
 
 // One private GitHub repo per order.
-// shortcut: no FK to core.orders yet because dev DBs still hold mock-id rows (GC-3428); add it once those are cleaned up.
 export const orderRepos = core.table('order_repos', {
-  orderId: text('order_id').primaryKey(),
+  orderId: text('order_id')
+    .primaryKey()
+    .references(() => orders.id, { onDelete: 'cascade' }),
   coderUserId: uuid('coder_user_id')
     .notNull()
     .references(() => users.id),
