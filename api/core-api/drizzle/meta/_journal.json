@@ -50,6 +50,13 @@
       "when": 1794407580788,
       "tag": "0006_smart_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794408314138,
+      "tag": "0007_curly_gravity",
+      "breakpoints": true
     }
   ]
 }

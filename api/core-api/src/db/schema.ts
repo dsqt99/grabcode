@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigserial, boolean, index, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, index, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { AIBrief } from '@grabcode/contracts';
 import type { CoderProfileDetails, NotificationPrefs } from '@grabcode/contracts/schemas';
 
@@ -143,3 +143,27 @@ export const repoCommits = core.table('repo_commits', {
   url: text('url').notNull(),
   pushedAt: timestamp('pushed_at', { withTimezone: true }).notNull(),
 });
+
+// Escrow ledger (double-entry). The tx id is the idempotency key: 'sepay:<SePay id>', 'release:<orderId>', 'dev:<uuid>'.
+// Entries of one tx sum to 0 (checked before insert); an account balance is the sum of its entries.
+export const ledgerTxs = core.table('ledger_txs', {
+  id: text('id').primaryKey(),
+  kind: text('kind', { enum: ['DEPOSIT', 'RELEASE'] }).notNull(),
+  orderId: text('order_id').references(() => orders.id),
+  /** Raw source (e.g. SePay webhook body) for reconciliation. */
+  meta: jsonb('meta'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ledgerEntries = core.table(
+  'ledger_entries',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    txId: text('tx_id')
+      .notNull()
+      .references(() => ledgerTxs.id),
+    account: text('account').notNull(),
+    amountVnd: bigint('amount_vnd', { mode: 'number' }).notNull(),
+  },
+  (t) => [index('ledger_entries_account_idx').on(t.account)],
+);

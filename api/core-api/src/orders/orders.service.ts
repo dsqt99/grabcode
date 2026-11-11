@@ -15,11 +15,13 @@ import {
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
 import { orders, outbox, users } from '../db/schema';
+import { balanceOf, postTx } from '../payments/ledger.db';
+import { escrowOf, releaseEntries } from '../payments/ledger';
 import { completeMilestone, isDenied, planTransition, type Denied } from './transition';
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orders.$inferSelect;
-type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const customer = alias(users, 'customer');
 const coder = alias(users, 'coder');
@@ -41,6 +43,19 @@ async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
     data: { orderId: r.id, status: r.status, from, customerUserId: r.customerUserId, coderUserId: r.coderUserId },
   };
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+}
+
+/**
+ * SYSTEM edge DRAFT -> FUNDED -> DISPATCHED once the escrow holds the full price.
+ * `row` must be locked FOR UPDATE by the caller (same tx as the deposit).
+ */
+export async function fundIfCovered(tx: Tx, row: Row) {
+  if (row.status !== 'DRAFT' || (await balanceOf(tx, escrowOf(row.id))) < row.priceVnd) return;
+  let [next] = await tx.update(orders).set({ status: 'FUNDED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+  await emit(tx, next, 'DRAFT');
+  // shortcut: dispatch right after funding (open pool) until S3 matching sends wave offers.
+  [next] = await tx.update(orders).set({ status: 'DISPATCHED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+  await emit(tx, next, 'FUNDED');
 }
 
 @Injectable()
@@ -106,13 +121,13 @@ export class OrdersService {
       const plan = planTransition(row, user, to);
       if (isDenied(plan)) fail(plan);
       const { coderUserId } = plan as { coderUserId: string | null };
-      let [next] = await tx.update(orders).set({ status: to, coderUserId, updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
-      await emit(tx, next, row.status);
-      if (to === 'FUNDED') {
-        // shortcut: escrow is simulated (no payment) until the S2 ledger; a funded order is dispatched right away.
-        [next] = await tx.update(orders).set({ status: 'DISPATCHED', updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
-        await emit(tx, next, 'FUNDED');
+      if (to === 'ACCEPTED') {
+        // FUNDED required escrow >= price, so this only trips on a corrupted ledger.
+        if ((await balanceOf(tx, escrowOf(id))) < row.priceVnd) throw new ConflictException({ message: 'Escrow does not hold the order price' });
+        await postTx(tx, `release:${id}`, 'RELEASE', id, releaseEntries(id, row.priceVnd, row.coderUserId!));
       }
+      const [next] = await tx.update(orders).set({ status: to, coderUserId, updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
+      await emit(tx, next, row.status);
     });
     return (await this.load(eq(orders.id, id)))[0];
   }

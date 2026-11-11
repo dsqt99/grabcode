@@ -6,9 +6,10 @@ import { BriefsModule } from './briefs/briefs.module';
 import { WEB_ORIGINS } from './config';
 import { DbModule } from './db/db.module';
 import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
 import { ReposModule } from './repos/repos.module';
 
-@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, ReposModule] })
+@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule] })
 class AppModule {}
 
 async function bootstrap() {
