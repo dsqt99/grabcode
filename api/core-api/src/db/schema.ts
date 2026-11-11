@@ -1,4 +1,5 @@
-import { bigserial, boolean, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { bigserial, boolean, index, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { AIBrief } from '@grabcode/contracts';
 import type { CoderProfileDetails, NotificationPrefs } from '@grabcode/contracts/schemas';
 
@@ -87,7 +88,34 @@ export const customerProfiles = core.table('customer_profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// One private GitHub repo per order. orderId is text: orders are still mock ids (GC-3428) until the orders module lands.
+export const orderNumberSeq = core.sequence('order_number_seq', { startWith: 1001 });
+
+// Order core (S1). Milestones live inside brief.milestones (status per milestone); a submissions table comes with S4.
+export const orders = core.table(
+  'orders',
+  {
+    id: text('id').primaryKey().default(sql`'GC-' || nextval('core.order_number_seq')`),
+    customerUserId: uuid('customer_user_id')
+      .notNull()
+      .references(() => users.id),
+    coderUserId: uuid('coder_user_id').references(() => users.id),
+    status: text('status', { enum: ['DRAFT', 'FUNDED', 'DISPATCHED', 'IN_PROGRESS', 'DELIVERED', 'ACCEPTED', 'DISPUTED'] }).notNull().default('DRAFT'),
+    tier: text('tier', { enum: ['EXPRESS', 'STANDARD', 'PRO', 'TEMPLATE'] }).notNull(),
+    title: text('title').notNull(),
+    prompt: text('prompt').notNull(),
+    templateId: text('template_id'),
+    framework: text('framework').notNull(),
+    brief: jsonb('brief').$type<AIBrief>().notNull(),
+    priceVnd: integer('price_vnd').notNull(),
+    etaHours: integer('eta_hours').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('orders_customer_idx').on(t.customerUserId), index('orders_coder_idx').on(t.coderUserId), index('orders_status_idx').on(t.status)],
+);
+
+// One private GitHub repo per order.
+// shortcut: no FK to core.orders yet because dev DBs still hold mock-id rows (GC-3428); add it once those are cleaned up.
 export const orderRepos = core.table('order_repos', {
   orderId: text('order_id').primaryKey(),
   coderUserId: uuid('coder_user_id')

@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
-import { coderProfiles, orderRepos, outbox, repoCommits, type users } from '../db/schema';
+import { coderProfiles, orderRepos, orders, outbox, repoCommits, type users } from '../db/schema';
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orderRepos.$inferSelect;
@@ -30,7 +30,10 @@ export class ReposService {
    * Idempotent per orderId: an existing PENDING/READY repo is returned as is, a FAILED one is re-queued.
    */
   async request(user: UserRow, input: z.output<typeof RepoCreateSchema>): Promise<OrderRepo> {
-    if (!user.roles.includes('CODER')) throw new ForbiddenException({ message: 'Missing CODER role' });
+    // Only the coder the order is assigned to (status IN_PROGRESS or later) may open its repo.
+    const [order] = await this.db.select({ coderUserId: orders.coderUserId }).from(orders).where(eq(orders.id, input.orderId));
+    if (!order) throw new NotFoundException({ message: 'Order not found' });
+    if (order.coderUserId !== user.id) throw new ForbiddenException({ message: 'Not the assigned coder of this order' });
     const [profile] = await this.db
       .select({ githubUrl: coderProfiles.githubUrl })
       .from(coderProfiles)

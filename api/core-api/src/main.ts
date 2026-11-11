@@ -1,22 +1,14 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AuthController } from './auth/auth.controller';
-import { AuthService } from './auth/auth.service';
-import { BriefResultsConsumer } from './briefs/briefs.consumer';
-import { BriefsController } from './briefs/briefs.controller';
-import { BriefsService } from './briefs/briefs.service';
+import { AuthModule } from './auth/auth.module';
+import { BriefsModule } from './briefs/briefs.module';
 import { WEB_ORIGINS } from './config';
-import { RepoResultsConsumer } from './repos/repos.consumer';
-import { ReposController } from './repos/repos.controller';
-import { ReposService } from './repos/repos.service';
-import { createDb, DB } from './db/client';
+import { DbModule } from './db/db.module';
+import { OrdersModule } from './orders/orders.module';
+import { ReposModule } from './repos/repos.module';
 
-// shortcut: single module while only the briefs + auth domains exist; split per domain (orders, ledger...) as they land.
-@Module({
-  controllers: [BriefsController, AuthController, ReposController],
-  providers: [{ provide: DB, useFactory: () => createDb() }, BriefsService, BriefResultsConsumer, AuthService, ReposService, RepoResultsConsumer],
-})
+@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, ReposModule] })
 class AppModule {}
 
 async function bootstrap() {

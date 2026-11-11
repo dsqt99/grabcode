@@ -1,9 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { and, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, count, eq, gt, ne, sql } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
-import type { ChangePassword, CoderProfileDetails, CustomerProfile, Me, PasswordLogin, Register, UpdateMe, UserRole } from '@grabcode/contracts/schemas';
+import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type PasswordLogin, type Register, type UpdateMe, type UserRole } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { coderProfiles, customerProfiles, sessions, users } from '../db/schema';
+import { coderProfiles, customerProfiles, orders, sessions, users } from '../db/schema';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './password';
 
 export const SESSION_COOKIE = 'gc_session';
@@ -26,6 +26,7 @@ const toMe = (
   u: UserRow,
   coder: typeof coderProfiles.$inferSelect | undefined,
   customer: typeof customerProfiles.$inferSelect | undefined,
+  accepted: number,
 ): Me => ({
   id: u.id,
   name: u.name,
@@ -42,6 +43,8 @@ const toMe = (
   loginMethod: u.providerKey.slice(0, u.providerKey.indexOf(':')) as Me['loginMethod'],
   coderProfile: coder ? (({ userId, updatedAt, ...rest }) => rest)(coder) : null,
   customerProfile: customer ? { companyName: customer.companyName, companySize: customer.companySize, website: customer.website } : null,
+  // rating stays null until customer reviews (S4).
+  coderStats: u.roles.includes('CODER') ? { tier: coderTierFor(accepted), completedOrders: accepted, rating: null } : null,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -51,11 +54,12 @@ export class AuthService {
 
   /** Me with both profiles loaded. */
   async me(user: UserRow): Promise<Me> {
-    const [[coder], [customer]] = await Promise.all([
+    const [[coder], [customer], [stats]] = await Promise.all([
       this.db.select().from(coderProfiles).where(eq(coderProfiles.userId, user.id)),
       this.db.select().from(customerProfiles).where(eq(customerProfiles.userId, user.id)),
+      this.db.select({ n: count() }).from(orders).where(and(eq(orders.coderUserId, user.id), eq(orders.status, 'ACCEPTED'))),
     ]);
-    return toMe(user, coder, customer);
+    return toMe(user, coder, customer, stats?.n ?? 0);
   }
 
   /**

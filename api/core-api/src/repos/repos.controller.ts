@@ -19,6 +19,7 @@ import { OrderIdSchema, RepoCreateSchema, type OrderRepo } from '@grabcode/contr
 import { readCookie } from '../auth/auth.controller';
 import { AuthService, SESSION_COOKIE } from '../auth/auth.service';
 import { GITHUB_APP_WEBHOOK_SECRET } from '../config';
+import { OrdersService } from '../orders/orders.service';
 import { ReposService } from './repos.service';
 
 /** Constant-time check of GitHub's `sha256=<hex>` HMAC over the raw request body. */
@@ -34,6 +35,7 @@ export class ReposController {
   constructor(
     @Inject(ReposService) private readonly repos: ReposService,
     @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(OrdersService) private readonly orders: OrdersService,
   ) {}
 
   @Post('repos')
@@ -45,11 +47,12 @@ export class ReposController {
     return this.repos.request(user, parsed.data);
   }
 
-  // shortcut: any signed-in user can read any order's repo status; scope to the order's customer/coder once orders live in the backend.
+  /** Customer or assigned coder of the order only; anyone else gets 404 so order ids cannot be probed. */
   @Get('repos/:orderId')
   async get(@Req() req: Request, @Param('orderId') orderId: string): Promise<OrderRepo> {
-    await this.auth.requireUser(readCookie(req, SESSION_COOKIE));
-    const repo = OrderIdSchema.safeParse(orderId).success ? await this.repos.get(orderId) : undefined;
+    const user = await this.auth.requireUser(readCookie(req, SESSION_COOKIE));
+    const allowed = OrderIdSchema.safeParse(orderId).success && (await this.orders.isParty(user.id, orderId));
+    const repo = allowed ? await this.repos.get(orderId) : undefined;
     if (!repo) throw new NotFoundException({ message: 'Repo not found' });
     return repo;
   }
