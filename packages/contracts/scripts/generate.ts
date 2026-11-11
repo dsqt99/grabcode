@@ -16,8 +16,17 @@ import {
   BriefRequestedEventSchema,
   RepoFailedEventSchema,
   RepoProvisionedEventSchema,
+  OrderEventSchema,
+  ORDER_SUBJECTS,
   RepoRequestedEventSchema,
 } from '../src/schemas/events.ts';
+import {
+  MilestoneCompleteSchema,
+  OrderCreateSchema,
+  OrderListSchema,
+  OrderSchema,
+  OrderTransitionSchema,
+} from '../src/schemas/order.ts';
 import { OrderRepoSchema, RepoCreateSchema } from '../src/schemas/repo.ts';
 import {
   AddRoleSchema,
@@ -48,6 +57,7 @@ const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const json = (name: string) => ({ 'application/json': { schema: ref(name) } });
 const unauthorized = { description: 'No valid session', content: json('ErrorResponse') };
 const provider = { name: 'provider', in: 'path', required: true, schema: { type: 'string', enum: ['github', 'google'] } };
+const orderId = { name: 'id', in: 'path', required: true, schema: { type: 'string' } };
 const role = { name: 'role', in: 'query', required: false, description: 'Role for a new account (or added if missing).', schema: { type: 'string', enum: ['CUSTOMER', 'CODER'] } };
 
 write('openapi/core-api.openapi.json', {
@@ -169,24 +179,85 @@ write('openapi/core-api.openapi.json', {
     '/v1/repos': {
       post: {
         operationId: 'requestOrderRepo',
-        summary: 'Queue creation of the private GitHub repo for an order (CODER role). Idempotent per orderId; a FAILED repo is re-queued. Poll GET /v1/repos/{orderId}.',
+        summary: 'Queue creation of the private GitHub repo for an order (its assigned coder). Idempotent per orderId; a FAILED repo is re-queued. Poll GET /v1/repos/{orderId}.',
         requestBody: { required: true, content: json('RepoCreate') },
         responses: {
           '202': { description: 'Accepted', content: json('OrderRepo') },
           '400': { description: 'Validation error', content: json('ErrorResponse') },
           '401': unauthorized,
-          '403': { description: 'Missing CODER role', content: json('ErrorResponse') },
+          '403': { description: 'Not the assigned coder of the order', content: json('ErrorResponse') },
+          '404': { description: 'Order not found', content: json('ErrorResponse') },
         },
       },
     },
     '/v1/repos/{orderId}': {
       get: {
         operationId: 'getOrderRepo',
+        summary: 'Customer or assigned coder of the order.',
         parameters: [{ name: 'orderId', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
           '200': { description: 'OK', content: json('OrderRepo') },
           '401': unauthorized,
           '404': { description: 'Not found', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/orders': {
+      post: {
+        operationId: 'createOrder',
+        summary: 'Create a DRAFT order (CUSTOMER role). Price and ETA are computed by the server.',
+        requestBody: { required: true, content: json('OrderCreate') },
+        responses: {
+          '201': { description: 'Created', content: json('Order') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '403': { description: 'Missing CUSTOMER role', content: json('ErrorResponse') },
+        },
+      },
+      get: {
+        operationId: 'listOrders',
+        summary: 'scope=mine: own orders as customer + assigned orders as coder. scope=open: DISPATCHED unassigned orders (CODER role, until S3 wave offers).',
+        parameters: [{ name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['mine', 'open'], default: 'mine' } }],
+        responses: { '200': { description: 'OK', content: json('OrderList') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/orders/{id}': {
+      get: {
+        operationId: 'getOrder',
+        summary: 'Customer or assigned coder; a CODER may also read a DISPATCHED unassigned order.',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('Order') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/orders/{id}/transitions': {
+      post: {
+        operationId: 'transitionOrder',
+        summary:
+          'Move the order. DRAFT->FUNDED (customer; escrow simulated until S2, then auto DISPATCHED), DISPATCHED->IN_PROGRESS (coder claims), IN_PROGRESS->DELIVERED (assigned coder, all milestones done), DELIVERED->ACCEPTED|DISPUTED|IN_PROGRESS (customer).',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('OrderTransition') },
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '403': { description: 'Not a party allowed to take this transition', content: json('ErrorResponse') },
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+          '409': { description: 'Transition not allowed from the current status', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/orders/{id}/milestones/{milestoneId}/complete': {
+      post: {
+        operationId: 'completeMilestone',
+        summary: 'Assigned coder marks the next pending milestone COMPLETED (in order) while IN_PROGRESS.',
+        parameters: [orderId, { name: 'milestoneId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { required: false, content: json('MilestoneComplete') },
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '401': unauthorized,
+          '403': { description: 'Not the assigned coder', content: json('ErrorResponse') },
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+          '409': { description: 'Order not IN_PROGRESS or milestone out of order', content: json('ErrorResponse') },
         },
       },
     },
@@ -217,6 +288,11 @@ write('openapi/core-api.openapi.json', {
       ErrorResponse: schema(ErrorResponseSchema),
       RepoCreate: schema(RepoCreateSchema, 'input'),
       OrderRepo: schema(OrderRepoSchema),
+      OrderCreate: schema(OrderCreateSchema, 'input'),
+      Order: schema(OrderSchema),
+      OrderList: schema(OrderListSchema),
+      OrderTransition: schema(OrderTransitionSchema, 'input'),
+      MilestoneComplete: schema(MilestoneCompleteSchema, 'input'),
     },
   },
 });
@@ -227,3 +303,4 @@ write('events/brief.failed.schema.json', schema(BriefFailedEventSchema));
 write('events/repo.requested.schema.json', schema(RepoRequestedEventSchema));
 write('events/repo.provisioned.schema.json', schema(RepoProvisionedEventSchema));
 write('events/repo.failed.schema.json', schema(RepoFailedEventSchema));
+for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.schema.json`, schema(OrderEventSchema));

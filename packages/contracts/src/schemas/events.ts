@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { AIBriefSchema, OrderTierSchema } from './brief';
+import { OrderStatusSchema, type OrderStatus } from './order';
 import { OrderIdSchema } from './repo';
 
 // NATS JetStream contract. Every message is an envelope; event_id doubles as the
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -83,3 +84,30 @@ export const RepoFailedEventSchema = envelope(
 export type RepoRequestedEvent = z.infer<typeof RepoRequestedEventSchema>;
 export type RepoProvisionedEvent = z.infer<typeof RepoProvisionedEventSchema>;
 export type RepoFailedEvent = z.infer<typeof RepoFailedEventSchema>;
+
+/** Subject emitted when an order enters a status (DELIVERED -> IN_PROGRESS revision emits order.started again). */
+export const ORDER_SUBJECTS = {
+  DRAFT: 'order.created',
+  FUNDED: 'order.funded',
+  DISPATCHED: 'order.dispatched',
+  IN_PROGRESS: 'order.started',
+  DELIVERED: 'order.delivered',
+  ACCEPTED: 'order.accepted',
+  DISPUTED: 'order.disputed',
+} as const satisfies Record<OrderStatus, string>;
+
+export const OrderEventSchema = z.object({
+  event_id: z.string(),
+  type: z.enum(Object.values(ORDER_SUBJECTS) as [string, ...string[]]),
+  occurred_at: z.string(),
+  data: z.object({
+    orderId: z.string(),
+    status: OrderStatusSchema,
+    /** null for order.created. */
+    from: OrderStatusSchema.nullable(),
+    customerUserId: z.string().uuid(),
+    coderUserId: z.string().uuid().nullable(),
+  }),
+});
+
+export type OrderEvent = z.infer<typeof OrderEventSchema>;

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CoderStatsSchema } from './order';
 
 // Runtime contract for auth + profile (web/coder -> core-api). Session is an httpOnly cookie, never exposed to JS.
 
@@ -61,6 +62,8 @@ export const MeSchema = z.object({
   /** null until the user saves that profile. */
   coderProfile: CoderProfileDetailsSchema.nullable(),
   customerProfile: CustomerProfileSchema.nullable(),
+  /** Set when the user has the CODER role. */
+  coderStats: CoderStatsSchema.nullable(),
   createdAt: z.string(),
 });
 
