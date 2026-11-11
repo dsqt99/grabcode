@@ -29,7 +29,7 @@
 - [x] Luồng AI brief: `POST /v1/briefs` → brief-worker (LLM) → poll; fallback brief mẫu — `97d247a`, `f11d7d3`
 - [x] Repo-worker GitHub App: tạo repo private, `CLAUDE.md`, branch protection, mời coder; webhook push ký HMAC — `97d247a`, `f11d7d3`
 - [x] Coder workspace dùng repo thật (clone URL, trạng thái, Thử lại) — `4bd49e4`
-- [x] File `CHECKLIST.md` + Nguyên tắc 5 trong `CLAUDE.md`
+- [x] File `CHECKLIST.md` + Nguyên tắc 5 trong `CLAUDE.md` — `89bf74e`
 
 ### Còn lại để đóng S0
 - [ ] 👤 Tạo GitHub App trên org `grabcode-sandbox` (quyền Administration RW, Contents RW, Metadata R; event Push), cài vào org
