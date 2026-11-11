@@ -12,7 +12,7 @@ import {
   type Order,
   type WaveOffer,
 } from '@grabcode/contracts';
-import type { OrderDto, OrderList, OrderStatus, Wallet } from '@grabcode/contracts/schemas';
+import type { DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
 import { API_URL, useAuth } from './auth';
 
 const STORAGE_KEY = 'grabcode_coder_state';
@@ -56,21 +56,28 @@ export interface ToastMsg {
 
 const POLL_MS = 3000;
 
-async function api<T>(path: string, body?: unknown): Promise<T> {
+async function api<T>(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
+    method,
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
   });
-  if (!res.ok) throw new Error(`core-api ${res.status}`);
-  return res.json();
+  if (!res.ok) throw Object.assign(new Error(`core-api ${res.status}`), { status: res.status });
+  return res.status === 204 ? (undefined as T) : res.json();
 }
 const orderPath = (id: string) => `/v1/orders/${encodeURIComponent(id)}`;
 const transition = (id: string, status: OrderStatus) => api<OrderDto>(`${orderPath(id)}/transitions`, { status });
 
-const offerOf = (o: OrderDto, view: Order): WaveOffer => ({
-  id: `offer-${o.id}`,
+/** Server wave offer -> the modal's card. */
+const pendingOf = ({ id, order: o, expiresAt, createdAt }: DispatchOffer): PendingOffer => {
+  const view = toViewOrder(o);
+  const seconds = Math.round((Date.parse(expiresAt) - Date.parse(createdAt)) / 1000);
+  // shortcut: clamp so a client/DB clock skew never shows more than the offer window; send secondsLeft from the API if skew bites.
+  return { order: view, offer: waveOf(id, o, view, seconds, createdAt), expiresAt: Math.min(Date.parse(expiresAt), Date.now() + seconds * 1000) };
+};
+const waveOf = (id: string, o: OrderDto, view: Order, expiresInSeconds: number, createdAt: string): WaveOffer => ({
+  id,
   orderId: o.id,
   title: o.title,
   tier: o.tier,
@@ -78,8 +85,8 @@ const offerOf = (o: OrderDto, view: Order): WaveOffer => ({
   netPayoutVnd: o.payoutVnd,
   deadlineHours: o.etaHours,
   summary: o.brief.scopeSummary,
-  expiresInSeconds: DEFAULT_OFFER_SECONDS,
-  createdAt: o.updatedAt,
+  expiresInSeconds,
+  createdAt,
   templateName: view.templateName,
 });
 
@@ -255,27 +262,30 @@ export function useCoder() {
       assigned.find((o) => o.id === s.activeOrder?.id) ?? assigned.find((o) => o.status === 'IN_PROGRESS' || o.status === 'DELIVERED');
     if (job) return applyDto(job);
     if (s.activeOrder) patch({ activeOrder: null, completedMilestones: [], delivered: false, completed: false, chat: [], activePayoutVnd: 0 });
-    if (!s.isOnline || offerRef.current) return;
-    // shortcut: coders poll the open pool until S3 matching pushes wave offers.
-    const { orders: open } = await api<OrderList>('/v1/orders?scope=open');
-    const next = open.find((o) => o.customer.id !== meId && !stateRef.current.seenOrderIds.includes(o.id));
-    if (next && !offerRef.current) {
-      const view = toViewOrder(next);
-      setPending({ order: view, offer: offerOf(next, view), expiresAt: Date.now() + DEFAULT_OFFER_SECONDS * 1000 });
+    if (!s.isOnline) return;
+    // shortcut: polling (also the presence heartbeat) instead of a Centrifugo push; switch when the WebSocket lands.
+    const { offers } = await api<OfferList>('/v1/me/offers');
+    const shown = offerRef.current;
+    if (shown && !offers.some((o) => o.id === shown.offer.id)) {
+      setPending(null);
+      if (shown.expiresAt > Date.now()) toast(`Đơn ${shown.order.id} đã có Coder khác nhận.`, 'info');
     }
-  }, [meId, applyDto, patch, setPending]);
+    const next = offers.map(pendingOf).find((p) => p.expiresAt > Date.now());
+    if (!offerRef.current && next) setPending(next);
+  }, [meId, applyDto, patch, setPending, toast]);
 
   useEffect(() => {
     if (!hydrated || !API_URL || !meId) return;
     let stop = false;
     let t: ReturnType<typeof setTimeout>;
     const tick = () => void sync().catch(console.warn).finally(() => !stop && (t = setTimeout(tick, POLL_MS)));
+    api<Presence>('/v1/me/presence').then((p) => patch({ isOnline: p.online }), console.warn);
     tick();
     return () => {
       stop = true;
       clearTimeout(t);
     };
-  }, [hydrated, meId, sync]);
+  }, [hydrated, meId, sync, patch]);
 
   const apiFail = useCallback((e: unknown) => (console.warn(e), toast('Thao tác chưa thành công, thử lại sau.', 'warn')), [toast]);
 
@@ -352,6 +362,7 @@ export function useCoder() {
   const setOnline = useCallback(
     (isOnline: boolean) => {
       patch({ isOnline });
+      if (API_URL) api<Presence>('/v1/me/presence', { online: isOnline }, 'PUT').catch((e) => (console.warn(e), toast('Chưa lưu được trạng thái Online.', 'warn')));
       eventBus.publish({
         type: 'CODER_STATUS_CHANGED',
         payload: { coderId: SEED_CODER.id, isOnline },
@@ -359,7 +370,7 @@ export function useCoder() {
       });
       if (!isOnline) setPending(null);
     },
-    [patch, setPending]
+    [patch, setPending, toast]
   );
 
   const acceptOffer = useCallback(() => {
@@ -369,9 +380,10 @@ export function useCoder() {
     const ms = getMilestones(o.order);
     setPending(null);
     if (API_URL) {
-      patch({ seenOrderIds: [...s.seenOrderIds, o.order.id] });
-      // 409 when another coder claimed it first.
-      transition(o.order.id, 'IN_PROGRESS').then(applyDto, () => toast(`Đơn ${o.order.id} đã có Coder khác nhận.`, 'warn'));
+      // 409 when another coder accepted first or the offer expired.
+      api<OrderDto>(`/v1/offers/${encodeURIComponent(o.offer.id)}/accept`, {}).then(applyDto, () =>
+        toast(`Đơn ${o.order.id} đã có Coder khác nhận hoặc hết hạn.`, 'warn')
+      );
       return;
     }
     commit({
@@ -402,6 +414,11 @@ export function useCoder() {
       if (!o) return;
       const s = stateRef.current;
       setPending(null);
+      if (API_URL) {
+        // TIMEOUT needs no call: the server expires the offer and sends the next wave.
+        if (reason === 'DECLINED') api(`/v1/offers/${encodeURIComponent(o.offer.id)}/decline`, {}).catch(console.warn);
+        return;
+      }
       patch({ seenOrderIds: [...s.seenOrderIds, o.order.id] });
       eventBus.publish({
         type: 'ORDER_REJECTED',
