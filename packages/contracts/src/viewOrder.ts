@@ -16,6 +16,8 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     DELIVERED: 'DELIVERED',
     ACCEPTED: 'COMPLETED',
     DISPUTED: 'CANCELLED',
+    CANCELLED: 'CANCELLED',
+    RESOLVED: 'CANCELLED',
   };
   return {
     id: o.id,

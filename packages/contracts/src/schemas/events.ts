@@ -20,6 +20,8 @@ export const SUBJECTS = {
   REPO_HANDED_OVER: 'repo.handed_over',
   ESCROW_DEPOSITED: 'escrow.deposited',
   ESCROW_RELEASED: 'escrow.released',
+  ESCROW_REFUNDED: 'escrow.refunded',
+  ESCROW_PAID_OUT: 'escrow.paid_out',
   DISPATCH_REQUESTED: 'dispatch.requested',
   DISPATCH_OFFERED: 'dispatch.offered',
   DISPATCH_ACCEPTED: 'dispatch.accepted',
@@ -130,6 +132,8 @@ export const ORDER_SUBJECTS = {
   DELIVERED: 'order.delivered',
   ACCEPTED: 'order.accepted',
   DISPUTED: 'order.disputed',
+  CANCELLED: 'order.cancelled',
+  RESOLVED: 'order.resolved',
 } as const satisfies Record<OrderStatus, string>;
 
 export const OrderEventSchema = z.object({
@@ -148,10 +152,11 @@ export const OrderEventSchema = z.object({
 
 export type OrderEvent = z.infer<typeof OrderEventSchema>;
 
-/** One per ledger tx. deposited: money arrived (held in escrow:<orderId>, or suspense when unmatched). released: a milestone's share paid out on approval. */
+/** One per ledger tx. deposited: money arrived (held in escrow:<orderId>, or suspense when unmatched). released: a milestone's share paid out on approval (or a dispute split).
+ * refunded: money sent back to the customer. paid_out: coder withdrawal to their bank. */
 export const EscrowEventSchema = z.object({
   event_id: z.string(),
-  type: z.enum([SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]),
+  type: z.enum([SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED, SUBJECTS.ESCROW_REFUNDED, SUBJECTS.ESCROW_PAID_OUT]),
   occurred_at: z.string(),
   data: z.object({
     txId: z.string(),

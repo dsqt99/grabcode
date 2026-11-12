@@ -32,6 +32,21 @@ import {
   RepoHandedOverEventSchema,
   SUBJECTS,
 } from '../src/schemas/events.ts';
+import {
+  AdminCoderSchema,
+  AdminCoderListSchema,
+  AdminCoderPatchSchema,
+  AdminOrderSchema,
+  AdminOrderListSchema,
+  DisputeResolveSchema,
+  MonitorSchema,
+  PayoutSchema,
+  PayoutCreateSchema,
+  PayoutDecisionSchema,
+  PayoutListSchema,
+  SuspenseListSchema,
+  SuspenseResolveSchema,
+} from '../src/schemas/admin.ts';
 import { OfferListSchema, PresenceSchema } from '../src/schemas/dispatch.ts';
 import { DevDepositSchema, PaymentInstructionsSchema, SepayWebhookSchema, WalletSchema } from '../src/schemas/payment.ts';
 import {
@@ -75,6 +90,10 @@ const unauthorized = { description: 'No valid session', content: json('ErrorResp
 const provider = { name: 'provider', in: 'path', required: true, schema: { type: 'string', enum: ['github', 'google'] } };
 const orderId = { name: 'id', in: 'path', required: true, schema: { type: 'string' } };
 const milestoneId = { name: 'milestoneId', in: 'path', required: true, schema: { type: 'string' } };
+const adminOnly = { description: 'Missing ADMIN role', content: json('ErrorResponse') };
+const notFound = { description: 'Not found', content: json('ErrorResponse') };
+/** A uuid path id (user, payout). */
+const userId = { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } };
 const role = { name: 'role', in: 'query', required: false, description: 'Role for a new account (or added if missing).', schema: { type: 'string', enum: ['CUSTOMER', 'CODER'] } };
 
 write('openapi/core-api.openapi.json', {
@@ -370,6 +389,88 @@ write('openapi/core-api.openapi.json', {
         responses: { '200': { description: 'OK', content: json('OfferList') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
       },
     },
+    '/v1/me/payouts': {
+      get: { operationId: 'listMyPayouts', summary: 'Coder: own withdrawal requests.', responses: { '200': { description: 'OK', content: json('PayoutList') }, '401': unauthorized } },
+      post: {
+        operationId: 'requestPayout',
+        summary: 'Coder: ask to withdraw wallet money to a bank account. An admin pays it by hand, then approves.',
+        requestBody: { required: true, content: json('PayoutCreate') },
+        responses: {
+          '201': { description: 'Created (PENDING)', content: json('Payout') },
+          '400': { description: 'Invalid body', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '403': { description: 'Missing CODER role', content: json('ErrorResponse') },
+          '409': { description: 'Amount exceeds wallet balance minus pending requests', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/admin/coders': {
+      get: { operationId: 'adminListCoders', summary: 'Admin: every coder with tier, suspension and wallet.', responses: { '200': { description: 'OK', content: json('AdminCoderList') }, '401': unauthorized, '403': adminOnly } },
+    },
+    '/v1/admin/coders/{id}': {
+      patch: {
+        operationId: 'adminUpdateCoder',
+        summary: 'Admin: override tier and/or suspend (suspended coders get no offers).',
+        parameters: [userId],
+        requestBody: { required: true, content: json('AdminCoderPatch') },
+        responses: { '200': { description: 'OK', content: json('AdminCoder') }, '400': { description: 'Invalid body', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound },
+      },
+    },
+    '/v1/admin/orders': {
+      get: { operationId: 'adminListOrders', summary: 'Admin: disputed orders and orders with money left in escrow (part-paid drafts, overpayments).', responses: { '200': { description: 'OK', content: json('AdminOrderList') }, '401': unauthorized, '403': adminOnly } },
+    },
+    '/v1/admin/orders/{id}/resolve': {
+      post: {
+        operationId: 'adminResolveDispute',
+        summary: 'Admin: DISPUTED -> RESOLVED. refundVnd goes back to the customer, the rest of the escrow is released (coder share + platform fee).',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('DisputeResolve') },
+        responses: { '200': { description: 'OK', content: json('AdminOrder') }, '400': { description: 'Invalid body or refund above escrow', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order not DISPUTED', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/orders/{id}/refund': {
+      post: {
+        operationId: 'adminRefundOrder',
+        summary: 'Admin: refund what escrow still holds. DRAFT -> CANCELLED; on ACCEPTED/RESOLVED/CANCELLED refunds the overpayment.',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('AdminOrder') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order in progress or escrow empty', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/suspense': {
+      get: { operationId: 'adminListSuspense', summary: 'Admin: deposits that matched no order and are not reconciled yet.', responses: { '200': { description: 'OK', content: json('SuspenseList') }, '401': unauthorized, '403': adminOnly } },
+    },
+    '/v1/admin/suspense/{txId}/resolve': {
+      post: {
+        operationId: 'adminResolveSuspense',
+        summary: 'Admin: move a suspense deposit onto an order (may fund it) or refund it. Once per deposit.',
+        parameters: [{ name: 'txId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: json('SuspenseResolve') },
+        responses: { '204': { description: 'Done' }, '400': { description: 'Invalid body', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Already reconciled', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/payouts': {
+      get: { operationId: 'adminListPayouts', summary: 'Admin: withdrawal requests, PENDING first.', responses: { '200': { description: 'OK', content: json('PayoutList') }, '401': unauthorized, '403': adminOnly } },
+    },
+    '/v1/admin/payouts/{id}/decide': {
+      post: {
+        operationId: 'adminDecidePayout',
+        summary: 'Admin: approve (money already sent; the wallet is debited in the ledger) or reject.',
+        parameters: [userId],
+        requestBody: { required: true, content: json('PayoutDecision') },
+        responses: { '200': { description: 'OK', content: json('Payout') }, '400': { description: 'Invalid body', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Not PENDING, or wallet too low', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/monitor': {
+      get: { operationId: 'adminMonitor', summary: 'Admin: outbox backlog, FAILED jobs, JetStream consumer lag.', responses: { '200': { description: 'OK', content: json('Monitor') }, '401': unauthorized, '403': adminOnly } },
+    },
+    '/v1/admin/jobs/repo/{id}/retry': {
+      post: {
+        operationId: 'adminRetryRepo',
+        summary: 'Admin: re-queue the FAILED repo job of the order.',
+        parameters: [orderId],
+        responses: { '204': { description: 'Re-queued' }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Repo job not FAILED', content: json('ErrorResponse') } },
+      },
+    },
     '/v1/me/presence': {
       get: { operationId: 'getPresence', summary: 'Coder online toggle.', responses: { '200': { description: 'OK', content: json('Presence') }, '401': unauthorized } },
       put: {
@@ -444,6 +545,19 @@ write('openapi/core-api.openapi.json', {
       ChatList: schema(ChatListSchema),
       RealtimeToken: schema(RealtimeTokenSchema),
       RealtimeHint: schema(RealtimeHintSchema),
+      AdminCoder: schema(AdminCoderSchema),
+      AdminCoderList: schema(AdminCoderListSchema),
+      AdminCoderPatch: schema(AdminCoderPatchSchema, 'input'),
+      AdminOrder: schema(AdminOrderSchema),
+      AdminOrderList: schema(AdminOrderListSchema),
+      DisputeResolve: schema(DisputeResolveSchema, 'input'),
+      SuspenseList: schema(SuspenseListSchema),
+      SuspenseResolve: schema(SuspenseResolveSchema, 'input'),
+      Payout: schema(PayoutSchema),
+      PayoutList: schema(PayoutListSchema),
+      PayoutCreate: schema(PayoutCreateSchema, 'input'),
+      PayoutDecision: schema(PayoutDecisionSchema, 'input'),
+      Monitor: schema(MonitorSchema),
     },
   },
 });
@@ -457,7 +571,7 @@ write('events/repo.failed.schema.json', schema(RepoFailedEventSchema));
 write('events/repo.handover.requested.schema.json', schema(RepoHandoverRequestedEventSchema));
 write('events/repo.handed_over.schema.json', schema(RepoHandedOverEventSchema));
 for (const subject of Object.values(ORDER_SUBJECTS)) write(`events/${subject}.schema.json`, schema(OrderEventSchema));
-for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
+for (const subject of [SUBJECTS.ESCROW_DEPOSITED, SUBJECTS.ESCROW_RELEASED, SUBJECTS.ESCROW_REFUNDED, SUBJECTS.ESCROW_PAID_OUT]) write(`events/${subject}.schema.json`, schema(EscrowEventSchema));
 for (const subject of [SUBJECTS.DISPATCH_REQUESTED, SUBJECTS.DISPATCH_OFFERED, SUBJECTS.DISPATCH_ACCEPTED, SUBJECTS.DISPATCH_EXPIRED]) write(`events/${subject}.schema.json`, schema(DispatchEventSchema));
 for (const subject of [SUBJECTS.MILESTONE_SUBMITTED, SUBJECTS.MILESTONE_APPROVED, SUBJECTS.MILESTONE_REJECTED]) write(`events/${subject}.schema.json`, schema(MilestoneEventSchema));
 write('events/qa.requested.schema.json', schema(QaRequestedEventSchema));

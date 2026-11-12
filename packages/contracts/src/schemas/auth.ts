@@ -3,7 +3,9 @@ import { CoderStatsSchema } from './order';
 
 // Runtime contract for auth + profile (web/coder -> core-api). Session is an httpOnly cookie, never exposed to JS.
 
+/** Roles a user can pick (sign-up, POST /v1/me/roles). ADMIN is granted only in the DB (or dev-login). */
 export const UserRoleSchema = z.enum(['CUSTOMER', 'CODER']);
+export const AccountRoleSchema = z.enum(['CUSTOMER', 'CODER', 'ADMIN']);
 export const CurrencySchema = z.enum(['VND', 'USD']);
 
 export const ExperienceLevelSchema = z.enum(['ENTRY', 'INTERMEDIATE', 'EXPERT']);
@@ -48,7 +50,7 @@ export const MeSchema = z.object({
   /** Set for GitHub accounts (and dev logins). */
   githubLogin: z.string().nullable(),
   avatarUrl: z.string().nullable(),
-  roles: z.array(UserRoleSchema),
+  roles: z.array(AccountRoleSchema),
   currency: CurrencySchema,
   phone: z.string().nullable(),
   /** ISO 3166-1 alpha-2. */
@@ -117,10 +119,11 @@ export const PasswordLoginSchema = z.object({
 /** Local-only login (AUTH_DEV_LOGIN=true, never in production). */
 export const DevLoginSchema = z.object({
   login: z.string().trim().regex(/^[a-z0-9-]{2,39}$/i),
-  role: UserRoleSchema,
+  role: AccountRoleSchema,
 });
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
+export type AccountRole = z.infer<typeof AccountRoleSchema>;
 export type Me = z.infer<typeof MeSchema>;
 export type UpdateMe = z.infer<typeof UpdateMeSchema>;
 export type AuthProviders = z.infer<typeof AuthProvidersSchema>;

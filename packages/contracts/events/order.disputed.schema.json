@@ -13,7 +13,9 @@
         "order.started",
         "order.delivered",
         "order.accepted",
-        "order.disputed"
+        "order.disputed",
+        "order.cancelled",
+        "order.resolved"
       ]
     },
     "occurred_at": {
@@ -34,7 +36,9 @@
             "IN_PROGRESS",
             "DELIVERED",
             "ACCEPTED",
-            "DISPUTED"
+            "DISPUTED",
+            "CANCELLED",
+            "RESOLVED"
           ]
         },
         "from": {
@@ -48,7 +52,9 @@
                 "IN_PROGRESS",
                 "DELIVERED",
                 "ACCEPTED",
-                "DISPUTED"
+                "DISPUTED",
+                "CANCELLED",
+                "RESOLVED"
               ]
             },
             {

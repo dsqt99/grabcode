@@ -50,7 +50,9 @@ export type PaymentInstructions = z.infer<typeof PaymentInstructionsSchema>;
 /** Body of POST /v1/payments/dev-deposit (simulates the SePay webhook for the remaining amount). */
 export const DevDepositSchema = z.object({ orderId: z.string() });
 
-export const LedgerKindSchema = z.enum(['DEPOSIT', 'RELEASE']);
+/** ADJUST: admin moves a suspense deposit onto an order. REFUND: back to the customer. PAYOUT: coder withdrawal. */
+export const LedgerKindSchema = z.enum(['DEPOSIT', 'RELEASE', 'REFUND', 'PAYOUT', 'ADJUST']);
+export type LedgerKind = z.infer<typeof LedgerKindSchema>;
 
 /** GET /v1/me/wallet (coder earnings). */
 export const WalletSchema = z.object({

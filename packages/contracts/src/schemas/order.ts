@@ -4,7 +4,7 @@ import { AIBriefSchema, OrderTierSchema } from './brief';
 
 // Order core (S1). Postgres core.orders is the source of truth; every status change also writes an outbox event.
 
-export const OrderStatusSchema = z.enum(['DRAFT', 'FUNDED', 'DISPATCHED', 'IN_PROGRESS', 'DELIVERED', 'ACCEPTED', 'DISPUTED']);
+export const OrderStatusSchema = z.enum(['DRAFT', 'FUNDED', 'DISPATCHED', 'IN_PROGRESS', 'DELIVERED', 'ACCEPTED', 'DISPUTED', 'CANCELLED', 'RESOLVED']);
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
 /** Who may move an order along an edge. SYSTEM edges are taken by core-api itself, never via the API. */
@@ -15,16 +15,19 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
  * DELIVERED -> IN_PROGRESS is the customer's "request revision".
  * -> DISPUTED (customer, with a reason) freezes the escrow still held: no milestone can be approved or paid until an admin resolves it.
  * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
+ * DRAFT -> CANCELLED (unpaid or part-paid order, deposit refunded) and DISPUTED -> RESOLVED (escrow split) are taken by an admin (S7).
  * FUNDED -> DISPATCHED (first wave sent) and DISPATCHED -> IN_PROGRESS (a coder accepts an offer) are taken by dispatch.
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, OrderActor>>> = {
-  DRAFT: { FUNDED: 'SYSTEM' },
+  DRAFT: { FUNDED: 'SYSTEM', CANCELLED: 'SYSTEM' },
   FUNDED: { DISPATCHED: 'SYSTEM' },
   DISPATCHED: { IN_PROGRESS: 'SYSTEM' },
   IN_PROGRESS: { DELIVERED: 'CODER', DISPUTED: 'CUSTOMER' },
   DELIVERED: { ACCEPTED: 'CUSTOMER', DISPUTED: 'CUSTOMER', IN_PROGRESS: 'CUSTOMER' },
   ACCEPTED: {},
-  DISPUTED: {},
+  DISPUTED: { RESOLVED: 'SYSTEM' },
+  CANCELLED: {},
+  RESOLVED: {},
 };
 
 export const transitionActor = (from: OrderStatus, to: OrderStatus): OrderActor | undefined => ORDER_TRANSITIONS[from][to];
@@ -69,7 +72,7 @@ export const CoderStatsSchema = z.object({
 });
 export type CoderStats = z.infer<typeof CoderStatsSchema>;
 
-/** Tier from accepted orders; admin overrides come with S7. */
+/** Tier from accepted orders; an admin override (users.tier_override) wins. */
 export const coderTierFor = (completed: number): z.infer<typeof CoderTierSchema> =>
   completed >= 50 ? 'DIAMOND' : completed >= 20 ? 'GOLD' : completed >= 5 ? 'SILVER' : 'BRONZE';
 
