@@ -97,7 +97,7 @@
 - [x] ~~API: tách milestones sang bảng riêng~~ **Quyết định giữ jsonb** `orders.brief.milestones`: mọi thao tác mốc chạy dưới row lock `orders FOR UPDATE`, idempotency nằm ở ledger tx id `release:<order>:<milestone>` — không cần bảng riêng — 2dcf509
 - [x] Web: khách duyệt / yêu cầu sửa (bắt buộc ghi chú) từng mốc → duyệt nhả đúng phần ký quỹ của mốc (`milestoneShare`, tổng khớp giá); ACCEPTED quét nhả nốt mốc chưa trả (đơn cũ) — 2dcf509, efed16b
 - [x] Tranh chấp: khách mở `IN_PROGRESS|DELIVERED → DISPUTED` kèm lý do (`orders.dispute_reason`), DISPUTED chặn duyệt mốc → ký quỹ còn lại bị khoá; banner lý do trên web — 2dcf509, efed16b
-- [~] Bàn giao: ACCEPTED + repo READY → outbox `repo.handover.requested` → repo-worker cho khách quyền admin, hạ coder xuống pull → `repo.handed_over` → `order_repos.handed_over_at/to` — b4f40d7. **Chưa test thật** (cần 👤 GitHub App); smoke chỉ kiểm tra event được phát
+- [x] Bàn giao: ACCEPTED + repo READY → outbox `repo.handover.requested` → repo-worker cho khách quyền admin, hạ coder xuống pull → `repo.handed_over` → `order_repos.handed_over_at/to` — b4f40d7. test thật GC-1074 (GitHub App): 202 → `handed_over_to=dsqt99`; khách và coder cùng 1 tài khoản nên chỉ chứng minh API mời admin + hạ quyền chạy được
 - [x] Admin xử lý tranh chấp (hoàn tiền / nhả tiền phần còn khoá) — làm ở S7 `4845b21`
 - [x] Bàn giao khi khách không có GitHub login (hoặc lời mời bị từ chối): đơn ACCEPTED hiện nút "Nhận repo", khách nhập username → `POST /v1/repos/:orderId/handover` → repo-worker mời admin; kết quả trễ không xoá login đã giao — `a1ce99a`
 - Smoke: `node api/core-api/scripts/smoke-milestones.mjs` (core-api chạy, `AUTH_DEV_LOGIN=true`)
