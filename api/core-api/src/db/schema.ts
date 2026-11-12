@@ -39,7 +39,8 @@ export const users = core.table('users', {
   passwordHash: text('password_hash'),
   name: text('name').notNull(),
   avatarUrl: text('avatar_url'),
-  roles: text('roles', { enum: ['CUSTOMER', 'CODER'] }).array().notNull(),
+  // ADMIN is never self-service: granted by SQL (or dev-login when AUTH_DEV_LOGIN=true).
+  roles: text('roles', { enum: ['CUSTOMER', 'CODER', 'ADMIN'] }).array().notNull(),
   currency: text('currency', { enum: ['VND', 'USD'] }).notNull().default('VND'),
   phone: text('phone'),
   country: text('country').notNull().default('VN'),
@@ -48,6 +49,9 @@ export const users = core.table('users', {
   // Coder presence: online toggle + last GET /v1/me/offers poll (heartbeat). Matching only offers to fresh online coders.
   online: boolean('online').notNull().default(false),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  // S7 admin: tier override (null = computed from accepted orders); suspended coders get no offers.
+  tierOverride: text('tier_override', { enum: ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'] }),
+  suspended: boolean('suspended').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -102,7 +106,7 @@ export const orders = core.table(
       .notNull()
       .references(() => users.id),
     coderUserId: uuid('coder_user_id').references(() => users.id),
-    status: text('status', { enum: ['DRAFT', 'FUNDED', 'DISPATCHED', 'IN_PROGRESS', 'DELIVERED', 'ACCEPTED', 'DISPUTED'] }).notNull().default('DRAFT'),
+    status: text('status', { enum: ['DRAFT', 'FUNDED', 'DISPATCHED', 'IN_PROGRESS', 'DELIVERED', 'ACCEPTED', 'DISPUTED', 'CANCELLED', 'RESOLVED'] }).notNull().default('DRAFT'),
     tier: text('tier', { enum: ['EXPRESS', 'STANDARD', 'PRO', 'TEMPLATE'] }).notNull(),
     title: text('title').notNull(),
     prompt: text('prompt').notNull(),
@@ -152,11 +156,12 @@ export const repoCommits = core.table('repo_commits', {
   pushedAt: timestamp('pushed_at', { withTimezone: true }).notNull(),
 });
 
-// Escrow ledger (double-entry). The tx id is the idempotency key: 'sepay:<SePay id>', 'release:<orderId>', 'dev:<uuid>'.
+// Escrow ledger (double-entry). The tx id is the idempotency key: 'sepay:<SePay id>', 'release:<orderId>:<milestone>', 'dev:<uuid>',
+// 'resolve:<orderId>', 'refund:<orderId>:<n>', 'suspense:<deposit tx id>', 'payout:<request id>'.
 // Entries of one tx sum to 0 (checked before insert); an account balance is the sum of its entries.
 export const ledgerTxs = core.table('ledger_txs', {
   id: text('id').primaryKey(),
-  kind: text('kind', { enum: ['DEPOSIT', 'RELEASE'] }).notNull(),
+  kind: text('kind', { enum: ['DEPOSIT', 'RELEASE', 'REFUND', 'PAYOUT', 'ADJUST'] }).notNull(),
   orderId: text('order_id').references(() => orders.id),
   /** Raw source (e.g. SePay webhook body) for reconciliation. */
   meta: jsonb('meta'),
@@ -210,4 +215,23 @@ export const orderMessages = core.table(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('order_messages_order_idx').on(t.orderId, t.createdAt)],
+);
+
+// Coder withdrawals (S7). PENDING requests reserve wallet money; approval writes ledger tx 'payout:<id>'.
+export const payoutRequests = core.table(
+  'payout_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    coderUserId: uuid('coder_user_id')
+      .notNull()
+      .references(() => users.id),
+    amountVnd: bigint('amount_vnd', { mode: 'number' }).notNull(),
+    bankAccount: text('bank_account').notNull(),
+    status: text('status', { enum: ['PENDING', 'PAID', 'REJECTED'] }).notNull().default('PENDING'),
+    note: text('note'),
+    decidedBy: uuid('decided_by').references(() => users.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('payout_requests_coder_idx').on(t.coderUserId, t.status)],
 );

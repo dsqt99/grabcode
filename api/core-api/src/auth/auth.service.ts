@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { and, count, eq, gt, ne, sql } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
-import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type PasswordLogin, type Register, type UpdateMe, type UserRole } from '@grabcode/contracts/schemas';
+import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
 import { coderProfiles, customerProfiles, orders, sessions, users } from '../db/schema';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './password';
@@ -19,7 +19,7 @@ export interface Identity {
 }
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
-const addRoleSql = (role: UserRole) =>
+const addRoleSql = (role: AccountRole) =>
   sql`case when ${role}::text = any(${users.roles}) then ${users.roles} else array_append(${users.roles}, ${role}::text) end`;
 
 const toMe = (
@@ -44,7 +44,7 @@ const toMe = (
   coderProfile: coder ? (({ userId, updatedAt, ...rest }) => rest)(coder) : null,
   customerProfile: customer ? { companyName: customer.companyName, companySize: customer.companySize, website: customer.website } : null,
   // rating stays null until customer reviews (S4).
-  coderStats: u.roles.includes('CODER') ? { tier: coderTierFor(accepted), completedOrders: accepted, rating: null } : null,
+  coderStats: u.roles.includes('CODER') ? { tier: u.tierOverride ?? coderTierFor(accepted), completedOrders: accepted, rating: null } : null,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -66,7 +66,7 @@ export class AuthService {
    * Upsert an OAuth/dev user and open a session. Returns the raw token.
    * Provider name/avatar only seed a NEW account, so edits made in settings survive the next login.
    */
-  async login(id: Identity, role?: UserRole): Promise<{ token: string; user: UserRow }> {
+  async login(id: Identity, role?: AccountRole): Promise<{ token: string; user: UserRow }> {
     const [user] = await this.db
       .insert(users)
       .values({ ...id, roles: role ? [role] : [] })
@@ -83,7 +83,7 @@ export class AuthService {
     return { token: await this.createSession(user.id), user };
   }
 
-  async addRole(userId: string, role: UserRole): Promise<UserRow> {
+  async addRole(userId: string, role: AccountRole): Promise<UserRow> {
     const [user] = await this.db.update(users).set({ roles: addRoleSql(role), updatedAt: sql`now()` }).where(eq(users.id, userId)).returning();
     return user;
   }

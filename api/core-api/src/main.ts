@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BriefsModule } from './briefs/briefs.module';
 import { WEB_ORIGINS } from './config';
@@ -11,7 +12,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ReposModule } from './repos/repos.module';
 
-@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule, DispatchModule, RealtimeModule] })
+@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule, DispatchModule, RealtimeModule, AdminModule] })
 class AppModule {}
 
 async function bootstrap() {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { milestoneShare, orderIdFromTransfer, paymentCodeOf, payoutOf } from '@grabcode/contracts/schemas';
-import { BANK, PLATFORM, SUSPENSE, coderOf, depositEntries, escrowOf, isBalanced, releaseEntries } from './ledger';
+import { BANK, PLATFORM, SUSPENSE, coderOf, depositEntries, escrowOf, isBalanced, moveEntries, payoutEntries, releaseEntries, resolveEntries } from './ledger';
 
 test('deposit and release always balance', () => {
   for (const amount of [1, 10_000, 2_800_000, 6_543_210]) {
@@ -43,4 +43,24 @@ test('payment code round-trips through bank transfer content', () => {
   assert.equal(orderIdFromTransfer(null, 'NGUYEN VAN A chuyen tien gc1006 FT123'), 'GC-1006');
   assert.equal(orderIdFromTransfer('', 'GC-42 thanh toan'), 'GC-42');
   assert.equal(orderIdFromTransfer(null, 'chuyen tien'), null);
+});
+
+test('dispute split: refund + coder share + platform fee always equal the escrow', () => {
+  for (const [escrow, refund] of [[2_800_000, 0], [2_800_000, 2_800_000], [2_800_000, 1_000_000], [900, 0], [1_234_567, 7]]) {
+    const e = resolveEntries('GC-7', escrow, refund, 'k');
+    assert.ok(isBalanced(e), `${escrow}/${refund}`);
+    assert.equal(e[0].amountVnd, -escrow);
+    assert.equal(e.find((x) => x.account === BANK)?.amountVnd ?? 0, refund);
+    assert.ok(e.every((x) => x.account === escrowOf('GC-7') || x.amountVnd > 0), 'only escrow is debited');
+  }
+  // full refund: nothing for the coder or the platform
+  assert.deepEqual(resolveEntries('GC-7', 500_000, 500_000, 'k').map((x) => x.account), [escrowOf('GC-7'), BANK]);
+  // no refund: same split as releasing the whole price
+  assert.equal(resolveEntries('GC-7', 2_800_000, 0, 'k').find((x) => x.account === coderOf('k'))?.amountVnd, payoutOf(2_800_000));
+});
+
+test('refunds, payouts and suspense moves balance and debit the source', () => {
+  assert.deepEqual(payoutEntries(coderOf('k'), 300_000), [{ account: coderOf('k'), amountVnd: -300_000 }, { account: BANK, amountVnd: 300_000 }]);
+  assert.deepEqual(moveEntries(SUSPENSE, escrowOf('GC-7'), 50), [{ account: SUSPENSE, amountVnd: -50 }, { account: escrowOf('GC-7'), amountVnd: 50 }]);
+  assert.ok(isBalanced(payoutEntries(escrowOf('GC-7'), 1)));
 });

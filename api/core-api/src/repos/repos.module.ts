@@ -5,5 +5,5 @@ import { RepoResultsConsumer } from './repos.consumer';
 import { ReposController } from './repos.controller';
 import { ReposService } from './repos.service';
 
-@Module({ imports: [AuthModule, OrdersModule], controllers: [ReposController], providers: [ReposService, RepoResultsConsumer] })
+@Module({ imports: [AuthModule, OrdersModule], controllers: [ReposController], providers: [ReposService, RepoResultsConsumer], exports: [ReposService] })
 export class ReposModule {}

@@ -333,7 +333,7 @@ export class OrdersService {
       etaHours: o.etaHours,
       customer: party(c),
       // rating stays null until customer reviews exist (S4), same as /v1/me.
-      coder: k && { ...party(k), stats: { tier: coderTierFor(coderAccepted), completedOrders: coderAccepted, rating: null } },
+      coder: k && { ...party(k), stats: { tier: k.tierOverride ?? coderTierFor(coderAccepted), completedOrders: coderAccepted, rating: null } },
       createdAt: o.createdAt.toISOString(),
       updatedAt: o.updatedAt.toISOString(),
     }));

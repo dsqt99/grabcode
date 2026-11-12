@@ -85,6 +85,7 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
           and(
             sql`'CODER' = any(${users.roles})`,
             eq(users.online, true),
+            eq(users.suspended, false),
             gt(users.lastSeenAt, sql`now() - make_interval(secs => ${PRESENCE_TTL_SECONDS})`),
             ne(users.id, row.customerUserId),
             // one open offer per coder; never re-ask a coder who declined this order; busy coders are skipped.
