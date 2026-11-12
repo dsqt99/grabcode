@@ -148,6 +148,12 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Gate: web `/order/*` (role CUSTOMER), `/profile` (mọi user đã login); coder toàn app (role CODER). Chưa login → redirect `/login?next=...` (coder phải mở qua web `:3100/coder`, không mở trực tiếp `:3001`). Thiếu role → thẻ "Kích hoạt" gọi `POST /v1/me/roles`.
 - `/profile` (kiểu Upwork): thông tin liên hệ (`PATCH /v1/me`), hồ sơ Coder (`PUT /v1/me/coder-profile`), hồ sơ doanh nghiệp (`PUT /v1/me/customer-profile`), thông báo + tiền tệ, đổi mật khẩu (`POST /v1/me/password`, đăng xuất các phiên khác).
 
+### Admin portal (S7)
+- Chạy: `pnpm --filter @grabcode/admin dev` (`:3002`, basePath `/admin`), mở qua web `:3100/admin` (rewrite `ADMIN_ORIGIN`, chung cookie `gc_session`).
+- Cấp quyền: `update core.users set roles = array_append(roles, 'ADMIN') where email = '...'`; dev: `POST /v1/auth/dev-login {login, role: 'ADMIN'}`. Không có role ADMIN → `/v1/admin/*` trả 403.
+- Tab: Coders (tier override, khoá), Orders (chia tranh chấp, hoàn DRAFT nạp dở), Suspense (gán đơn / hoàn), Payouts (duyệt sau khi CK tay), Monitor (outbox, JetStream, job FAILED). Coder gửi yêu cầu rút ở coder app.
+- Smoke: `node api/core-api/scripts/smoke-admin.mjs` (core-api `AUTH_DEV_LOGIN=true`).
+
 ### Quy ước Git & Commit
 - Tiền tố theo component:
   * `feat(contract): define schema for video generation`

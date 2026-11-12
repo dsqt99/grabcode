@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). S6 realtime + chat xong; `notifier` chờ 👤 Zalo/FCM/VAPID. **Tiếp theo:** S7 Admin portal.
+**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). S6 realtime + chat xong; `notifier` chờ 👤 Zalo/FCM/VAPID. S7 Admin portal xong (cấu hình AI/bảng giá DB hoãn). **Tiếp theo:** nợ còn lại + việc 👤.
 
 ---
 
@@ -84,7 +84,7 @@
 - [x] Coder: offer thật thay giả lập (`WaveOfferModal`) — poll `/v1/me/offers` (kiêm heartbeat) (da40a03)
 - [x] Coder: trạng thái online/offline lưu server `PUT /v1/me/presence` (6eeec73, da40a03)
 - [x] Test: 2 coder nhận cùng lúc → chỉ 1 thắng — `pnpm --filter @grabcode/core-api smoke:dispatch` 17 check (6eeec73, 87a517e)
-- [ ] Push offer qua Centrifugo thay vì poll
+- [x] Push offer qua Centrifugo thay vì poll — `2fe55c7`
 - [ ] Đơn không có coder nào online: chờ vô hạn — cần cảnh báo khách / admin, hoàn tiền sau N giờ
 - [ ] Đồng hồ offer: client kẹp theo 30s; nên trả `secondsLeft` từ API nếu lệch giờ client/DB
 
@@ -129,14 +129,17 @@
 
 ## S7 — Admin portal
 
-- [ ] App `apps/admin` (Next.js 15) + role ADMIN trong contract / API
-- [ ] Quản lý coder tier, khoá / mở coder
-- [ ] Giải quyết tranh chấp (hoàn / nhả tiền qua ledger)
-- [ ] Đối soát tài khoản `suspense` (CK sai nội dung / không khớp đơn) — gán vào đơn hoặc hoàn
-- [ ] Hoàn tiền thừa / huỷ đơn DRAFT đã nạp một phần (tiền thừa hiện nằm lại escrow)
-- [ ] Coder rút tiền từ ví về ngân hàng (payout, duyệt thủ công)
-- [ ] Giám sát worker / queue (JetStream consumer lag, job FAILED, thử lại)
-- [ ] Cấu hình AI model & bảng giá (đọc từ DB thay `.env`)
+- [x] App `apps/admin` (Next.js 15, mở qua web `/admin`) + role ADMIN trong contract / API — `9ad6df4` `4845b21` `c4e59d0`
+- [x] Quản lý coder tier (override), khoá / mở coder (khoá = offline, không nhận wave) — `4845b21` `c4e59d0`
+- [x] Giải quyết tranh chấp: chia escrow hoàn khách / nhả coder qua ledger, DISPUTED → RESOLVED — `4845b21` `c4e59d0`
+- [x] Đối soát tài khoản `suspense` (CK sai nội dung / không khớp đơn) — gán vào đơn hoặc hoàn — `4845b21` `c4e59d0`
+- [x] Hoàn tiền thừa / huỷ đơn DRAFT đã nạp một phần → CANCELLED — `4845b21` `c4e59d0`
+- [x] Coder rút tiền từ ví về ngân hàng (payout, duyệt thủ công) — `4845b21` `c4e59d0` `67c48b0`
+- [x] Giám sát worker / queue (JetStream consumer lag, job FAILED, thử lại repo) — `4845b21` `c4e59d0`
+- [x] Smoke `scripts/smoke-admin.mjs` (34 check) — `3a04826`
+- [ ] Cấu hình AI model & bảng giá (đọc từ DB thay `.env`) — hoãn: bảng giá dùng chung với ước tính ở web qua contracts, chuyển DB phải đổi cả web + API
+- [ ] Thử lại job brief/QA/sandbox FAILED từ admin (hiện chỉ repo)
+- [ ] Chuyển khoản payout tự động (hiện admin CK tay rồi bấm duyệt)
 
 ---
 
