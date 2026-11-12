@@ -1,10 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { and, count, eq, gt, ne, sql } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
 import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
 import { coderProfiles, customerProfiles, orders, sessions, users } from '../db/schema';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './password';
+import { Throttle } from './throttle';
 
 export const SESSION_COOKIE = 'gc_session';
 export const SESSION_TTL_MS = 30 * 24 * 3600 * 1000;
@@ -50,6 +51,9 @@ const toMe = (
 
 @Injectable()
 export class AuthService {
+  private readonly emailFails = new Throttle(10, 15 * 60_000);
+  private readonly ipFails = new Throttle(30, 15 * 60_000);
+
   constructor(@Inject(DB) private readonly db: Db) {}
 
   /** Me with both profiles loaded. */
@@ -131,12 +135,22 @@ export class AuthService {
     return { token: await this.createSession(user.id), user };
   }
 
-  /** Same 401 for unknown email and wrong password, so the response does not reveal which emails exist. */
-  // shortcut: no brute-force throttling; add per-IP/per-email rate limit (Redis) before public launch.
-  async passwordLogin(input: PasswordLogin): Promise<{ token: string; user: UserRow }> {
+  /**
+   * Same 401 for unknown email and wrong password, so the response does not reveal which emails exist.
+   * 10 failures per email or 30 per IP in 15 minutes -> 429 until the window ends (checked before the password).
+   */
+  async passwordLogin(input: PasswordLogin, ip = ''): Promise<{ token: string; user: UserRow }> {
+    const keys = [`e:${input.email}`, `i:${ip}`];
+    if (this.emailFails.blocked(keys[0]) || this.ipFails.blocked(keys[1]))
+      throw new HttpException({ message: 'Too many failed attempts, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
     const [row] = await this.db.select().from(users).where(eq(users.providerKey, `email:${input.email}`));
     const ok = await verifyPassword(input.password, row?.passwordHash ?? (await DUMMY_HASH));
-    if (!row || !ok) throw new UnauthorizedException({ message: 'Wrong email or password' });
+    if (!row || !ok) {
+      this.emailFails.fail(keys[0]);
+      this.ipFails.fail(keys[1]);
+      throw new UnauthorizedException({ message: 'Wrong email or password' });
+    }
+    this.emailFails.reset(keys[0]);
     const { email, githubLogin, name, avatarUrl, providerKey } = row;
     return this.login({ providerKey, email, githubLogin, name, avatarUrl });
   }

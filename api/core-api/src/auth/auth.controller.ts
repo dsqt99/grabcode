@@ -83,10 +83,10 @@ export class AuthController {
 
   @Post('auth/login')
   @HttpCode(200)
-  async passwordLogin(@Body() body: unknown, @Res({ passthrough: true }) res: Response): Promise<Me> {
+  async passwordLogin(@Req() req: Request, @Body() body: unknown, @Res({ passthrough: true }) res: Response): Promise<Me> {
     const parsed = PasswordLoginSchema.safeParse(body);
     if (!parsed.success) throw invalid(parsed.error.issues);
-    const { token, user } = await this.auth.passwordLogin(parsed.data);
+    const { token, user } = await this.auth.passwordLogin(parsed.data, req.ip);
     this.setSession(res, token);
     return this.auth.me(user);
   }
