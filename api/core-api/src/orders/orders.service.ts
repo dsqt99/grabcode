@@ -19,6 +19,7 @@ import {
   type OrderEvent,
   type OrderStatus,
   type ChatMessage,
+  type ChatPostedEvent,
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
@@ -182,10 +183,22 @@ export class OrdersService {
     return rows.reverse().map(({ m, name }) => chatOf(row, m, name));
   }
 
-  /** The insert trigger pushes a `chat` hint to both parties. */
+  /** The insert trigger pushes a `chat` hint to both parties; chat.posted lets notifier push to the other side. */
   async sendMessage(user: UserRow, id: string, text: string): Promise<ChatMessage> {
     const row = await this.party(user, id);
-    const [m] = await this.db.insert(orderMessages).values({ orderId: id, senderUserId: user.id, body: text }).returning();
+    const other = (u: string | null) => (u && u !== user.id ? u : null);
+    const to = { toCustomerUserId: other(row.customerUserId), toCoderUserId: other(row.coderUserId) };
+    const m = await this.db.transaction(async (tx) => {
+      const [m] = await tx.insert(orderMessages).values({ orderId: id, senderUserId: user.id, body: text }).returning();
+      const event: ChatPostedEvent = {
+        event_id: randomUUID(),
+        type: SUBJECTS.CHAT_POSTED,
+        occurred_at: new Date().toISOString(),
+        data: { orderId: id, senderName: user.name, ...to, preview: text.slice(0, 120) },
+      };
+      if (to.toCustomerUserId || to.toCoderUserId) await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+      return m;
+    });
     return chatOf(row, m, user.name);
   }
 
