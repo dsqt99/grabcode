@@ -124,6 +124,12 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Luồng: coder nhận đơn → `POST /v1/repos` (idempotent theo `orderId`, FAILED thì xếp lại) → outbox `repo.requested` → repo-worker: tạo repo private (`gc-<số đơn>`), commit `CLAUDE.md`, branch protection (chặn force-push; org Free + repo private sẽ bị 403, chỉ cảnh báo), mời coder quyền push → `repo.provisioned|failed` → `core.order_repos`. Push webhook → `core.repo_commits` → `GET /v1/repos/:orderId`.
 - Coder được mời theo `users.github_login` (login GitHub) hoặc link GitHub trong hồ sơ Coder; không có thì repo vẫn tạo nhưng chưa mời.
 
+### QA Gate & sandbox (qa-worker, deploy-worker)
+- Chạy: `pnpm --filter @grabcode/qa-worker dev`, `pnpm --filter @grabcode/deploy-worker dev` (cùng core-api + outbox-relay). qa-worker cần Docker (image `QA_IMAGE`, mặc định `node:22-alpine`); deploy-worker cần `gcloud` đã login + `GCP_PROJECT` (thiếu → sandbox `FAILED`).
+- Luồng QA: coder nộp mốc (repo READY) → `qa.requested` → clone commit (bỏ `.git`) → quét secret + install/lint/typecheck/build/test/audit, mỗi bước 1 container → `qa.completed` → `brief.milestones[].qa`.
+- Luồng sandbox: đơn DELIVERED → `deploy.requested` → `gcloud run deploy --source` → `deploy.ready|failed` → `orders.sandbox`; quá `SANDBOX_TTL_HOURS` → xóa service, `deploy.expired`.
+- Test không cần GitHub: `GIT_CLONE_BASE=file:///<dir>` cho cả 2 worker, rồi `REPOS=<dir> node api/core-api/scripts/smoke-qa.mjs`.
+
 ### Đăng nhập (Auth) local
 - core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
 - GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
