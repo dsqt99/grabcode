@@ -155,6 +155,10 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Tab: Coders (tier override, khoá), Orders (chia tranh chấp, hoàn DRAFT nạp dở), Suspense (gán đơn / hoàn), Payouts (duyệt sau khi CK tay), Monitor (outbox, JetStream, job FAILED). Coder gửi yêu cầu rút ở coder app.
 - Smoke: `node api/core-api/scripts/smoke-admin.mjs` (core-api `AUTH_DEV_LOGIN=true`).
 
+### Image deploy (core-api + workers)
+- `docker build -f infra/node-service.Dockerfile --build-arg PKG=@grabcode/core-api -t grabcode/core-api .` (đổi `PKG` cho từng worker). Chạy bằng tsx, user `node`, cấu hình qua env (không copy `.env`/`credentials`).
+- qa-worker cần Docker CLI + socket, deploy-worker cần `gcloud`: chạy nơi host có sẵn. Web/coder/admin (Next.js) chưa có image.
+
 ### Quy ước Git & Commit
 - Tiền tố theo component:
   * `feat(contract): define schema for video generation`
