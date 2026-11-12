@@ -72,11 +72,11 @@ const orderPath = (id: string) => `/v1/orders/${encodeURIComponent(id)}`;
 const transition = (id: string, status: OrderStatus) => api<OrderDto>(`${orderPath(id)}/transitions`, { status });
 
 /** Server wave offer -> the modal's card. */
-const pendingOf = ({ id, order: o, expiresAt, createdAt }: DispatchOffer): PendingOffer => {
+const pendingOf = ({ id, order: o, expiresAt, createdAt, secondsLeft }: DispatchOffer): PendingOffer => {
   const view = toViewOrder(o);
   const seconds = Math.round((Date.parse(expiresAt) - Date.parse(createdAt)) / 1000);
-  // shortcut: clamp so a client/DB clock skew never shows more than the offer window; send secondsLeft from the API if skew bites.
-  return { order: view, offer: waveOf(id, o, view, seconds, createdAt), expiresAt: Math.min(Date.parse(expiresAt), Date.now() + seconds * 1000) };
+  // Countdown from the server's secondsLeft, not the client clock (skew-proof).
+  return { order: view, offer: waveOf(id, o, view, seconds, createdAt), expiresAt: Date.now() + secondsLeft * 1000 };
 };
 const waveOf = (id: string, o: OrderDto, view: Order, expiresInSeconds: number, createdAt: string): WaveOffer => ({
   id,
