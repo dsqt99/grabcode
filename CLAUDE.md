@@ -130,6 +130,13 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Luồng sandbox: đơn DELIVERED → `deploy.requested` → `gcloud run deploy --source` → `deploy.ready|failed` → `orders.sandbox`; quá `SANDBOX_TTL_HOURS` → xóa service, `deploy.expired`.
 - Test không cần GitHub: `GIT_CLONE_BASE=file:///<dir>` cho cả 2 worker, rồi `REPOS=<dir> node api/core-api/scripts/smoke-qa.mjs`.
 
+### Realtime & chat (Centrifugo)
+- `.env`: `CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY` (chuỗi ngẫu nhiên, dùng chung cho core-api ký JWT và Centrifugo), `REALTIME_WS_URL`. Thiếu secret → `GET /v1/realtime/token` trả 404, app tự về polling 3s.
+- Chạy: `docker compose up -d centrifugo` (`127.0.0.1:8000`, config `infra/centrifugo.json`, `allowed_origins` phải có origin web/coder).
+- Luồng: ghi DB (API, worker consumer, webhook) → trigger `core.realtime_hint()` ghi `public.centrifugo_outbox` cùng transaction → Centrifugo consumer `core_pg` broadcast kênh `user.<id>` → client (`onRealtimeHint` trong contracts) refetch REST. Hint chỉ `{type, orderId}`, không mang state.
+- Chat: `GET/POST /v1/orders/:id/messages` (`core.order_messages`), chỉ khách/coder của đơn; tin SYSTEM ở web vẫn là local.
+- Smoke: `node api/core-api/scripts/smoke-realtime.mjs` (core-api `AUTH_DEV_LOGIN=true` + Centrifugo chạy).
+
 ### Đăng nhập (Auth) local
 - core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
 - GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.

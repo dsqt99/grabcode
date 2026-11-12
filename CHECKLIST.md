@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). **Tiếp theo:** S6 Realtime & thông báo.
+**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). S6 realtime + chat xong; `notifier` chờ 👤 Zalo/FCM/VAPID. **Tiếp theo:** S7 Admin portal.
 
 ---
 
@@ -115,9 +115,15 @@
 
 ## S6 — Realtime & thông báo
 
-- [ ] Centrifugo trong docker-compose; core-api phát kênh theo đơn / coder
-- [ ] Web + coder thay polling (brief, repo, tiến độ, offer) bằng subscribe
-- [ ] Chat backend khách ↔ coder (lưu Postgres) thay `OrderChatBox` / `CoderChat` mock (hiện localStorage/eventBus)
+- [x] Contract: `RealtimeHint` / `RealtimeToken`, chat schemas + endpoints, client Centrifugo dùng chung (WebSocket thô, không SDK) — `ed1fa04` `a06df7b` `7a72052`
+- [x] Centrifugo v6 trong docker-compose; trigger Postgres ghi hint vào `centrifugo_outbox` (cùng transaction, phủ API + worker consumer + webhook), kênh `user.<id>`; `GET /v1/realtime/token` (JWT HS256) — `7912d57`
+- [x] Chat khách ↔ coder lưu Postgres (`core.order_messages`), `GET/POST /v1/orders/:id/messages`, chỉ 2 bên của đơn — `7912d57`
+- [x] Web + coder: hint → refetch REST (đơn, thanh toán, repo/commit, offer, chat); poll giữ làm lưới an toàn 30s khi socket sống, 3s khi không — `2fe55c7`
+- [x] Smoke `api/core-api/scripts/smoke-realtime.mjs`: hint order/chat tới đúng user, user khác không nhận, chat 400/404 — `c63070f`
+- Brief vẫn poll: brief job ẩn danh (landing chưa login), không có kênh user
+- [ ] Token không refresh (24h, reconnect lấy token mới) và không recovery hint lỡ khi offline — đang dựa vào poll 30s
+- [ ] `centrifugo_outbox` phình nếu Centrifugo không chạy; cần job dọn hàng cũ
+- [ ] Coder app: chưa verify trên browser luồng nhận offer qua hint (chỉ typecheck + smoke API)
 - [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
 - [ ] `notifier`: Zalo ZNS, FCM, WebPush theo cài đặt thông báo trong `/profile`
 
