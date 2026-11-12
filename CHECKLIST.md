@@ -161,6 +161,6 @@
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
 - [x] `TRUST_PROXY` (vd `1` trên Cloud Run) bật express trust proxy để `req.ip` là IP khách — `52614af`
 - [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica
-- [ ] Liên kết tài khoản cùng email giữa các provider — `api/core-api/src/db/schema.ts:33`
+- [x] Liên kết tài khoản giữa các provider: nút Liên kết ở /profile khi đang login (`?link=1`, `core.user_identities`), không gộp theo email — 5e0f38d
 - [ ] Gộp `RequireAuth` + `lib/auth.tsx` trùng giữa web và coder vào package UI chung — `apps/*/components/RequireAuth.tsx`, `apps/*/lib/auth.tsx`
 - [x] Múi giờ đầy đủ (`Intl.supportedValuesOf`) trong `/profile`, contract từ chối múi giờ lạ (400) — `d4cd6a6` `39b366c`
