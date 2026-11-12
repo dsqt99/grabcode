@@ -5,6 +5,7 @@
     "dev": "pnpm -r --parallel --stream run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run lint",
     "test": "pnpm -r --if-present run test",
     "generate": "pnpm --filter @grabcode/contracts run generate"
   },
