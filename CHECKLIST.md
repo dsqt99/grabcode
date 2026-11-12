@@ -124,7 +124,7 @@
 - Brief vẫn poll: brief job ẩn danh (landing chưa login), không có kênh user
 - [x] Token refresh tại chỗ trước hạn (`refresh` command, kiểm với Centrifugo thật) — `b6b4773`; hint lỡ khi offline không replay: socket không live thì poll 3s đã bù
 - [x] `centrifugo_outbox` phình nếu Centrifugo không chạy → core-api xoá hint quá 10 phút, mỗi 10 phút — `a83414c`
-- [ ] Coder app: chưa verify trên browser luồng nhận offer qua hint (chỉ typecheck + smoke API)
+- [x] Coder app verify trên browser: offer mới → fetch `/v1/me/offers` sau 85 ms và 0,7 s (poll đang 30 s) → modal offer hiện, từ chối OK
 - [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
 - [ ] `notifier`: Zalo ZNS, FCM, WebPush theo cài đặt thông báo trong `/profile`
 
