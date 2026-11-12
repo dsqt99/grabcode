@@ -35,7 +35,7 @@
 - [~] 👤 Tạo GitHub App trên org `grabcode-sandbox` (quyền Administration RW, Contents RW, Metadata R; event Push), cài vào org — đã tạo + cài; **còn tick "Push" ở Subscribe to events** (hiện `events: []`)
 - [x] 👤 Điền `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_APP_WEBHOOK_SECRET` trong `.env`
 - [~] Webhook local qua smee.io / ngrok → `/v1/github/webhook`; test 1 đơn end-to-end (repo tạo, coder được mời, push hiện commit) — GC-1074: repo `gc-1074` private + `CLAUDE.md` + mời `dsqt99` OK, smee chuyển webhook (chữ ký thật 204); push chưa về vì App chưa subscribe Push
-- [ ] Commit `CLAUDE.md` đầu tiên không vào timeline: webhook push tới trước khi `order_repos` READY (chưa có `repo_full_name`) → bị bỏ
+- [x] Commit `CLAUDE.md` đầu tiên không vào timeline (push tới trước READY): webhook khớp `gc-<n>` với order_repos PENDING — `d70d2bb`
 - [x] Xoá dòng test `GC-3428` (FAILED) trong `core.order_repos` (migration 0006 xoá repo không có đơn) — `b73486c`
 - [ ] Mở PR `feat/s0-backend-core` → `main`
 
