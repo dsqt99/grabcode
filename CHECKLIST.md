@@ -126,8 +126,8 @@
 - [x] Token refresh tại chỗ trước hạn (`refresh` command, kiểm với Centrifugo thật) — `b6b4773`; hint lỡ khi offline không replay: socket không live thì poll 3s đã bù
 - [x] `centrifugo_outbox` phình nếu Centrifugo không chạy → core-api xoá hint quá 10 phút, mỗi 10 phút — `a83414c`
 - [x] Coder app verify trên browser: offer mới → fetch `/v1/me/offers` sau 85 ms và 0,7 s (poll đang 30 s) → modal offer hiện, từ chối OK
-- [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
-- [ ] `notifier`: Zalo ZNS, FCM, WebPush theo cài đặt thông báo trong `/profile`
+- [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM) — VAPID WebPush tự sinh được (`npx web-push generate-vapid-keys`), không cần 👤
+- [~] `notifier`: WebPush xong — order.* + dispatch.offered → người liên quan có `notifications.push` bật, mọi trình duyệt đã đăng ký (`core.push_subscriptions`, nút bật/tắt ở `/profile`, `public/sw.js`), 404/410 tự xoá endpoint — c978a30 018277c bd84a77 45e180d. Test: push service giả (https) giải mã đúng payload, VAPID header OK; **chưa test Chrome thật** (pane không cho service worker). Còn Zalo ZNS, FCM (chờ 👤), chat chưa có event để push
 
 ## S7 — Admin portal
 

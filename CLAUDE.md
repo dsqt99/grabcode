@@ -138,6 +138,11 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Chat: `GET/POST /v1/orders/:id/messages` (`core.order_messages`), chỉ khách/coder của đơn; tin SYSTEM ở web vẫn là local.
 - Smoke: `node api/core-api/scripts/smoke-realtime.mjs` (core-api `AUTH_DEV_LOGIN=true` + Centrifugo chạy).
 
+### Thông báo đẩy (notifier, WebPush)
+- `.env`: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (sinh: `npx web-push generate-vapid-keys`). Thiếu → `GET /v1/push/key` 404, nút ở `/profile` ẩn, notifier ack bỏ qua.
+- Chạy: `pnpm --filter @grabcode/notifier dev` (cùng core-api + outbox-relay).
+- Luồng: `/profile` bật "Thông báo đẩy" → "Bật trên trình duyệt này" → `public/sw.js` + `PUT /v1/me/push-subscriptions` (`core.push_subscriptions`) → notifier nghe `order.*` + `dispatch.offered` → push tới user liên quan (`notifications.push` bật); endpoint 404/410 tự xoá. Zalo ZNS / FCM chưa làm.
+
 ### Đăng nhập (Auth) local
 - core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
 - GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
