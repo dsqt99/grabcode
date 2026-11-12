@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
     "start": "tsx --env-file-if-exists=../../.env src/main.ts",
-    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/throttle.test.ts src/auth/password.test.ts src/repos/repos.test.ts",

@@ -5,13 +5,16 @@
     "dev": "pnpm -r --parallel --stream run dev",
     "stack": "docker compose up -d --wait && pnpm --filter @grabcode/core-api db:migrate && pnpm dev",
     "build": "pnpm -r run build",
-    "lint": "pnpm -r run lint",
-    "typecheck": "pnpm -r run lint",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r --if-present run test",
     "generate": "pnpm --filter @grabcode/contracts run generate"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.72.2"
   },
   "packageManager": "pnpm@10.15.1",
   "pnpm": {

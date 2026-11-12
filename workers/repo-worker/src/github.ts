@@ -66,6 +66,7 @@ export function createGitHubApp(cfg: { appId: string; installationId: string; pr
 }
 
 /** Throws GitHubError unless the status is one of `ok`. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw GitHub JSON, callers pick the fields they read
 export function expect(r: { status: number; rateLimitRemaining: string | null; json: any }, ok: number[], what: string) {
   if (ok.includes(r.status)) return r.json;
   throw new GitHubError(r.status, `${what} ${r.status}: ${r.json?.message ?? ''}`, r.status === 401 || isRetryableStatus(r.status, r.rateLimitRemaining));

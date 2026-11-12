@@ -16,5 +16,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Contract drift: generated OpenAPI / event schemas must match the zod source.
       - run: pnpm generate && git diff --exit-code packages/contracts
+      - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

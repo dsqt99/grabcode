@@ -27,7 +27,6 @@ export default function Navbar() {
       <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
           <Link href="/" className="flex shrink-0 items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="GrabCode" width={240} height={47} className="h-8 w-auto md:h-9" />
           </Link>
 
@@ -49,7 +48,6 @@ export default function Navbar() {
             ) : (
               <Link href="/profile" className="btn-ghost !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
                 {me?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={me.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                 ) : me ? (
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald font-display text-sm font-bold uppercase text-white" aria-hidden>

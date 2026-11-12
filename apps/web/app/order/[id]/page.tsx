@@ -88,7 +88,7 @@ export default function OrderPage() {
       return;
     }
     initChat(loadOrder(id) ?? INITIAL_DEMO_ORDER);
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // API mode: the server is the source of truth. Refetch on a realtime hint; slow poll as safety net (fast if no socket).
   useEffect(() => {

@@ -425,7 +425,7 @@ export function useCoder() {
       payload: { orderId: o.order.id, milestoneId: ms[0].id, status: 'IN_PROGRESS' },
       timestamp: nowIso(),
     });
-  }, [commit, patch, profile, setPending, applyDto, toast]);
+  }, [commit, profile, setPending, applyDto, toast]);
 
   const rejectOffer = useCallback(
     (reason: 'DECLINED' | 'TIMEOUT') => {

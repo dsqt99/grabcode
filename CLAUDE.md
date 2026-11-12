@@ -106,7 +106,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
   * Chạy Admin: `pnpm --filter @grabcode/admin dev`
   * Chạy API: `pnpm --filter @grabcode/core-api dev`
   * Chạy Worker: `pnpm --filter @grabcode/brief-worker dev`
-- **Kiểm tra Lint & Typecheck**: `pnpm lint && pnpm typecheck`
+- **Kiểm tra Lint & Typecheck**: `pnpm lint && pnpm typecheck` (ESLint flat config ở root `eslint.config.mjs`; typecheck = `tsc --noEmit` từng package)
 - **Chạy Unit Test**: `pnpm test`
 
 ### Chạy luồng AI Brief local (S0)

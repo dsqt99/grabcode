@@ -52,7 +52,8 @@ async function step(dir: string, corepack: string, s: Step): Promise<Check> {
   try {
     const { stdout, stderr } = await run('docker', args, { timeout: STEP_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 });
     return { name: s.name, status: 'PASSED', detail: tail(stdout + stderr, 400) };
-  } catch (err: any) {
+  } catch (e) {
+    const err = e as { killed?: boolean; code?: unknown; stdout?: string; stderr?: string };
     // The CLI timing out does not stop the container.
     if (err.killed) await run('docker', ['rm', '-f', name]).catch(() => {});
     if (typeof err.code !== 'number' && !err.killed) throw err; // docker itself missing: gate ERROR, not a coder failure

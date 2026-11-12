@@ -159,7 +159,6 @@ function AccountForm({ me }: { me: Me }) {
     >
       <div className="flex items-center gap-4">
         {f.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={f.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-emerald/30" />
         ) : (
           <span className="material-symbols-outlined grid h-16 w-16 place-items-center rounded-full bg-emerald/10 !text-[36px] text-emerald" aria-hidden>

@@ -45,6 +45,7 @@ export function useOrderRepo(order: { id: string; title: string; brief: { claude
       off();
     };
     // Re-run per order and on retry only; title/brief of a given order do not change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, attempt]);
 
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
