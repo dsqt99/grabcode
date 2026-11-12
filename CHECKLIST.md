@@ -154,7 +154,8 @@
 - [x] Test API: unit (scrypt, chữ ký webhook, parse login GitHub) + `smoke-auth.mjs` (đăng ký/login/đổi mật khẩu/session hết hạn, briefs, repos: chữ ký sai, push trùng lưu 1 lần) — `353846a`
 - [x] `POST /v1/briefs` công khai (landing trước login) → giới hạn 20 brief/IP/giờ, quá thì 429, web tự fallback brief mẫu — `1bd5659`
 - [x] Dockerfile chung `infra/node-service.Dockerfile` (`PKG` = core-api / worker), non-root, đã build + chạy thử core-api, outbox-relay — `f6a2d0c`
-- [ ] Image Next.js (web/coder/admin) + cấu hình deploy thật (Cloud Run service, secret manager)
+- [x] Image Next.js web/coder/admin: `infra/next-app.Dockerfile` (đã build + chạy thử web) — 8ca643b
+- [ ] 👤 Deploy thật: Cloud Run service cho core-api/workers/apps, Secret Manager cho secret `.env` (cần project GCP)
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
