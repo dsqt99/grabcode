@@ -17,7 +17,7 @@ import {
   type SuspenseItem,
 } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { briefJobs, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, users } from '../db/schema';
+import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, users } from '../db/schema';
 import { emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { SUSPENSE, coderOf, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
@@ -37,6 +37,9 @@ const escrowSql = sql<string>`(select coalesce(sum(e.amount_vnd), 0) from core.l
 const paidSql = sql<string>`(select coalesce(sum(e.amount_vnd), 0) from core.ledger_entries e where e.account = 'escrow:' || "orders"."id" and e.amount_vnd > 0)`;
 /** Statuses where money left in escrow is not owed to anyone in progress: refundable by an admin. */
 const REFUNDABLE = ['DRAFT', 'ACCEPTED', 'RESOLVED', 'CANCELLED'] as const;
+/** Paid but no coder has accepted yet: the admin may cancel + refund (no online coder, nobody wants it). */
+const UNASSIGNED = ['FUNDED', 'DISPATCHED'] as const;
+const cancellable = (o: OrderRow) => o.status === 'DRAFT' || ((UNASSIGNED as readonly string[]).includes(o.status) && !o.coderUserId);
 
 /** Wallet minus PENDING payout requests: what a coder may still request / an admin may still pay. */
 async function freeWallet(tx: Tx, userId: string, exceptId?: string) {
@@ -109,7 +112,12 @@ export class AdminService {
       .where(
         id
           ? eq(orders.id, id)
-          : or(eq(orders.status, 'DISPUTED'), and(inArray(orders.status, [...REFUNDABLE]), sql`${escrowSql} > 0`)),
+          : or(
+              eq(orders.status, 'DISPUTED'),
+              and(inArray(orders.status, [...REFUNDABLE]), sql`${escrowSql} > 0`),
+              // createdAt, not updatedAt: every dispatch wave bumps updatedAt.
+              and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - interval '30 minutes'`),
+            ),
       )
       .orderBy(desc(orders.updatedAt))
       .limit(200);
@@ -156,13 +164,16 @@ export class AdminService {
   async refund(id: string): Promise<AdminOrder> {
     await this.db.transaction(async (tx) => {
       const row = await this.lockOrder(tx, id);
-      if (!(REFUNDABLE as readonly string[]).includes(row.status)) throw new ConflictException({ message: `Order ${row.status} is in progress` });
+      const cancel = cancellable(row);
+      if (!cancel && !(REFUNDABLE as readonly string[]).includes(row.status)) throw new ConflictException({ message: `Order ${row.status} is in progress` });
       const escrow = await balanceOf(tx, escrowOf(id));
-      if (escrow <= 0 && row.status !== 'DRAFT') throw new ConflictException({ message: 'Escrow is empty' });
+      if (escrow <= 0 && !cancel) throw new ConflictException({ message: 'Escrow is empty' });
       if (escrow > 0) await postTx(tx, `refund:${id}:${randomUUID()}`, 'REFUND', id, payoutEntries(escrowOf(id), escrow));
-      if (row.status === 'DRAFT') {
+      if (cancel) {
+        // Order row is locked, so no offer accept can slip in; open offers just expire.
+        await tx.update(dispatchOffers).set({ status: 'EXPIRED' }).where(and(eq(dispatchOffers.orderId, id), eq(dispatchOffers.status, 'PENDING')));
         const [next] = await tx.update(orders).set({ status: 'CANCELLED', updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
-        await emit(tx, next, 'DRAFT');
+        await emit(tx, next, row.status);
       }
     });
     return (await this.orders(id))[0];
