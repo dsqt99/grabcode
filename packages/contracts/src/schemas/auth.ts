@@ -105,6 +105,15 @@ export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+/** Browser PushSubscription.toJSON() (WebPush). One row per endpoint; re-subscribing the same endpoint moves it to the caller. */
+export const PushSubscriptionSchema = z.object({
+  endpoint: z.string().url().startsWith('https://').max(1000),
+  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+});
+export const PushUnsubscribeSchema = z.object({ endpoint: z.string().max(1000) });
+/** VAPID public key (applicationServerKey). 404 when WebPush is not configured. */
+export const PushKeySchema = z.object({ publicKey: z.string() });
+
 /** Which login methods core-api has enabled, so the UI only offers working buttons. */
 export const AuthProvidersSchema = z.object({
   password: z.boolean(),
@@ -145,6 +154,8 @@ export type AuthProviders = z.infer<typeof AuthProvidersSchema>;
 export type OAuthProvider = z.infer<typeof OAuthProviderSchema>;
 export type Register = z.infer<typeof RegisterSchema>;
 export type PasswordLogin = z.infer<typeof PasswordLoginSchema>;
+export type PushSubscriptionInput = z.infer<typeof PushSubscriptionSchema>;
+export type PushKey = z.infer<typeof PushKeySchema>;
 export type NotificationPrefs = z.infer<typeof NotificationPrefsSchema>;
 export type ExperienceLevel = z.infer<typeof ExperienceLevelSchema>;
 export type HoursPerWeek = z.infer<typeof HoursPerWeekSchema>;

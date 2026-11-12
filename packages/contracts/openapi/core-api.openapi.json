@@ -613,6 +613,104 @@
         }
       }
     },
+    "/v1/push/key": {
+      "get": {
+        "operationId": "getPushKey",
+        "summary": "VAPID public key for PushManager.subscribe. Public.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "WebPush not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/push-subscriptions": {
+      "put": {
+        "operationId": "savePushSubscription",
+        "summary": "Store this browser's WebPush subscription for the signed-in user (upsert by endpoint). Sent when notifications.push is on.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscription"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Saved"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePushSubscription",
+        "summary": "Forget one endpoint of the signed-in user. 204 even if unknown.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushUnsubscribe"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/repos": {
       "post": {
         "operationId": "requestOrderRepo",
@@ -3332,6 +3430,64 @@
           "currentPassword",
           "newPassword"
         ]
+      },
+      "PushSubscription": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1000,
+            "format": "starts_with",
+            "pattern": "^https:\\/\\/.*"
+          },
+          "keys": {
+            "type": "object",
+            "properties": {
+              "p256dh": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "auth": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "p256dh",
+              "auth"
+            ]
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "PushUnsubscribe": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "endpoint"
+        ]
+      },
+      "PushKey": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "publicKey"
+        ],
+        "additionalProperties": false
       },
       "AIBrief": {
         "type": "object",

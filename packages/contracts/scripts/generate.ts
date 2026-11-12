@@ -63,6 +63,9 @@ import {
   AddRoleSchema,
   AuthProvidersSchema,
   ChangePasswordSchema,
+  PushKeySchema,
+  PushSubscriptionSchema,
+  PushUnsubscribeSchema,
   CoderProfileDetailsSchema,
   CustomerProfileSchema,
   DevLoginSchema,
@@ -217,6 +220,27 @@ write('openapi/core-api.openapi.json', {
         summary: 'Email accounts only. Revokes every other session of the user.',
         requestBody: { required: true, content: json('ChangePassword') },
         responses: { '204': { description: 'Changed' }, '400': { description: 'Validation error or not an email account', content: json('ErrorResponse') }, '401': { description: 'Not signed in or wrong current password', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/push/key': {
+      get: {
+        operationId: 'getPushKey',
+        summary: 'VAPID public key for PushManager.subscribe. Public.',
+        responses: { '200': { description: 'OK', content: json('PushKey') }, '404': { description: 'WebPush not configured', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/me/push-subscriptions': {
+      put: {
+        operationId: 'savePushSubscription',
+        summary: "Store this browser's WebPush subscription for the signed-in user (upsert by endpoint). Sent when notifications.push is on.",
+        requestBody: { required: true, content: json('PushSubscription') },
+        responses: { '204': { description: 'Saved' }, '400': { description: 'Validation error', content: json('ErrorResponse') }, '401': unauthorized },
+      },
+      delete: {
+        operationId: 'deletePushSubscription',
+        summary: 'Forget one endpoint of the signed-in user. 204 even if unknown.',
+        requestBody: { required: true, content: json('PushUnsubscribe') },
+        responses: { '204': { description: 'Deleted' }, '401': unauthorized },
       },
     },
     '/v1/repos': {
@@ -552,6 +576,9 @@ write('openapi/core-api.openapi.json', {
       CoderProfileDetails: schema(CoderProfileDetailsSchema, 'input'),
       CustomerProfile: schema(CustomerProfileSchema, 'input'),
       ChangePassword: schema(ChangePasswordSchema, 'input'),
+      PushSubscription: schema(PushSubscriptionSchema, 'input'),
+      PushUnsubscribe: schema(PushUnsubscribeSchema, 'input'),
+      PushKey: schema(PushKeySchema),
       AIBrief: schema(AIBriefSchema),
       BriefJobCreate: schema(BriefJobCreateSchema, 'input'),
       BriefJob: schema(BriefJobSchema),
