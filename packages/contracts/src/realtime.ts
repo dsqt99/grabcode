@@ -2,8 +2,8 @@ import type { RealtimeHint, RealtimeToken } from './schemas/realtime';
 
 // Minimal Centrifugo client (JSON protocol over the browser WebSocket, no SDK): one shared connection per tab,
 // connect on first listener, close on last. Pushes are hints only; callers refetch over REST.
-// shortcut: no token refresh (24h token, a reconnect fetches a new one) and no recovery of hints missed while offline;
-// callers keep a slow poll as the safety net (see pollDelay).
+// The token is refreshed in place before it expires. Hints missed while the socket was down are not replayed:
+// callers poll fast whenever the socket is not live (see pollDelay), which covers that gap.
 
 type Listener = (h: RealtimeHint) => void;
 const listeners = new Set<Listener>();
@@ -13,6 +13,20 @@ let retry = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let apiBase = '';
 let opening = false;
+let refresher: ReturnType<typeof setTimeout> | undefined;
+
+const fetchToken = () => fetch(`${apiBase}/v1/realtime/token`, { credentials: 'include' }).catch(() => null);
+
+/** Sends a fresh token shortly before `ttl` seconds run out; on failure the server disconnects and we reconnect. */
+function refreshIn(sock: WebSocket, ttl: number) {
+  clearTimeout(refresher);
+  refresher = setTimeout(async () => {
+    const res = await fetchToken();
+    if (ws !== sock || !res?.ok) return;
+    const { token } = (await res.json()) as RealtimeToken;
+    sock.send(JSON.stringify({ id: 2, refresh: { token } }));
+  }, Math.max(5, ttl - 60) * 1000);
+}
 
 /** Poll interval for a caller that also listens to hints: slow while the socket is up, `fast` otherwise. */
 export const pollDelay = (fast: number) => (live ? 30_000 : fast);
@@ -20,7 +34,7 @@ export const pollDelay = (fast: number) => (live ? 30_000 : fast);
 async function open() {
   if (ws || opening || !listeners.size) return;
   opening = true;
-  const res = await fetch(`${apiBase}/v1/realtime/token`, { credentials: 'include' }).catch(() => null);
+  const res = await fetchToken();
   opening = false;
   if (!res?.ok) return res?.status === 404 ? undefined : schedule(); // 404: realtime not configured, stay on polling
   const { url, token } = (await res.json()) as RealtimeToken;
@@ -37,6 +51,9 @@ async function open() {
         live = true;
         retry = 0;
         pong = !!msg.connect.pong;
+        if (msg.connect.expires) refreshIn(sock, msg.connect.ttl);
+      } else if (msg.id === 2 && msg.refresh?.expires) {
+        refreshIn(sock, msg.refresh.ttl);
       } else if (msg.push?.pub?.data) {
         for (const l of listeners) l(msg.push.pub.data as RealtimeHint);
       } else if (!Object.keys(msg).length && pong) {
@@ -46,6 +63,7 @@ async function open() {
   };
   sock.onclose = () => {
     if (ws === sock) ws = null;
+    clearTimeout(refresher);
     live = false;
     schedule();
   };
