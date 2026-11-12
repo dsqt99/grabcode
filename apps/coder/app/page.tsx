@@ -5,6 +5,7 @@ import DriverHeader from '../components/DriverHeader';
 import OnlineRadar from '../components/OnlineRadar';
 import WaveOfferModal from '../components/WaveOfferModal';
 import ActiveJobWorkspace from '../components/ActiveJobWorkspace';
+import PayoutCard from '../components/PayoutCard';
 import { API_URL } from '../lib/auth';
 import { formatVnd, useCoder } from '../lib/coderStore';
 
@@ -48,6 +49,7 @@ export default function Page() {
         ) : (
           <>
             <OnlineRadar isOnline={state.isOnline} onToggle={c.setOnline} />
+            {API_URL && <PayoutCard />}
             {state.history.length > 0 && (
               <section className="card">
                 <h3 className="font-display text-sm font-bold">Cuốc đã hoàn thành</h3>
