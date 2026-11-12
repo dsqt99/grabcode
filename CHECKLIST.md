@@ -160,7 +160,7 @@
 
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
 - [x] `TRUST_PROXY` (vd `1` trên Cloud Run) bật express trust proxy để `req.ip` là IP khách — `52614af`
-- [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica
+- [x] Rate limit dùng chung giữa replica: bộ đếm trong Postgres `core.rate_limits` (upsert atomic, không thêm Redis) — 5c03f28
 - [x] Liên kết tài khoản giữa các provider: nút Liên kết ở /profile khi đang login (`?link=1`, `core.user_identities`), không gộp theo email — 5e0f38d
 - [x] Gộp `RequireAuth` + `lib/auth.tsx` của web và coder vào `packages/auth-ui` (`@grabcode/auth-ui`) — 0f8e8a6
 - [x] Múi giờ đầy đủ (`Intl.supportedValuesOf`) trong `/profile`, contract từ chối múi giờ lạ (400) — `d4cd6a6` `39b366c`
