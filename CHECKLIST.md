@@ -147,7 +147,7 @@
 ## Xuyên suốt
 
 - [x] Root có `pnpm typecheck` (alias `pnpm -r lint` = `tsc --noEmit`) — `e06534b`; lint thật xem dòng ESLint
-- [ ] ESLint thật cho các package (chưa có linter nào)
+- [x] ESLint: `eslint.config.mjs` root (typescript-eslint recommended + react-hooks), `pnpm lint` chạy trong CI — 6231612
 - [x] CI GitHub Actions: install, check contract drift, typecheck, test trên mỗi PR — `25fef4e` (chưa chạy trên GitHub, branch chưa có PR)
 - [x] `.gitattributes` cố định line ending LF — `e06534b`
 - [x] Một lệnh chạy cả stack local: `pnpm stack` (compose --wait + migrate + dev) — `00303ec`
