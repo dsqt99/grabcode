@@ -120,13 +120,16 @@ function Coders() {
   );
 }
 
+/** Server cancels DRAFT and unassigned FUNDED/DISPATCHED orders on refund; the list only shows unassigned ones for those. */
+const cancels = (o: AdminOrder) => ['DRAFT', 'FUNDED', 'DISPATCHED'].includes(o.status);
+
 function Orders() {
   const { data, error, busy, act } = useList<AdminOrderList>('/v1/admin/orders');
   const [refund, setRefund] = useState<Record<string, string>>({});
   const resolve = (o: AdminOrder) =>
     act(() => api(`/v1/admin/orders/${o.id}/resolve`, 'POST', { refundVnd: Number(refund[o.id] ?? 0) }));
   const refundAll = (o: AdminOrder) => {
-    if (confirm(`Hoàn ${vnd(o.escrowVnd)} cho khách của ${o.id}?${o.status === 'DRAFT' ? ' Đơn sẽ bị huỷ.' : ''}`))
+    if (confirm(`Hoàn ${vnd(o.escrowVnd)} cho khách của ${o.id}?${cancels(o) ? ' Đơn sẽ bị huỷ.' : ''}`))
       void act(() => api(`/v1/admin/orders/${o.id}/refund`, 'POST'));
   };
   return (
@@ -167,7 +170,7 @@ function Orders() {
               </div>
             ) : (
               <button className="btn-alt" disabled={busy} onClick={() => refundAll(o)}>
-                {o.status === 'DRAFT' ? 'Hoàn & huỷ đơn' : 'Hoàn tiền thừa'}
+                {cancels(o) ? 'Hoàn & huỷ đơn' : 'Hoàn tiền thừa'}
               </button>
             )}
           </td>
