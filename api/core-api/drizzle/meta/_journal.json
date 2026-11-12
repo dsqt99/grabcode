@@ -71,6 +71,13 @@
       "when": 1794413176318,
       "tag": "0009_smart_victor_mancha",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794414359807,
+      "tag": "0010_slimy_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,11 @@ import {
   coderTierFor,
   estimateOrder,
   payoutOf,
+  type DeployRequestedEvent,
   type MilestoneEvent,
+  type QaRequestedEvent,
+  type QaResultSchema,
+  type Sandbox,
   type OrderCreateSchema,
   type OrderDto,
   type RepoHandoverRequestedEvent,
@@ -81,10 +85,19 @@ async function emitMilestone(tx: Tx, type: MilestoneEvent['type'], data: Milesto
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
 }
 
+async function readyRepo(tx: Tx, orderId: string) {
+  const [repo] = await tx.select().from(orderRepos).where(eq(orderRepos.orderId, orderId));
+  return repo?.status === 'READY' && repo.repoFullName ? { ...repo, repoFullName: repo.repoFullName } : null;
+}
+
+async function outboxEvent(tx: Tx, event: QaRequestedEvent | DeployRequestedEvent) {
+  await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+}
+
 /** ACCEPTED: repo-worker gives the customer admin on the order repo and drops the coder to read. */
 async function requestHandover(tx: Tx, row: Row) {
-  const [repo] = await tx.select().from(orderRepos).where(eq(orderRepos.orderId, row.id));
-  if (!repo || repo.status !== 'READY' || !repo.repoFullName) return;
+  const repo = await readyRepo(tx, row.id);
+  if (!repo) return;
   const [c] = await tx.select({ githubLogin: users.githubLogin }).from(users).where(eq(users.id, row.customerUserId));
   const event: RepoHandoverRequestedEvent = {
     event_id: randomUUID(),
@@ -158,9 +171,22 @@ export class OrdersService {
         for (let i = 0; i < row.brief.milestones.length; i++) await releaseMilestone(tx, row, i);
         await requestHandover(tx, row);
       }
+      // DELIVERED: deploy-worker builds the last submitted commit (default branch when none) as a preview.
+      let sandbox: Sandbox | undefined;
+      const repo = to === 'DELIVERED' ? await readyRepo(tx, id) : null;
+      if (repo) {
+        sandbox = { status: 'PENDING', url: null, error: null, expiresAt: null };
+        const commitHash = [...row.brief.milestones].reverse().find((m) => m.commitHash)?.commitHash ?? null;
+        await outboxEvent(tx, {
+          event_id: randomUUID(),
+          type: SUBJECTS.DEPLOY_REQUESTED,
+          occurred_at: new Date().toISOString(),
+          data: { orderId: id, repoFullName: repo.repoFullName, commitHash },
+        });
+      }
       const [next] = await tx
         .update(orders)
-        .set({ status: to, coderUserId, ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}), updatedAt: sql`now()` })
+        .set({ status: to, coderUserId, ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}), ...(sandbox ? { sandbox } : {}), updatedAt: sql`now()` })
         .where(eq(orders.id, id))
         .returning();
       await emit(tx, next, row.status);
@@ -185,6 +211,19 @@ export class OrdersService {
       }
       const brief = submitMilestone(row, user, milestoneId, sha, note, new Date().toISOString());
       if (isDenied(brief)) fail(brief);
+      // QA Gate on every submit with a repo; the previous result is dropped so the customer never sees a stale one.
+      const m = (brief as Row['brief']).milestones.find((x) => x.id === milestoneId)!;
+      delete m.qa;
+      const repo = await readyRepo(tx, id);
+      if (repo) {
+        m.qa = { status: 'RUNNING', commitHash: sha, checks: [] };
+        await outboxEvent(tx, {
+          event_id: randomUUID(),
+          type: SUBJECTS.QA_REQUESTED,
+          occurred_at: new Date().toISOString(),
+          data: { orderId: id, milestoneId, repoFullName: repo.repoFullName, commitHash: sha },
+        });
+      }
       await tx.update(orders).set({ brief: brief as Row['brief'], updatedAt: sql`now()` }).where(eq(orders.id, id));
       await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0 });
     });
@@ -212,6 +251,22 @@ export class OrdersService {
     return (await this.load(eq(orders.id, id)))[0];
   }
 
+  /** qa.completed: applied only while the milestone still waits on that exact commit (a resubmit makes it stale). */
+  async applyQa(orderId: string, milestoneId: string, result: z.infer<typeof QaResultSchema>) {
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
+      const m = row?.brief.milestones.find((x) => x.id === milestoneId);
+      if (!m || m.qa?.status !== 'RUNNING' || m.qa.commitHash !== result.commitHash) return;
+      m.qa = result;
+      await tx.update(orders).set({ brief: row.brief, updatedAt: sql`now()` }).where(eq(orders.id, orderId));
+    });
+  }
+
+  /** deploy.ready / failed / expired. shortcut: last result wins; a stale deploy finishing after a redeploy can overwrite, add a deploy id if that shows up. */
+  async applySandbox(orderId: string, sandbox: Sandbox) {
+    await this.db.update(orders).set({ sandbox, updatedAt: sql`now()` }).where(eq(orders.id, orderId));
+  }
+
   async load(where: SQL | undefined, limit = 1): Promise<OrderDto[]> {
     const rows = await this.db
       .select({
@@ -237,6 +292,7 @@ export class OrdersService {
       brief: o.brief,
       priceVnd: o.priceVnd,
       disputeReason: o.disputeReason,
+      sandbox: o.sandbox,
       payoutVnd: payoutOf(o.priceVnd),
       etaHours: o.etaHours,
       customer: party(c),

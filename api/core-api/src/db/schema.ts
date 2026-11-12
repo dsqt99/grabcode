@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, bigserial, boolean, index, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { AIBrief } from '@grabcode/contracts';
-import type { CoderProfileDetails, NotificationPrefs } from '@grabcode/contracts/schemas';
+import type { CoderProfileDetails, NotificationPrefs, Sandbox } from '@grabcode/contracts/schemas';
 
 export const core = pgSchema('core');
 
@@ -112,6 +112,8 @@ export const orders = core.table(
     priceVnd: integer('price_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
     disputeReason: text('dispute_reason'),
+    // Cloud Run preview (S5), written from deploy-worker results.
+    sandbox: jsonb('sandbox').$type<Sandbox>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
