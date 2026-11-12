@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   CoderProfileDetails,
   CompanySize,
@@ -16,6 +16,7 @@ import Navbar from '../../components/Navbar';
 import { RequireAuth } from '@grabcode/auth-ui';
 import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
+import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
 
 const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-50 disabled:text-slate-500';
 const LABEL = 'block text-sm font-semibold text-ink';
@@ -117,6 +118,44 @@ function Toggle({ checked, onChange, label, text }: { checked: boolean; onChange
       </span>
       <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-emerald" />
     </label>
+  );
+}
+
+/** Per-browser WebPush subscription; hidden when core-api has no VAPID key or the browser lacks Push. */
+function PushDevice() {
+  const [key, setKey] = useState<string | null>(null);
+  const [on, setOn] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    if (!pushSupported()) return;
+    void pushKey().then(setKey).catch(() => {});
+    void currentSubscription().then((s) => setOn(Boolean(s))).catch(() => {});
+  }, []);
+  if (!key) return null;
+  const toggle = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      if (on) await unsubscribePush();
+      else await subscribePush(key);
+      setOn(!on);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="rounded-lg border border-dashed border-slate-200 p-3 text-sm">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-slate-600">{on ? 'Trình duyệt này đang nhận thông báo đẩy.' : 'Trình duyệt này chưa nhận thông báo đẩy.'}</span>
+        <button type="button" disabled={busy} onClick={toggle} className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold hover:bg-slate-50 disabled:opacity-50">
+          {on ? 'Tắt trên trình duyệt này' : 'Bật trên trình duyệt này'}
+        </button>
+      </div>
+      {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
+    </div>
   );
 }
 
@@ -436,6 +475,7 @@ function PrefsForm({ me }: { me: Me }) {
         {NOTIFY.map((x) => (
           <Toggle key={x.k} checked={n[x.k]} onChange={(v) => setN({ ...n, [x.k]: v })} label={x.label} text={x.text} />
         ))}
+        {n.push && <PushDevice />}
       </div>
       <fieldset className="mt-5">
         <legend className={LABEL}>Đơn vị tiền tệ hiển thị</legend>
