@@ -62,9 +62,9 @@
 ## S2 — Ledger ký quỹ (SePay chuyển khoản ngân hàng)
 
 - [x] Chọn cổng thanh toán: SePay (webhook biến động số dư, nội dung CK = mã đơn không gạch, VD `GC1006`) — `01911ed`
-- [ ] 👤 Tạo tài khoản SePay, liên kết tài khoản ngân hàng nhận, cấu hình mã thanh toán tiền tố `GC`
-- [ ] 👤 SePay → Webhooks: URL `{API_PUBLIC_URL}/v1/payments/sepay/webhook` (cần URL public: ngrok/smee), xác thực "API Key"; điền `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME` trong `.env`
-- [ ] Test 1 giao dịch thật end-to-end (CK nhỏ → đơn DISPATCHED)
+- [x] 👤 Tạo tài khoản SePay, liên kết tài khoản ngân hàng nhận, cấu hình mã thanh toán tiền tố `GC`
+- [x] 👤 SePay → Webhooks: URL `{API_PUBLIC_URL}/v1/payments/sepay/webhook` (cần URL public: ngrok/smee), xác thực "API Key"; điền `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME` trong `.env` — env đủ; webhook ký bằng key thật: sai key 401, TK khác bỏ qua, đúng → FUNDED, gửi lại không cộng 2 lần; QR `qr.sepay.vn` OK. Local public: `cloudflared tunnel --url http://localhost:4000` (tắt `AUTH_DEV_LOGIN`)
+- [~] Test 1 giao dịch thật end-to-end (CK nhỏ → đơn DISPATCHED) — chờ 👤 CK 10.000đ nội dung `GC1077` qua tunnel
 - [x] Contract: `SepayWebhook`, `PaymentInstructions`, `Wallet`, events `escrow.deposited|released`; DRAFT → FUNDED thành cạnh SYSTEM — `01911ed`
 - [x] API: ledger double-entry `core.ledger_txs` / `core.ledger_entries` (migration 0007), tx id = idempotency key (`sepay:<id>`, `release:<orderId>`, `dev:<uuid>`) — `1ff520b`
 - [x] API: webhook SePay (`Authorization: Apikey`, so sánh constant-time, bỏ qua `out` / sai tài khoản, mã không khớp → `suspense`) — `1ff520b`
