@@ -18,10 +18,11 @@ import {
   type RepoHandoverRequestedEvent,
   type OrderEvent,
   type OrderStatus,
+  type ChatMessage,
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
-import { ledgerTxs, orderRepos, orders, outbox, repoCommits, users } from '../db/schema';
+import { ledgerTxs, orderMessages, orderRepos, orders, outbox, repoCommits, users } from '../db/schema';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
 import { dispatchEvent } from '../dispatch/events';
@@ -108,6 +109,15 @@ async function requestHandover(tx: Tx, row: Row) {
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
 }
 
+const chatOf = (r: Row, m: typeof orderMessages.$inferSelect, senderName: string): ChatMessage => ({
+  id: m.id,
+  orderId: m.orderId,
+  sender: m.senderUserId === r.customerUserId ? 'CUSTOMER' : 'CODER',
+  senderName,
+  text: m.body,
+  timestamp: m.createdAt.toISOString(),
+});
+
 @Injectable()
 export class OrdersService {
   constructor(@Inject(DB) private readonly db: Db) {}
@@ -143,6 +153,32 @@ export class OrdersService {
     const [row] = await this.db.select().from(orders).where(eq(orders.id, id));
     if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
     return (await this.load(eq(orders.id, id)))[0];
+  }
+
+  /** Order chat, oldest first. Only the customer and the assigned coder can read or write it. */
+  async messages(user: UserRow, id: string): Promise<ChatMessage[]> {
+    const row = await this.party(user, id);
+    const rows = await this.db
+      .select({ m: orderMessages, name: users.name })
+      .from(orderMessages)
+      .innerJoin(users, eq(users.id, orderMessages.senderUserId))
+      .where(eq(orderMessages.orderId, id))
+      .orderBy(desc(orderMessages.createdAt))
+      .limit(200);
+    return rows.reverse().map(({ m, name }) => chatOf(row, m, name));
+  }
+
+  /** The insert trigger pushes a `chat` hint to both parties. */
+  async sendMessage(user: UserRow, id: string, text: string): Promise<ChatMessage> {
+    const row = await this.party(user, id);
+    const [m] = await this.db.insert(orderMessages).values({ orderId: id, senderUserId: user.id, body: text }).returning();
+    return chatOf(row, m, user.name);
+  }
+
+  private async party(user: UserRow, id: string) {
+    const [row] = await this.db.select().from(orders).where(eq(orders.id, id));
+    if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
+    return row;
   }
 
   /** True when the user is the customer or the assigned coder (used to scope repo access). */

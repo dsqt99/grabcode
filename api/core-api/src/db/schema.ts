@@ -194,3 +194,20 @@ export const dispatchOffers = core.table(
   },
   (t) => [index('dispatch_offers_order_idx').on(t.orderId), index('dispatch_offers_coder_status_idx').on(t.coderUserId, t.status)],
 );
+
+// Order chat (S6) between the customer and the assigned coder. Inserts fire a `chat` realtime hint (migration trigger).
+export const orderMessages = core.table(
+  'order_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: text('order_id')
+      .notNull()
+      .references(() => orders.id),
+    senderUserId: uuid('sender_user_id')
+      .notNull()
+      .references(() => users.id),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('order_messages_order_idx').on(t.orderId, t.createdAt)],
+);

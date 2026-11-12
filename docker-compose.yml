@@ -19,6 +19,19 @@ services:
     ports: ['127.0.0.1:4223:4222', '127.0.0.1:8223:8222']
     volumes: ['natsdata:/data']
 
+  # S6 realtime: reads hints from public.centrifugo_outbox (written by core-api triggers), pushes them over WebSocket.
+  # Token secret comes from .env (CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY, shared with core-api); never commit it.
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    command: ['centrifugo', '-c', '/centrifugo/config.json']
+    environment:
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: ${CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY:-}
+    volumes: ['./infra/centrifugo.json:/centrifugo/config.json:ro']
+    ports: ['127.0.0.1:8000:8000']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   natsdata:

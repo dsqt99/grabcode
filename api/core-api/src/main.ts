@@ -8,9 +8,10 @@ import { DbModule } from './db/db.module';
 import { DispatchModule } from './dispatch/dispatch.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { ReposModule } from './repos/repos.module';
 
-@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule, DispatchModule] })
+@Module({ imports: [DbModule, AuthModule, BriefsModule, OrdersModule, PaymentsModule, ReposModule, DispatchModule, RealtimeModule] })
 class AppModule {}
 
 async function bootstrap() {

@@ -1,11 +1,14 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import {
+  ChatSendSchema,
   MilestoneRejectSchema,
   MilestoneSubmitSchema,
   OrderCreateSchema,
   OrderListQuerySchema,
   OrderTransitionSchema,
+  type ChatList,
+  type ChatMessage,
   type OrderDto,
   type OrderList,
 } from '@grabcode/contracts/schemas';
@@ -77,5 +80,17 @@ export class OrdersController {
   async rejectMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string, @Body() body: unknown): Promise<OrderDto> {
     const user = await this.user(req);
     return this.orders.reviewMilestone(user, id, mid, false, parse(MilestoneRejectSchema, body).note);
+  }
+
+  @Get(':id/messages')
+  async messages(@Req() req: Request, @Param('id') id: string): Promise<ChatList> {
+    return { messages: await this.orders.messages(await this.user(req), id) };
+  }
+
+  @Post(':id/messages')
+  @HttpCode(201)
+  async send(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<ChatMessage> {
+    const user = await this.user(req);
+    return this.orders.sendMessage(user, id, parse(ChatSendSchema, body).text);
   }
 }
