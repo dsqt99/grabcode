@@ -16,6 +16,22 @@ import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../l
 import { progressPercent } from '../../../lib/orderView';
 
 const POLL_MS = 3000;
+const LONG_WAIT_MS = 30 * 60_000;
+
+/** Paid order still without a coder after 30 min (admin sees it too); core-api auto-refunds after AUTO_REFUND_HOURS. */
+function LongWaitNote({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (now - new Date(since).getTime() < LONG_WAIT_MS) return null;
+  return (
+    <p className="mt-2 text-sm font-semibold text-amber-700">
+      Đã hơn 30 phút chưa có Coder nhận. Vận hành đã được báo; nếu vẫn không ai nhận, đơn sẽ tự huỷ và hoàn ký quỹ.
+    </p>
+  );
+}
 const fetchView = async (id: string) => {
   const [o, repo] = await Promise.all([getOrder(id), getOrderRepo(id)]);
   return toViewOrder(o, repo);
@@ -340,6 +356,7 @@ export default function OrderPage() {
             <div>
               <p className="font-display font-bold text-ink">Đang gửi offer tới các Coder gần nhất...</p>
               <p className="text-sm text-slate-600">Offer có hiệu lực 30 giây mỗi đợt. Mở ứng dụng Coder (/coder) để nhận đơn khi demo.</p>
+              <LongWaitNote since={order.createdAt} />
             </div>
           </div>
         )}
