@@ -86,7 +86,7 @@
 - [x] Test: 2 coder nhận cùng lúc → chỉ 1 thắng — `pnpm --filter @grabcode/core-api smoke:dispatch` 17 check (6eeec73, 87a517e)
 - [x] Push offer qua Centrifugo thay vì poll — `2fe55c7`
 - [ ] Đơn không có coder nào online: chờ vô hạn — cần cảnh báo khách / admin, hoàn tiền sau N giờ
-- [ ] Đồng hồ offer: client kẹp theo 30s; nên trả `secondsLeft` từ API nếu lệch giờ client/DB
+- [x] Đồng hồ offer: API trả `secondsLeft` theo giờ DB, client đếm theo đó — `63ddacc` `5711771` `18ab6ed`
 
 ## S4 — Milestone & nghiệm thu
 
@@ -138,7 +138,7 @@
 - [x] Giám sát worker / queue (JetStream consumer lag, job FAILED, thử lại repo) — `4845b21` `c4e59d0`
 - [x] Smoke `scripts/smoke-admin.mjs` (34 check) — `3a04826`
 - [ ] Cấu hình AI model & bảng giá (đọc từ DB thay `.env`) — hoãn: bảng giá dùng chung với ước tính ở web qua contracts, chuyển DB phải đổi cả web + API
-- [ ] Thử lại job brief/QA/sandbox FAILED từ admin (hiện chỉ repo)
+- [x] Thử lại sandbox FAILED từ admin (cùng repo) — `fa92323` `3d393a1` `abe9c8f`; brief không retry (khách tạo lại ở web), QA chạy lại khi coder nộp lại
 - [ ] Chuyển khoản payout tự động (hiện admin CK tay rồi bấm duyệt)
 
 ---
@@ -147,7 +147,7 @@
 
 - [x] Root có `pnpm typecheck` (alias `pnpm -r lint` = `tsc --noEmit`) — `e06534b`; lint thật xem dòng ESLint
 - [ ] ESLint thật cho các package (chưa có linter nào)
-- [ ] CI GitHub Actions: install, typecheck, lint, test trên mỗi PR
+- [x] CI GitHub Actions: install, check contract drift, typecheck, test trên mỗi PR — `25fef4e` (chưa chạy trên GitHub, branch chưa có PR)
 - [x] `.gitattributes` cố định line ending LF — `e06534b`
 - [ ] Một lệnh chạy cả stack local (api + relay + workers + apps)
 - [ ] Test API: auth (đăng ký, login, session hết hạn), briefs, repos (webhook chữ ký sai, push trùng)
