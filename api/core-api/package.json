@@ -8,8 +8,9 @@
     "lint": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/throttle.test.ts",
-    "smoke:dispatch": "node scripts/smoke-dispatch.mjs"
+    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/throttle.test.ts src/auth/password.test.ts src/repos/repos.test.ts",
+    "smoke:dispatch": "node scripts/smoke-dispatch.mjs",
+    "smoke:auth": "node scripts/smoke-auth.mjs"
   },
   "dependencies": {
     "@grabcode/contracts": "workspace:*",
