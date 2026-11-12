@@ -98,7 +98,7 @@
 - [x] Tranh chấp: khách mở `IN_PROGRESS|DELIVERED → DISPUTED` kèm lý do (`orders.dispute_reason`), DISPUTED chặn duyệt mốc → ký quỹ còn lại bị khoá; banner lý do trên web — 2dcf509, efed16b
 - [~] Bàn giao: ACCEPTED + repo READY → outbox `repo.handover.requested` → repo-worker cho khách quyền admin, hạ coder xuống pull → `repo.handed_over` → `order_repos.handed_over_at/to` — b4f40d7. **Chưa test thật** (cần 👤 GitHub App); smoke chỉ kiểm tra event được phát
 - [x] Admin xử lý tranh chấp (hoàn tiền / nhả tiền phần còn khoá) — làm ở S7 `4845b21`
-- [ ] Bàn giao khi khách không có GitHub login: hiện chỉ log cảnh báo, repo nằm lại org; cần transfer repo hoặc UI nhập login
+- [x] Bàn giao khi khách không có GitHub login (hoặc lời mời bị từ chối): đơn ACCEPTED hiện nút "Nhận repo", khách nhập username → `POST /v1/repos/:orderId/handover` → repo-worker mời admin; kết quả trễ không xoá login đã giao — `a1ce99a`
 - Smoke: `node api/core-api/scripts/smoke-milestones.mjs` (core-api chạy, `AUTH_DEV_LOGIN=true`)
 
 ## S5 — Workers bàn giao

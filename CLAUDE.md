@@ -123,6 +123,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Chạy: `pnpm --filter @grabcode/repo-worker dev` (cùng core-api + outbox-relay).
 - Luồng: coder nhận đơn → `POST /v1/repos` (idempotent theo `orderId`, FAILED thì xếp lại) → outbox `repo.requested` → repo-worker: tạo repo private (`gc-<số đơn>`), commit `CLAUDE.md`, branch protection (chặn force-push; org Free + repo private sẽ bị 403, chỉ cảnh báo), mời coder quyền push → `repo.provisioned|failed` → `core.order_repos`. Push webhook → `core.repo_commits` → `GET /v1/repos/:orderId`.
 - Coder được mời theo `users.github_login` (login GitHub) hoặc link GitHub trong hồ sơ Coder; không có thì repo vẫn tạo nhưng chưa mời.
+- Đơn ACCEPTED: `repo.handover.requested` → khách (`users.github_login`) thành admin, coder còn quyền đọc. Khách không có login → nút "Nhận repo" ở web gọi `POST /v1/repos/:orderId/handover {githubLogin}`.
 
 ### QA Gate & sandbox (qa-worker, deploy-worker)
 - Chạy: `pnpm --filter @grabcode/qa-worker dev`, `pnpm --filter @grabcode/deploy-worker dev` (cùng core-api + outbox-relay). qa-worker cần Docker (image `QA_IMAGE`, mặc định `node:22-alpine`); deploy-worker cần `gcloud` đã login + `GCP_PROJECT` (thiếu → sandbox `FAILED`).
