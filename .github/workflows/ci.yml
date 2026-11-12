@@ -1,0 +1,20 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Contract drift: generated OpenAPI / event schemas must match the zod source.
+      - run: pnpm generate && git diff --exit-code packages/contracts
+      - run: pnpm typecheck
+      - run: pnpm test
