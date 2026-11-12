@@ -431,7 +431,7 @@ write('openapi/core-api.openapi.json', {
     '/v1/admin/orders/{id}/refund': {
       post: {
         operationId: 'adminRefundOrder',
-        summary: 'Admin: refund what escrow still holds. DRAFT -> CANCELLED; on ACCEPTED/RESOLVED/CANCELLED refunds the overpayment.',
+        summary: 'Admin: refund what escrow still holds. DRAFT, or FUNDED/DISPATCHED with no coder yet -> CANCELLED (open offers expire); on ACCEPTED/RESOLVED/CANCELLED refunds the overpayment.',
         parameters: [orderId],
         responses: { '200': { description: 'OK', content: json('AdminOrder') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order in progress or escrow empty', content: json('ErrorResponse') } },
       },

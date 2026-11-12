@@ -32,7 +32,7 @@ export const AdminCoderPatchSchema = z
   .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined, { message: 'Nothing to change' });
 export type AdminCoderPatch = z.infer<typeof AdminCoderPatchSchema>;
 
-// ---- Orders needing an admin: disputes, part-paid drafts, money left in escrow ----
+// ---- Orders needing an admin: disputes, part-paid drafts, money left in escrow, paid orders no coder took for 30+ minutes ----
 
 export const AdminOrderSchema = z.object({
   id: z.string(),
