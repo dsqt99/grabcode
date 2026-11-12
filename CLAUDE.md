@@ -151,6 +151,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 ### Admin portal (S7)
 - Chạy: `pnpm --filter @grabcode/admin dev` (`:3002`, basePath `/admin`), mở qua web `:3100/admin` (rewrite `ADMIN_ORIGIN`, chung cookie `gc_session`).
 - Cấp quyền: `update core.users set roles = array_append(roles, 'ADMIN') where email = '...'`; dev: `POST /v1/auth/dev-login {login, role: 'ADMIN'}`. Không có role ADMIN → `/v1/admin/*` trả 403.
+- Đơn đã nạp quá 30 phút chưa coder nhận: web hiện cảnh báo, admin thấy ở tab Orders; quá `AUTO_REFUND_HOURS` (mặc định 24, 0 = tắt) core-api tự huỷ + hoàn (quét 10 phút/lần).
 - Tab: Coders (tier override, khoá), Orders (chia tranh chấp, hoàn DRAFT nạp dở), Suspense (gán đơn / hoàn), Payouts (duyệt sau khi CK tay), Monitor (outbox, JetStream, job FAILED). Coder gửi yêu cầu rút ở coder app.
 - Smoke: `node api/core-api/scripts/smoke-admin.mjs` (core-api `AUTH_DEV_LOGIN=true`).
 
