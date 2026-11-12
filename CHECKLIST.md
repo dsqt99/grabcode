@@ -152,7 +152,7 @@
 - [x] `.gitattributes` cố định line ending LF — `e06534b`
 - [x] Một lệnh chạy cả stack local: `pnpm stack` (compose --wait + migrate + dev) — `00303ec`
 - [x] Test API: unit (scrypt, chữ ký webhook, parse login GitHub) + `smoke-auth.mjs` (đăng ký/login/đổi mật khẩu/session hết hạn, briefs, repos: chữ ký sai, push trùng lưu 1 lần) — `353846a`
-- [ ] `POST /v1/briefs` không cần đăng nhập + không giới hạn: ai cũng đốt được quota LLM → rate limit theo IP hoặc bắt login
+- [x] `POST /v1/briefs` công khai (landing trước login) → giới hạn 20 brief/IP/giờ, quá thì 429, web tự fallback brief mẫu — `1bd5659`
 - [x] Dockerfile chung `infra/node-service.Dockerfile` (`PKG` = core-api / worker), non-root, đã build + chạy thử core-api, outbox-relay — `f6a2d0c`
 - [ ] Image Next.js (web/coder/admin) + cấu hình deploy thật (Cloud Run service, secret manager)
 
