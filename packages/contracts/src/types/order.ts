@@ -41,6 +41,7 @@ export interface Order {
   sandboxStatus?: 'PENDING' | 'READY' | 'FAILED' | 'EXPIRED';
   sandboxError?: string;
   repoUrl?: string;
+  repoHandoverPending?: boolean; // ACCEPTED, repo READY but not yet handed to a customer GitHub login
   createdAt: string;
   etaHours: number;
   completedAt?: string;

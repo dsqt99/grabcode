@@ -57,7 +57,7 @@ import {
   OrderSchema,
   OrderTransitionSchema,
 } from '../src/schemas/order.ts';
-import { OrderRepoSchema, RepoCreateSchema } from '../src/schemas/repo.ts';
+import { OrderRepoSchema, RepoCreateSchema, RepoHandoverSchema } from '../src/schemas/repo.ts';
 import { ChatListSchema, ChatMessageSchema, ChatSendSchema, RealtimeHintSchema, RealtimeTokenSchema } from '../src/schemas/realtime.ts';
 import {
   AddRoleSchema,
@@ -236,6 +236,21 @@ write('openapi/core-api.openapi.json', {
           '200': { description: 'OK', content: json('OrderRepo') },
           '401': unauthorized,
           '404': { description: 'Not found', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/repos/{orderId}/handover': {
+      post: {
+        operationId: 'handoverOrderRepo',
+        summary: 'Customer of an ACCEPTED order names the GitHub login that gets admin on the repo (when the account has no GitHub login, or the invite was rejected).',
+        parameters: [{ name: 'orderId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: json('RepoHandover') },
+        responses: {
+          '202': { description: 'Handover queued', content: json('OrderRepo') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '404': { description: 'Not the customer of the order', content: json('ErrorResponse') },
+          '409': { description: 'Order not ACCEPTED, repo not READY, or already handed over to a login', content: json('ErrorResponse') },
         },
       },
     },
@@ -536,6 +551,7 @@ write('openapi/core-api.openapi.json', {
       BriefJob: schema(BriefJobSchema),
       ErrorResponse: schema(ErrorResponseSchema),
       RepoCreate: schema(RepoCreateSchema, 'input'),
+      RepoHandover: schema(RepoHandoverSchema, 'input'),
       OrderRepo: schema(OrderRepoSchema),
       OrderCreate: schema(OrderCreateSchema, 'input'),
       Order: schema(OrderSchema),

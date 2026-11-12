@@ -718,6 +718,84 @@
         }
       }
     },
+    "/v1/repos/{orderId}/handover": {
+      "post": {
+        "operationId": "handoverOrderRepo",
+        "summary": "Customer of an ACCEPTED order names the GitHub login that gets admin on the repo (when the account has no GitHub login, or the invite was rejected).",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepoHandover"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Handover queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRepo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not the customer of the order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order not ACCEPTED, repo not READY, or already handed over to a login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/orders": {
       "post": {
         "operationId": "createOrder",
@@ -3730,6 +3808,18 @@
           "orderId",
           "title",
           "claudeMd"
+        ]
+      },
+      "RepoHandover": {
+        "type": "object",
+        "properties": {
+          "githubLogin": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+          }
+        },
+        "required": [
+          "githubLogin"
         ]
       },
       "OrderRepo": {

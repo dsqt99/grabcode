@@ -41,6 +41,12 @@ export const OrderRepoSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** ACCEPTED order whose customer has no GitHub-linked account: the GitHub login that should receive admin on the repo. */
+export const RepoHandoverSchema = z.object({
+  githubLogin: z.string().trim().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/, 'Invalid GitHub login'),
+});
+
 export type RepoCreate = z.input<typeof RepoCreateSchema>;
+export type RepoHandover = z.infer<typeof RepoHandoverSchema>;
 export type RepoCommit = z.infer<typeof RepoCommitSchema>;
 export type OrderRepo = z.infer<typeof OrderRepoSchema>;

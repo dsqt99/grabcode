@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { OrderIdSchema, RepoCreateSchema, type OrderRepo } from '@grabcode/contracts/schemas';
+import { OrderIdSchema, RepoCreateSchema, RepoHandoverSchema, type OrderRepo } from '@grabcode/contracts/schemas';
 import { readCookie } from '../auth/auth.controller';
 import { AuthService, SESSION_COOKIE } from '../auth/auth.service';
 import { GITHUB_APP_WEBHOOK_SECRET } from '../config';
@@ -55,6 +55,16 @@ export class ReposController {
     const repo = allowed ? await this.repos.get(orderId) : undefined;
     if (!repo) throw new NotFoundException({ message: 'Repo not found' });
     return repo;
+  }
+
+  @Post('repos/:orderId/handover')
+  @HttpCode(202)
+  async handover(@Req() req: Request, @Param('orderId') orderId: string, @Body() body: unknown): Promise<OrderRepo> {
+    const user = await this.auth.requireUser(readCookie(req, SESSION_COOKIE));
+    const parsed = RepoHandoverSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException({ message: 'Invalid request body', issues: parsed.error.issues });
+    if (!OrderIdSchema.safeParse(orderId).success) throw new NotFoundException({ message: 'Order not found' });
+    return this.repos.handover(user, orderId, parsed.data.githubLogin);
   }
 
   /** GitHub App webhook. Only `push` is used (commit timeline); other events are acknowledged and dropped. */

@@ -59,6 +59,9 @@ export const reviewMilestone = (id: string, milestoneId: string, approve: boolea
   });
 /** Repo + commits of the order; null until the coder has opened one. */
 export const getOrderRepo = (id: string) => api<OrderRepo>(`/v1/repos/${encodeURIComponent(id)}`).catch(() => null);
+/** ACCEPTED order without a customer GitHub login: give the repo (admin) to this login. */
+export const handoverRepo = (id: string, githubLogin: string) =>
+  api<OrderRepo>(`/v1/repos/${encodeURIComponent(id)}/handover`, { method: 'POST', body: JSON.stringify({ githubLogin }) });
 
 // ---- Escrow (S2): customer pays by bank transfer, SePay webhook funds the order. ----
 export const getOrderPayment = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment`);

@@ -1,6 +1,6 @@
 // Auth / briefs / repos API smoke test against a running local core-api (AUTH_DEV_LOGIN=true) + docker compose Postgres.
 // Run: node api/core-api/scripts/smoke-auth.mjs
-// Set WEBHOOK_SECRET to the core-api's GITHUB_APP_WEBHOOK_SECRET to also test signed push delivery + dedupe.
+// Set WEBHOOK_SECRET to the core-api GITHUB_APP_WEBHOOK_SECRET to also test signed push delivery + dedupe. Also covers repo handover to a customer-named login.
 import { execFileSync } from 'node:child_process';
 import { createHmac, randomUUID } from 'node:crypto';
 
@@ -79,13 +79,22 @@ const sha = randomUUID().replaceAll('-', '') + '00000000';
 const raw = JSON.stringify({ repository: { full_name: full }, commits: [{ id: sha, message: 'init', author: { username: 'smoke' }, url: 'https://example.test', timestamp: new Date().toISOString() }] });
 ok((await push(raw, 'sha256=' + '0'.repeat(64))).status === 401, 'webhook bad signature 401');
 ok((await push(raw, undefined)).status === 401, 'webhook missing signature 401');
+const coderId = psql(`select id from core.users where github_login = 'smoke-repo-other' limit 1`) || uid;
+psql(`insert into core.order_repos (order_id, coder_user_id, status, repo_full_name) values ('${order.id}', '${coderId}', 'READY', '${full}')`);
 if (SECRET) {
   const sig = `sha256=${createHmac('sha256', SECRET).update(raw).digest('hex')}`;
-  const coderId = psql(`select id from core.users where github_login = 'smoke-repo-other' limit 1`) || uid;
-  psql(`insert into core.order_repos (order_id, coder_user_id, status, repo_full_name) values ('${order.id}', '${coderId}', 'READY', '${full}')`);
   const [r1, r2] = [await push(raw, sig), await push(raw, sig)];
   ok(r1.status === 204 && r2.status === 204, 'signed push 204 (twice)');
   ok(psql(`select count(*) from core.repo_commits where sha = '${sha}'`) === '1', 'redelivered push stored once');
   ok((await cust('GET', `/v1/repos/${order.id}`)).body?.commits?.some((x) => x.sha === sha), 'customer sees pushed commit');
 } else console.log('SKIP signed push (set WEBHOOK_SECRET)');
+// Handover to a customer-named GitHub login (account without one), only after ACCEPTED.
+const handover = (k, login) => k('POST', `/v1/repos/${order.id}/handover`, { githubLogin: login });
+ok((await handover(cust, 'octocat')).status === 409, 'handover before ACCEPTED 409');
+psql(`update core.orders set status = 'ACCEPTED' where id = '${order.id}'`);
+ok((await handover(cust, '-bad-')).status === 400 && (await handover(stranger, 'octocat')).status === 404, 'handover bad login 400, non-customer 404');
+const h = await handover(cust, 'octocat');
+ok(h.status === 202 && psql(`select payload->'data'->>'customerGithubLogin' from core.outbox where subject = 'repo.handover.requested' and payload->'data'->>'orderId' = '${order.id}'`) === 'octocat', 'handover 202 + outbox event with named login');
+psql(`update core.order_repos set handed_over_at = now(), handed_over_to = 'octocat' where order_id = '${order.id}'`);
+ok((await handover(cust, 'someone')).status === 409, 'handover again after done 409');
 psql(`update core.orders set status = 'CANCELLED' where id = '${order.id}'`);

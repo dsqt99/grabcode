@@ -1,10 +1,11 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import {
   SUBJECTS,
   type OrderRepo,
   type RepoCreateSchema,
+  type RepoHandoverRequestedEvent,
   type RepoProvisionedEvent,
   type RepoRequestedEvent,
 } from '@grabcode/contracts/schemas';
@@ -66,6 +67,26 @@ export class ReposService {
     return (await this.get(orderId))!;
   }
 
+  /** Customer names the GitHub login for an ACCEPTED order's repo; repo-worker invites it as admin (same event as the automatic handover). */
+  async handover(user: UserRow, orderId: string, githubLogin: string): Promise<OrderRepo> {
+    await this.db.transaction(async (tx) => {
+      const [o] = await tx.select({ status: orders.status, customerUserId: orders.customerUserId }).from(orders).where(eq(orders.id, orderId));
+      if (!o || o.customerUserId !== user.id) throw new NotFoundException({ message: 'Order not found' });
+      const [r] = await tx.select().from(orderRepos).where(eq(orderRepos.orderId, orderId)).for('update');
+      if (o.status !== 'ACCEPTED' || r?.status !== 'READY' || !r.repoFullName || r.handedOverTo) {
+        throw new ConflictException({ message: 'Repo is handed over once, after the order is ACCEPTED' });
+      }
+      const event: RepoHandoverRequestedEvent = {
+        event_id: randomUUID(),
+        type: SUBJECTS.REPO_HANDOVER_REQUESTED,
+        occurred_at: new Date().toISOString(),
+        data: { orderId, repoFullName: r.repoFullName, customerGithubLogin: githubLogin, coderGithubLogin: r.collaborator },
+      };
+      await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+    });
+    return (await this.get(orderId))!;
+  }
+
   async get(orderId: string): Promise<OrderRepo | undefined> {
     const [r] = await this.db.select().from(orderRepos).where(eq(orderRepos.orderId, orderId));
     if (!r) return undefined;
@@ -93,9 +114,11 @@ export class ReposService {
       .where(and(eq(orderRepos.orderId, orderId), eq(orderRepos.status, 'PENDING')));
   }
 
-  /** repo-worker finished the ACCEPTED handover; a redelivery rewrites the same values. */
+  /** repo-worker finished a handover; a late result without a login never clears one already given. */
   async markHandedOver(orderId: string, to: string | null): Promise<void> {
-    await this.db.update(orderRepos).set({ handedOverAt: sql`now()`, handedOverTo: to, updatedAt: sql`now()` }).where(eq(orderRepos.orderId, orderId));
+    await this.db
+      .update(orderRepos)
+      .set({ handedOverAt: sql`now()`, handedOverTo: sql`coalesce(${to}, ${orderRepos.handedOverTo})`, updatedAt: sql`now()` }).where(eq(orderRepos.orderId, orderId));
   }
 
   /** Push webhook: store commits of a known repo; unknown repos are ignored. sha PK dedupes redeliveries. */

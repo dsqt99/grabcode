@@ -10,7 +10,7 @@ import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
 import SandboxFrame from '../../../components/SandboxFrame';
-import { getMessages, getOrder, getOrderRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
+import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
@@ -311,6 +311,18 @@ export default function OrderPage() {
       pushChat(systemMsg(order.id, 'Mở tranh chấp chưa thành công, vui lòng thử lại.'));
     }
   };
+  const claimRepo = async () => {
+    const login = window.prompt('GitHub username nhận quyền admin repo:')?.trim();
+    if (!login) return;
+    try {
+      await handoverRepo(order.id, login);
+      showOrder(await fetchView(order.id));
+      pushChat(systemMsg(order.id, `Đang chuyển quyền admin repo cho GitHub ${login}. Kiểm tra lời mời trong email GitHub.`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, 'Chưa chuyển được repo: kiểm tra lại GitHub username.'));
+    }
+  };
   const disputed = order.disputeReason !== undefined;
   const canDispute = ordersApiEnabled && ['BUILDING', 'QA_TESTING', 'DELIVERED'].includes(order.status);
 
@@ -397,6 +409,11 @@ export default function OrderPage() {
                 <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
                   Xem repo bàn giao
                 </a>
+              )}
+              {ordersApiEnabled && order.repoHandoverPending && (
+                <button type="button" className="w-full text-center text-sm font-semibold text-emerald-dark hover:underline" onClick={claimRepo}>
+                  Nhận repo về tài khoản GitHub của bạn
+                </button>
               )}
             </div>
             <MilestoneList milestones={order.brief.milestones} onReview={ordersApiEnabled && !disputed ? review : undefined} />

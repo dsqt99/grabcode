@@ -115,9 +115,9 @@ async function handover(d: RepoHandoverRequestedEvent['data']): Promise<RepoHand
   let to: string | null = null;
   if (d.customerGithubLogin) {
     const inv = await gh('PUT', `/repos/${d.repoFullName}/collaborators/${d.customerGithubLogin}`, { permission: 'admin' });
-    if (inv.status === 404 || inv.status === 422) console.warn(`order=${d.orderId} customer ${d.customerGithubLogin} rejected (${inv.status})`);
+    if (inv.status === 404 || inv.status === 422) console.warn(`order=${d.orderId} customer ${d.customerGithubLogin} rejected (${inv.status}), customer can name another login`);
     else to = (expect(inv, [201, 204], 'invite customer'), d.customerGithubLogin);
-  } else console.warn(`order=${d.orderId} customer has no GitHub login: repo stays in ${ORG}, transfer by hand`);
+  } else console.warn(`order=${d.orderId} customer has no GitHub login: repo stays in ${ORG} until the customer names one (POST /v1/repos/:orderId/handover)`);
   if (d.coderGithubLogin) expect(await gh('PUT', `/repos/${d.repoFullName}/collaborators/${d.coderGithubLogin}`, { permission: 'pull' }), [201, 204], 'downgrade coder');
   return { orderId: d.orderId, customerGithubLogin: to };
 }

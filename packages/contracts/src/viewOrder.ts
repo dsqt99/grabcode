@@ -48,6 +48,7 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
         }
       : undefined,
     repoUrl: repo?.htmlUrl ?? undefined,
+    repoHandoverPending: o.status === 'ACCEPTED' && repo?.status === 'READY' && !repo.handedOverTo,
     demoUrl: o.sandbox?.status === 'READY' ? (o.sandbox.url ?? undefined) : undefined,
     sandboxStatus: o.sandbox?.status,
     sandboxError: o.sandbox?.error ?? undefined,
