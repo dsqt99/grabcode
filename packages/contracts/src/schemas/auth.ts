@@ -75,7 +75,19 @@ export const UpdateMeSchema = z
     avatarUrl: UrlSchema.nullable(),
     phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/).nullable(),
     country: z.string().regex(/^[A-Z]{2}$/),
-    timezone: z.string().trim().min(1).max(64),
+    timezone: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .refine((tz) => {
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      }, 'Unknown IANA timezone'),
     currency: CurrencySchema,
     notifications: NotificationPrefsSchema,
   })
