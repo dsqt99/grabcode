@@ -160,4 +160,4 @@
 - [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica; sau proxy/LB phải bật `trust proxy` để `req.ip` đúng
 - [ ] Liên kết tài khoản cùng email giữa các provider — `api/core-api/src/db/schema.ts:33`
 - [ ] Gộp `RequireAuth` + `lib/auth.tsx` trùng giữa web và coder vào package UI chung — `apps/*/components/RequireAuth.tsx`, `apps/*/lib/auth.tsx`
-- [ ] Danh sách múi giờ đầy đủ trong `/profile` — `apps/web/app/profile/page.tsx:200`
+- [x] Múi giờ đầy đủ (`Intl.supportedValuesOf`) trong `/profile`, contract từ chối múi giờ lạ (400) — `d4cd6a6` `39b366c`
