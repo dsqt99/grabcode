@@ -82,6 +82,17 @@ export const sessions = core.table('sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** WebPush endpoints per browser; notifier reads them and deletes ones the push service reports gone (404/410). */
+export const pushSubscriptions = core.table('push_subscriptions', {
+  endpoint: text('endpoint').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Typed columns (not one jsonb blob) so the matching engine can filter on skills/rate/availability.
 export const coderProfiles = core.table('coder_profiles', {
   userId: uuid('user_id')

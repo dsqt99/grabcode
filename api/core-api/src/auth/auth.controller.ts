@@ -3,6 +3,7 @@ import {
   ConflictException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
@@ -25,11 +26,14 @@ import {
   DevLoginSchema,
   OAuthProviderSchema,
   PasswordLoginSchema,
+  PushSubscriptionSchema,
+  PushUnsubscribeSchema,
   RegisterSchema,
   UpdateMeSchema,
   UserRoleSchema,
   type AuthProviders,
   type Me,
+  type PushKey,
   type UserRole,
 } from '@grabcode/contracts/schemas';
 import { API_PUBLIC_URL, DEV_LOGIN_ENABLED, IS_PROD, WEB_ORIGINS } from '../config';
@@ -216,6 +220,30 @@ export class AuthController {
     if (!parsed.success) throw invalid(parsed.error.issues);
     await this.auth.saveCustomerProfile(user, parsed.data);
     return this.auth.me(user);
+  }
+
+  @Get('push/key')
+  pushKey(): PushKey {
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    if (!publicKey || !process.env.VAPID_PRIVATE_KEY) throw new NotFoundException({ message: 'WebPush is not configured' });
+    return { publicKey };
+  }
+
+  @Put('me/push-subscriptions')
+  @HttpCode(204)
+  async savePush(@Req() req: Request, @Body() body: unknown): Promise<void> {
+    const user = await this.user(req);
+    const parsed = PushSubscriptionSchema.safeParse(body);
+    if (!parsed.success) throw invalid(parsed.error.issues);
+    await this.auth.savePushSubscription(user.id, parsed.data);
+  }
+
+  @Delete('me/push-subscriptions')
+  @HttpCode(204)
+  async deletePush(@Req() req: Request, @Body() body: unknown): Promise<void> {
+    const user = await this.user(req);
+    const parsed = PushUnsubscribeSchema.safeParse(body);
+    if (parsed.success) await this.auth.deletePushSubscription(user.id, parsed.data.endpoint);
   }
 
   @Post('me/password')

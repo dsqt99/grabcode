@@ -1,9 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { and, count, eq, gt, ne, sql } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
-import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type OAuthProvider, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
+import { coderTierFor, type ChangePassword, type PushSubscriptionInput, type CoderProfileDetails, type CustomerProfile, type Me, type OAuthProvider, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { coderProfiles, customerProfiles, orders, sessions, userIdentities, users } from '../db/schema';
+import { coderProfiles, customerProfiles, orders, pushSubscriptions, sessions, userIdentities, users } from '../db/schema';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './password';
 import { Throttle } from './throttle';
 
@@ -151,6 +151,16 @@ export class AuthService {
     }
     await this.db.update(users).set({ passwordHash: await hashPassword(input.newPassword), updatedAt: sql`now()` }).where(eq(users.id, user.id));
     await this.db.delete(sessions).where(and(eq(sessions.userId, user.id), ne(sessions.tokenHash, hash(currentToken))));
+  }
+
+  /** Upsert by endpoint: a browser shared by two accounts notifies whoever subscribed last. */
+  async savePushSubscription(userId: string, s: PushSubscriptionInput): Promise<void> {
+    const row = { userId, p256dh: s.keys.p256dh, auth: s.keys.auth };
+    await this.db.insert(pushSubscriptions).values({ endpoint: s.endpoint, ...row }).onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: row });
+  }
+
+  async deletePushSubscription(userId: string, endpoint: string): Promise<void> {
+    await this.db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.endpoint, endpoint), eq(pushSubscriptions.userId, userId)));
   }
 
   /** Email/password sign-up; 409 if the email already has a password account. */
