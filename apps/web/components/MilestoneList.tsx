@@ -68,7 +68,13 @@ export default function MilestoneList({
                 )}
                 {m.status === 'SUBMITTED' && onReview && (
                   <div className="mt-3 flex gap-2">
-                    <button type="button" className="btn-primary !min-h-[36px] flex-1 !py-1 text-sm" onClick={() => onReview(m.id, true)}>
+                    <button
+                      type="button"
+                      className="btn-primary !min-h-[36px] flex-1 !py-1 text-sm"
+                      disabled={m.qa?.status === 'FAILED'}
+                      title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
+                      onClick={() => onReview(m.id, true)}
+                    >
                       Duyệt & giải ngân {m.weightPercent}%
                     </button>
                     <button
