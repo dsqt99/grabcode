@@ -111,7 +111,7 @@
 - [ ] 👤 Tài khoản GCP + project cho Cloud Run sandbox (`gcloud auth login`, bật Cloud Run + Cloud Build, điền `GCP_PROJECT`)
 - [~] `deploy-worker`: `gcloud run deploy --source` → `deploy.ready` URL cho `SandboxFrame` — code xong `b533e51`, chưa deploy thật (chờ GCP)
 - [~] Dọn sandbox hết hạn: tick 10 phút xóa service quá `SANDBOX_TTL_HOURS` (72h) → `deploy.expired` — code xong `b533e51`, chưa test với GCP
-- [ ] QA container còn mạng ra ngoài (cần cho install); cân nhắc `--network none` cho bước sau install
+- [x] QA: lint/typecheck/test chạy `--network none`; install, build (next/font), audit vẫn có mạng; pnpm từ cache corepack theo gate — `2886397`
 - [x] QA FAILED chặn khách duyệt mốc (409, nút Duyệt tắt), vẫn yêu cầu sửa được; ERROR/RUNNING không chặn để lỗi hạ tầng QA không giam tiền — `0d8c2d5` `24fa251`
 
 ## S6 — Realtime & thông báo
