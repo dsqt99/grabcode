@@ -96,7 +96,7 @@
 - [x] Web: khách duyệt / yêu cầu sửa (bắt buộc ghi chú) từng mốc → duyệt nhả đúng phần ký quỹ của mốc (`milestoneShare`, tổng khớp giá); ACCEPTED quét nhả nốt mốc chưa trả (đơn cũ) — 2dcf509, efed16b
 - [x] Tranh chấp: khách mở `IN_PROGRESS|DELIVERED → DISPUTED` kèm lý do (`orders.dispute_reason`), DISPUTED chặn duyệt mốc → ký quỹ còn lại bị khoá; banner lý do trên web — 2dcf509, efed16b
 - [~] Bàn giao: ACCEPTED + repo READY → outbox `repo.handover.requested` → repo-worker cho khách quyền admin, hạ coder xuống pull → `repo.handed_over` → `order_repos.handed_over_at/to` — b4f40d7. **Chưa test thật** (cần 👤 GitHub App); smoke chỉ kiểm tra event được phát
-- [ ] Admin xử lý tranh chấp (hoàn tiền / nhả tiền phần còn khoá) — sang S6 admin portal
+- [x] Admin xử lý tranh chấp (hoàn tiền / nhả tiền phần còn khoá) — làm ở S7 `4845b21`
 - [ ] Bàn giao khi khách không có GitHub login: hiện chỉ log cảnh báo, repo nằm lại org; cần transfer repo hoặc UI nhập login
 - Smoke: `node api/core-api/scripts/smoke-milestones.mjs` (core-api chạy, `AUTH_DEV_LOGIN=true`)
 
@@ -122,7 +122,7 @@
 - [x] Smoke `api/core-api/scripts/smoke-realtime.mjs`: hint order/chat tới đúng user, user khác không nhận, chat 400/404 — `c63070f`
 - Brief vẫn poll: brief job ẩn danh (landing chưa login), không có kênh user
 - [ ] Token không refresh (24h, reconnect lấy token mới) và không recovery hint lỡ khi offline — đang dựa vào poll 30s
-- [ ] `centrifugo_outbox` phình nếu Centrifugo không chạy; cần job dọn hàng cũ
+- [x] `centrifugo_outbox` phình nếu Centrifugo không chạy → core-api xoá hint quá 10 phút, mỗi 10 phút — `a83414c`
 - [ ] Coder app: chưa verify trên browser luồng nhận offer qua hint (chỉ typecheck + smoke API)
 - [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
 - [ ] `notifier`: Zalo ZNS, FCM, WebPush theo cài đặt thông báo trong `/profile`
@@ -145,17 +145,18 @@
 
 ## Xuyên suốt
 
-- [ ] Tách script: `lint` mọi package hiện là `tsc --noEmit` (thực chất typecheck); `CLAUDE.md` ghi `pnpm typecheck` nhưng root chưa có script này
+- [x] Root có `pnpm typecheck` (alias `pnpm -r lint` = `tsc --noEmit`) — `e06534b`; lint thật xem dòng ESLint
 - [ ] ESLint thật cho các package (chưa có linter nào)
 - [ ] CI GitHub Actions: install, typecheck, lint, test trên mỗi PR
-- [ ] `.gitattributes` cố định line ending (đang có cảnh báo LF → CRLF khi commit trên Windows)
+- [x] `.gitattributes` cố định line ending LF — `e06534b`
 - [ ] Một lệnh chạy cả stack local (api + relay + workers + apps)
 - [ ] Test API: auth (đăng ký, login, session hết hạn), briefs, repos (webhook chữ ký sai, push trùng)
 - [ ] Dockerfile / cấu hình deploy cho core-api + workers
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
-- [ ] Rate limit chống brute-force login theo IP / email — `api/core-api/src/auth/auth.service.ts:131` (**bắt buộc trước khi public**)
+- [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
+- [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica; sau proxy/LB phải bật `trust proxy` để `req.ip` đúng
 - [ ] Liên kết tài khoản cùng email giữa các provider — `api/core-api/src/db/schema.ts:33`
 - [ ] Gộp `RequireAuth` + `lib/auth.tsx` trùng giữa web và coder vào package UI chung — `apps/*/components/RequireAuth.tsx`, `apps/*/lib/auth.tsx`
 - [ ] Danh sách múi giờ đầy đủ trong `/profile` — `apps/web/app/profile/page.tsx:200`
