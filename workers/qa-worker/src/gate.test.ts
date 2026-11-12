@@ -42,6 +42,11 @@ test('plan: npm ci with lockfile, only defined scripts, placeholder test skipped
   assert.equal(planSteps(repo({ 'main.go': '' })), null);
 });
 
+test('plan: only install, build and audit get network', () => {
+  const p = planSteps(repo({ 'package.json': JSON.stringify({ scripts: { lint: 'x', typecheck: 'x', build: 'x', test: 'x' } }) }))!;
+  assert.deepEqual(p.steps.filter((s) => !s.offline).map((s) => s.name), ['install', 'build', 'audit']);
+});
+
 test('verdict and tail', () => {
   assert.equal(verdict([{ name: 'a', status: 'PASSED', detail: '' }, { name: 'b', status: 'SKIPPED', detail: '' }], true), 'PASSED');
   assert.equal(verdict([{ name: 'a', status: 'FAILED', detail: '' }], true), 'FAILED');

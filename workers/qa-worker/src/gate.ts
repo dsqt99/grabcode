@@ -5,8 +5,8 @@ import type { QaCheck, QaResult } from '@grabcode/contracts';
 
 export type Check = QaCheck;
 export type Status = QaResult['status'];
-/** A step run inside the sandbox container (sh -c). */
-export type Step = { name: string; cmd: string };
+/** A step run inside the sandbox container (sh -c). offline: container gets no network (--network none). */
+export type Step = { name: string; cmd: string; offline?: boolean };
 
 const SECRET_PATTERNS: [string, RegExp][] = [
   ['private key', /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/],
@@ -59,7 +59,8 @@ export function planSteps(dir: string): { steps: Step[]; skipped: Check[] } | nu
   const skipped: Check[] = [];
   for (const s of ['lint', 'typecheck', 'build', 'test']) {
     // npm init's placeholder test script always exits 1.
-    if (scripts[s] && !scripts[s].includes('no test specified')) steps.push({ name: s, cmd: `${pm} run ${s}` });
+    // build keeps network: next/font and similar fetch at build time. Coder code never needs it to lint/typecheck/test.
+    if (scripts[s] && !scripts[s].includes('no test specified')) steps.push({ name: s, cmd: `${pm} run ${s}`, offline: s !== 'build' });
     else skipped.push({ name: s, status: 'SKIPPED', detail: `no "${s}" script in package.json` });
   }
   steps.push({ name: 'audit', cmd: pnpm ? `${pm} audit --prod --audit-level high` : 'npm audit --omit=dev --audit-level=high' });

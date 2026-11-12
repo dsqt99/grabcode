@@ -3,7 +3,9 @@
 // the checkout has no .git, so no GitHub token reaches it. Idempotent via qa_worker.processed_events.
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { AckPolicy, connect, type JsMsg } from 'nats';
 import postgres from 'postgres';
@@ -40,9 +42,12 @@ await jsm.consumers
 const js = nc.jetstream();
 
 /** One step in a fresh container on the checkout. Non-zero exit = FAILED with the output tail. */
-async function step(dir: string, s: Step): Promise<Check> {
+async function step(dir: string, corepack: string, s: Step): Promise<Check> {
   const name = `gc-qa-${randomUUID().slice(0, 8)}`;
   const args = ['run', '--rm', '--name', name, '--mount', `type=bind,src=${dir},dst=/w`, '-w', '/w', '-e', 'CI=true'];
+  // pnpm is fetched by corepack in the (online) install step; offline steps reuse it from this per-gate cache.
+  args.push('--mount', `type=bind,src=${corepack},dst=/corepack`, '-e', 'COREPACK_HOME=/corepack', '-e', 'COREPACK_DEFAULT_TO_LATEST=0');
+  if (s.offline) args.push('--network', 'none');
   args.push('--memory', '2g', '--cpus', '2', '--pids-limit', '512', '--security-opt', 'no-new-privileges', IMAGE, 'sh', '-c', s.cmd);
   try {
     const { stdout, stderr } = await run('docker', args, { timeout: STEP_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 });
@@ -57,6 +62,7 @@ async function step(dir: string, s: Step): Promise<Check> {
 
 async function gate(repoFullName: string, sha: string | null): Promise<{ status: Status; checks: Check[] }> {
   const dir = await checkout(gh, repoFullName, sha);
+  const corepack = await mkdtemp(join(tmpdir(), 'gc-corepack-'));
   try {
     const checks = [scanSecrets(dir)];
     const plan = planSteps(dir);
@@ -65,7 +71,7 @@ async function gate(repoFullName: string, sha: string | null): Promise<{ status:
       for (const s of plan.steps) {
         if (!installed) checks.push({ name: s.name, status: 'SKIPPED', detail: 'install failed' });
         else {
-          const c = await step(dir, s);
+          const c = await step(dir, corepack, s);
           checks.push(c);
           if (s.name === 'install' && c.status === 'FAILED') installed = false;
         }
@@ -75,6 +81,7 @@ async function gate(repoFullName: string, sha: string | null): Promise<{ status:
     return { status: verdict(checks, !!plan), checks };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
+    await rm(corepack, { recursive: true, force: true }).catch(() => {});
   }
 }
 
