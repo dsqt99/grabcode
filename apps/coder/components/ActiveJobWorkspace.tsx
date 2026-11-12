@@ -136,6 +136,16 @@ export default function ActiveJobWorkspace({
                     <p className="text-sm font-semibold text-ink">{m.title}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{m.description}</p>
                     {m.status === 'SUBMITTED' && <p className="mt-1 text-xs font-semibold text-amber-700">Đã nộp{m.commitHash ? ` @${m.commitHash.slice(0, 7)}` : ''} — chờ khách duyệt</p>}
+                    {m.qa && m.status !== 'COMPLETED' && (
+                      <p className={`mt-1 text-xs font-semibold ${m.qa.status === 'FAILED' ? 'text-red-600' : m.qa.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-500'}`}>
+                        QA Gate: {m.qa.status}
+                        {m.qa.status === 'FAILED' && ` (${m.qa.checks.filter((c) => c.status === 'FAILED').map((c) => c.name).join(', ')})`}
+                      </p>
+                    )}
+                    {m.qa?.status === 'FAILED' && m.status !== 'COMPLETED' &&
+                      m.qa.checks.filter((c) => c.status === 'FAILED').map((c) => (
+                        <pre key={c.name} className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-600">{c.detail}</pre>
+                      ))}
                     {m.status === 'IN_PROGRESS' && m.note && <p className="mt-1 text-xs font-semibold text-red-600">Khách yêu cầu sửa: {m.note}</p>}
                   </div>
                   <span className="chip-warn shrink-0">{m.weightPercent}%</span>

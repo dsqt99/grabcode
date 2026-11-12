@@ -8,6 +8,14 @@ const META = {
   PENDING: { icon: 'radio_button_unchecked', cls: 'text-slate-300', label: 'Chờ' },
 } as const;
 
+const QA = {
+  RUNNING: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA đang chạy' },
+  PASSED: { cls: 'chip-ok', label: 'QA đạt' },
+  FAILED: { cls: 'chip bg-red-50 text-red-600', label: 'QA trượt' },
+  SKIPPED: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA bỏ qua' },
+  ERROR: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA lỗi hệ thống' },
+} as const;
+
 /** `onReview` (API mode, order not disputed) shows approve / request-changes on the SUBMITTED milestone. */
 export default function MilestoneList({
   milestones,
@@ -37,8 +45,24 @@ export default function MilestoneList({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-500'}>{meta.label}</span>
                   {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
+                  {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
                   {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
                 </div>
+                {m.qa && m.qa.checks.length > 0 && (
+                  <details className="mt-2 text-xs text-slate-600">
+                    <summary className="cursor-pointer">Chi tiết QA Gate</summary>
+                    <ul className="mt-1 space-y-1">
+                      {m.qa.checks.map((c) => (
+                        <li key={c.name}>
+                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-400'}>
+                            {c.name}: {c.status}
+                          </span>
+                          {c.status === 'FAILED' && c.detail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px]">{c.detail}</pre>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
                 {m.note && m.status !== 'COMPLETED' && (
                   <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Coder ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
                 )}
