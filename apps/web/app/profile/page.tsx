@@ -197,8 +197,8 @@ function AccountForm({ me }: { me: Me }) {
         <label className={`${LABEL} sm:col-span-2`}>
           Múi giờ
           <select value={f.timezone} onChange={set('timezone')} className={INPUT}>
-            {/* shortcut: short list; switch to Intl.supportedValuesOf('timeZone') if users outside Asia/US appear. */}
-            {['Asia/Ho_Chi_Minh', 'Asia/Singapore', 'Asia/Tokyo', 'Asia/Seoul', 'America/Los_Angeles', 'America/New_York', 'Europe/London'].map((tz) => (
+            {/* Keep the saved value even if this browser's IANA list lacks it (alias like Asia/Saigon). */}
+            {[...new Set([f.timezone, ...Intl.supportedValuesOf('timeZone')])].map((tz) => (
               <option key={tz}>{tz}</option>
             ))}
           </select>
