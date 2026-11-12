@@ -280,7 +280,7 @@ function MonitorView() {
             <td className="max-w-md break-words text-xs">{j.error}</td>
             <td>
               {j.retryable && (
-                <button className="btn" disabled={busy} onClick={() => act(() => api(`/v1/admin/jobs/repo/${j.orderId}/retry`, 'POST'))}>
+                <button className="btn" disabled={busy} onClick={() => act(() => api(`/v1/admin/jobs/${j.kind}/${j.orderId}/retry`, 'POST'))}>
                   Thử lại
                 </button>
               )}
