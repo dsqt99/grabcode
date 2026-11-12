@@ -28,6 +28,7 @@ import {
   DeployReadyEventSchema,
   DeployFailedEventSchema,
   DeployExpiredEventSchema,
+  ChatPostedEventSchema,
   RepoHandoverRequestedEventSchema,
   RepoHandedOverEventSchema,
   SUBJECTS,
@@ -638,3 +639,4 @@ write('events/deploy.requested.schema.json', schema(DeployRequestedEventSchema))
 write('events/deploy.ready.schema.json', schema(DeployReadyEventSchema));
 write('events/deploy.failed.schema.json', schema(DeployFailedEventSchema));
 write('events/deploy.expired.schema.json', schema(DeployExpiredEventSchema));
+write('events/chat.posted.schema.json', schema(ChatPostedEventSchema));

@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>', 'chat.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -35,6 +35,7 @@ export const SUBJECTS = {
   DEPLOY_READY: 'deploy.ready',
   DEPLOY_FAILED: 'deploy.failed',
   DEPLOY_EXPIRED: 'deploy.expired',
+  CHAT_POSTED: 'chat.posted',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -184,6 +185,19 @@ export const DispatchEventSchema = z.object({
   }),
 });
 export type DispatchEvent = z.infer<typeof DispatchEventSchema>;
+
+/** A party posted in the order chat. to*UserId = the other party on that side (null when it is the sender or unassigned). preview = first 120 chars. */
+export const ChatPostedEventSchema = envelope(
+  SUBJECTS.CHAT_POSTED,
+  z.object({
+    orderId: z.string(),
+    senderName: z.string(),
+    toCustomerUserId: z.string().uuid().nullable(),
+    toCoderUserId: z.string().uuid().nullable(),
+    preview: z.string().max(120),
+  }),
+);
+export type ChatPostedEvent = z.infer<typeof ChatPostedEventSchema>;
 
 /** submitted: coder handed in a milestone. approved: customer accepted it, releasedVnd left escrow. rejected: revision asked (note). */
 export const MilestoneEventSchema = z.object({
