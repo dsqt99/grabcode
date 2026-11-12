@@ -1,5 +1,5 @@
-import type { AIBrief, OrderTier } from '@grabcode/contracts';
-import type { BriefJob, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions } from '@grabcode/contracts/schemas';
+import { onRealtimeHint, type AIBrief, type OrderTier } from '@grabcode/contracts';
+import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const POLL_MS = 1500;
@@ -64,3 +64,10 @@ export const getOrderRepo = (id: string) => api<OrderRepo>(`/v1/repos/${encodeUR
 export const getOrderPayment = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment`);
 /** Dev only (AUTH_DEV_LOGIN): simulate the transfer of the remaining amount. */
 export const devDeposit = (orderId: string) => api<PaymentInstructions>('/v1/payments/dev-deposit', { method: 'POST', body: JSON.stringify({ orderId }) });
+
+// ---- Realtime & chat (S6). Hints only: on a hint, refetch over REST. ----
+export const getMessages = (id: string) => api<ChatList>(`/v1/orders/${encodeURIComponent(id)}/messages`).then((r) => r.messages);
+export const sendMessage = (id: string, text: string) =>
+  api<ChatMessage>(`/v1/orders/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ text }) });
+/** Hints pushed to the signed-in user (no-op in mock mode). */
+export const onHint = (fn: (h: RealtimeHint) => void) => (API_URL ? onRealtimeHint(API_URL, fn) : () => {});

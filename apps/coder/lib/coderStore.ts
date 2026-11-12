@@ -5,6 +5,7 @@ import {
   SEED_CODER,
   INITIAL_DEMO_ORDER,
   eventBus,
+  pollDelay,
   toViewOrder,
   type ChatMessage,
   type CoderProfile,
@@ -12,7 +13,8 @@ import {
   type Order,
   type WaveOffer,
 } from '@grabcode/contracts';
-import type { DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
+import { onRealtimeHint } from '@grabcode/contracts';
+import type { ChatList, DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
 import { API_URL, useAuth } from './auth';
 
 const STORAGE_KEY = 'grabcode_coder_state';
@@ -249,6 +251,20 @@ export function useCoder() {
     [commit, toast]
   );
 
+  /** Appends server chat messages for the active order (dedupe by id). */
+  const mergeChat = useCallback(
+    (msgs: ChatMessage[]) => {
+      const s = stateRef.current;
+      const fresh = msgs.filter((m) => m.orderId === s.activeOrder?.id && !s.chat.some((c) => c.id === m.id));
+      if (fresh.length) patch({ chat: [...s.chat, ...fresh].slice(-100) });
+    },
+    [patch]
+  );
+  const loadChat = useCallback(async () => {
+    const id = stateRef.current.activeOrder?.id;
+    if (id) mergeChat((await api<ChatList>(`/v1/orders/${encodeURIComponent(id)}/messages`)).messages);
+  }, [mergeChat]);
+
   const sync = useCallback(async () => {
     const [{ orders: mine }, wallet] = await Promise.all([api<OrderList>('/v1/orders?scope=mine'), api<Wallet>('/v1/me/wallet')]);
     const today = todayKey();
@@ -260,10 +276,10 @@ export function useCoder() {
     const assigned = mine.filter((o) => o.coder?.id === meId);
     const job =
       assigned.find((o) => o.id === s.activeOrder?.id) ?? assigned.find((o) => o.status === 'IN_PROGRESS' || o.status === 'DELIVERED');
-    if (job) return applyDto(job);
+    if (job) return applyDto(job), loadChat();
     if (s.activeOrder) patch({ activeOrder: null, completedMilestones: [], delivered: false, completed: false, chat: [], activePayoutVnd: 0 });
     if (!s.isOnline) return;
-    // shortcut: polling (also the presence heartbeat) instead of a Centrifugo push; switch when the WebSocket lands.
+    // The offers poll is also the presence heartbeat (TTL 60s), so it keeps running, slower while the socket is live.
     const { offers } = await api<OfferList>('/v1/me/offers');
     const shown = offerRef.current;
     if (shown && !offers.some((o) => o.id === shown.offer.id)) {
@@ -272,20 +288,23 @@ export function useCoder() {
     }
     const next = offers.map(pendingOf).find((p) => p.expiresAt > Date.now());
     if (!offerRef.current && next) setPending(next);
-  }, [meId, applyDto, patch, setPending, toast]);
+  }, [meId, applyDto, loadChat, patch, setPending, toast]);
 
   useEffect(() => {
     if (!hydrated || !API_URL || !meId) return;
     let stop = false;
     let t: ReturnType<typeof setTimeout>;
-    const tick = () => void sync().catch(console.warn).finally(() => !stop && (t = setTimeout(tick, POLL_MS)));
+    const tick = () => void sync().catch(console.warn).finally(() => !stop && (t = setTimeout(tick, pollDelay(POLL_MS))));
     api<Presence>('/v1/me/presence').then((p) => patch({ isOnline: p.online }), console.warn);
     tick();
+    // Hint = something changed for this coder (offer, order, repo, chat): refetch now instead of waiting for the poll.
+    const off = onRealtimeHint(API_URL, (h) => void (h.type === 'chat' ? loadChat() : sync()).catch(console.warn));
     return () => {
       stop = true;
       clearTimeout(t);
+      off();
     };
-  }, [hydrated, meId, sync, patch]);
+  }, [hydrated, meId, sync, loadChat, patch]);
 
   const apiFail = useCallback((e: unknown) => (console.warn(e), toast('Thao tác chưa thành công, thử lại sau.', 'warn')), [toast]);
 
@@ -494,6 +513,10 @@ export function useCoder() {
     const order = stateRef.current.activeOrder;
     const clean = text.trim();
     if (!order || !clean) return;
+    if (API_URL) {
+      api<ChatMessage>(`/v1/orders/${encodeURIComponent(order.id)}/messages`, { text: clean }).then((m) => mergeChat([m]), apiFail);
+      return;
+    }
     eventBus.publish({
       type: 'CHAT_MESSAGE_SENT',
       payload: {
@@ -506,7 +529,7 @@ export function useCoder() {
       },
       timestamp: nowIso(),
     });
-  }, []);
+  }, [mergeChat, apiFail]);
 
   const dismissJob = useCallback(() => {
     patch({ activeOrder: null, completedMilestones: [], delivered: false, completed: false, chat: [], activePayoutVnd: 0 });

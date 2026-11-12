@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { PaymentInstructions } from '@grabcode/contracts/schemas';
-import { devDeposit, getOrderPayment } from '../lib/api';
+import { pollDelay } from '@grabcode/contracts';
+import { devDeposit, getOrderPayment, onHint } from '../lib/api';
 import { useCurrency } from '../lib/currency';
 
 const POLL_MS = 3000;
@@ -16,8 +17,14 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
   useEffect(() => {
     const load = () => getOrderPayment(orderId).then(setP, console.warn);
     load();
-    const t = setInterval(load, POLL_MS);
-    return () => clearInterval(t);
+    let t: ReturnType<typeof setTimeout>;
+    const tick = () => (t = setTimeout(() => void load().finally(tick), pollDelay(POLL_MS)));
+    tick();
+    const off = onHint((h) => h.orderId === orderId && void load()); // a deposit (ledger tx) sends an order hint
+    return () => {
+      clearTimeout(t);
+      off();
+    };
   }, [orderId]);
 
   if (!p) return <div className="card text-sm text-slate-500">Đang tải thông tin thanh toán...</div>;

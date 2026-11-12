@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { INITIAL_DEMO_ORDER, eventBus, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
+import { INITIAL_DEMO_ORDER, eventBus, pollDelay, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
 import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
@@ -10,7 +10,7 @@ import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
 import SandboxFrame from '../../../components/SandboxFrame';
-import { getOrder, getOrderRepo, ordersApiEnabled, reviewMilestone, transitionOrder } from '../../../lib/api';
+import { getMessages, getOrder, getOrderRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
@@ -74,11 +74,12 @@ export default function OrderPage() {
     initChat(loadOrder(id) ?? INITIAL_DEMO_ORDER);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // API mode: the server is the source of truth, poll it.
+  // API mode: the server is the source of truth. Refetch on a realtime hint; slow poll as safety net (fast if no socket).
   useEffect(() => {
     if (!ordersApiEnabled || !order) return;
-    const t = setInterval(() => {
-      fetchView(order.id).then((next) => {
+    const oid = order.id;
+    const refresh = () =>
+      fetchView(oid).then((next) => {
         const prev = orderRef.current;
         if (prev && prev.status !== next.status) {
           const msg = STATUS_MSG[next.status]?.(next);
@@ -86,8 +87,22 @@ export default function OrderPage() {
         }
         showOrder(next);
       }, console.warn);
-    }, POLL_MS);
-    return () => clearInterval(t);
+    const refreshChat = () => getMessages(oid).then((ms) => ms.forEach(pushChat), console.warn);
+    refreshChat();
+    let t: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      t = setTimeout(() => void Promise.all([refresh(), refreshChat()]).finally(tick), pollDelay(POLL_MS));
+    };
+    tick();
+    const off = onHint((h) => {
+      if (h.orderId !== oid) return;
+      if (h.type === 'chat') void refreshChat();
+      else void refresh();
+    });
+    return () => {
+      clearTimeout(t);
+      off();
+    };
   }, [order?.id, pushChat, showOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function initChat(found: Order) {
@@ -103,7 +118,7 @@ export default function OrderPage() {
             : `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`,
         ),
       ];
-      if (found.assignedCoder) {
+      if (found.assignedCoder && !ordersApiEnabled) {
         msgs.push({
           id: uid(),
           orderId: found.id,
@@ -210,6 +225,10 @@ export default function OrderPage() {
   const percent = progressPercent(order);
 
   const sendChat = (text: string) => {
+    if (ordersApiEnabled) {
+      sendMessage(order.id, text).then(pushChat, () => pushChat(systemMsg(order.id, 'Gửi tin nhắn chưa thành công, vui lòng thử lại.')));
+      return;
+    }
     const msg: ChatMessage = {
       id: uid(),
       orderId: order.id,
