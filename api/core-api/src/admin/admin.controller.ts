@@ -125,4 +125,11 @@ export class AdminController {
     await this.admin(req);
     await this.svc.retryRepo(parse(OrderIdSchema, id));
   }
+
+  @Post('admin/jobs/sandbox/:id/retry')
+  @HttpCode(204)
+  async retrySandbox(@Req() req: Request, @Param('id') id: string): Promise<void> {
+    await this.admin(req);
+    await this.svc.retrySandbox(parse(OrderIdSchema, id));
+  }
 }

@@ -95,6 +95,20 @@ async function outboxEvent(tx: Tx, event: QaRequestedEvent | DeployRequestedEven
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
 }
 
+/** Queues a sandbox preview of the last submitted commit (default branch when none); null when the repo is not READY. */
+export async function requestSandbox(tx: Tx, row: Row): Promise<Sandbox | null> {
+  const repo = await readyRepo(tx, row.id);
+  if (!repo) return null;
+  const commitHash = [...row.brief.milestones].reverse().find((m) => m.commitHash)?.commitHash ?? null;
+  await outboxEvent(tx, {
+    event_id: randomUUID(),
+    type: SUBJECTS.DEPLOY_REQUESTED,
+    occurred_at: new Date().toISOString(),
+    data: { orderId: row.id, repoFullName: repo.repoFullName, commitHash },
+  });
+  return { status: 'PENDING', url: null, error: null, expiresAt: null };
+}
+
 /** ACCEPTED: repo-worker gives the customer admin on the order repo and drops the coder to read. */
 async function requestHandover(tx: Tx, row: Row) {
   const repo = await readyRepo(tx, row.id);
@@ -208,18 +222,7 @@ export class OrdersService {
         await requestHandover(tx, row);
       }
       // DELIVERED: deploy-worker builds the last submitted commit (default branch when none) as a preview.
-      let sandbox: Sandbox | undefined;
-      const repo = to === 'DELIVERED' ? await readyRepo(tx, id) : null;
-      if (repo) {
-        sandbox = { status: 'PENDING', url: null, error: null, expiresAt: null };
-        const commitHash = [...row.brief.milestones].reverse().find((m) => m.commitHash)?.commitHash ?? null;
-        await outboxEvent(tx, {
-          event_id: randomUUID(),
-          type: SUBJECTS.DEPLOY_REQUESTED,
-          occurred_at: new Date().toISOString(),
-          data: { orderId: id, repoFullName: repo.repoFullName, commitHash },
-        });
-      }
+      const sandbox = to === 'DELIVERED' ? await requestSandbox(tx, row) : null;
       const [next] = await tx
         .update(orders)
         .set({ status: to, coderUserId, ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}), ...(sandbox ? { sandbox } : {}), updatedAt: sql`now()` })

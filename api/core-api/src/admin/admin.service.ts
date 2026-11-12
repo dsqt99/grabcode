@@ -18,7 +18,7 @@ import {
 } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
 import { briefJobs, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, users } from '../db/schema';
-import { emit, fundIfCovered, type Tx } from '../orders/orders.service';
+import { emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { SUSPENSE, coderOf, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
 import { ReposService } from '../repos/repos.service';
@@ -264,7 +264,7 @@ export class AdminService {
   // ---- Worker / queue monitor ----
 
   async monitor(): Promise<Monitor> {
-    const [[ob], rt, briefs, repos, consumers] = await Promise.all([
+    const [[ob], rt, briefs, repos, sandboxes, consumers] = await Promise.all([
       this.db
         .select({ n: sql<number>`count(*)::int`, oldest: sql<number | null>`extract(epoch from now() - min(${outbox.createdAt}))::int` })
         .from(outbox)
@@ -272,6 +272,7 @@ export class AdminService {
       this.db.execute<{ n: number }>(sql`select count(*)::int as n from public.centrifugo_outbox`),
       this.db.select().from(briefJobs).where(eq(briefJobs.status, 'FAILED')).orderBy(desc(briefJobs.updatedAt)).limit(20),
       this.db.select().from(orderRepos).where(eq(orderRepos.status, 'FAILED')).orderBy(desc(orderRepos.updatedAt)).limit(20),
+      this.db.select().from(orders).where(sql`${orders.sandbox}->>'status' = 'FAILED'`).orderBy(desc(orders.updatedAt)).limit(20),
       natsConsumers(),
     ]);
     const rtRows = (Array.isArray(rt) ? rt : (rt as { rows: { n: number }[] }).rows) as { n: number }[];
@@ -282,6 +283,7 @@ export class AdminService {
       failedJobs: [
         ...briefs.map((b) => ({ kind: 'brief' as const, id: b.id, orderId: null, error: b.error, updatedAt: iso(b.updatedAt), retryable: false })),
         ...repos.map((r) => ({ kind: 'repo' as const, id: r.orderId, orderId: r.orderId, error: r.error, updatedAt: iso(r.updatedAt), retryable: true })),
+        ...sandboxes.map((o) => ({ kind: 'sandbox' as const, id: o.id, orderId: o.id, error: o.sandbox?.error ?? null, updatedAt: iso(o.updatedAt), retryable: true })),
       ],
       consumers,
     };
@@ -297,6 +299,17 @@ export class AdminService {
     if (!r) throw new NotFoundException({ message: 'Repo job not found' });
     if (r.status !== 'FAILED') throw new ConflictException({ message: `Repo job is ${r.status}` });
     await this.repos.request(r.coder, { orderId, title: r.order.title, claudeMd: r.order.brief.claudeMdContent });
+  }
+
+  async retrySandbox(orderId: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
+      if (!row) throw new NotFoundException({ message: 'Order not found' });
+      if (row.sandbox?.status !== 'FAILED') throw new ConflictException({ message: `Sandbox is ${row.sandbox?.status ?? 'absent'}` });
+      const sandbox = await requestSandbox(tx, row);
+      if (!sandbox) throw new ConflictException({ message: 'Order repo is not READY' });
+      await tx.update(orders).set({ sandbox, updatedAt: sql`now()` }).where(eq(orders.id, orderId));
+    });
   }
 }
 
