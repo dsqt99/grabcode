@@ -122,7 +122,7 @@
 - [x] Web + coder: hint → refetch REST (đơn, thanh toán, repo/commit, offer, chat); poll giữ làm lưới an toàn 30s khi socket sống, 3s khi không — `2fe55c7`
 - [x] Smoke `api/core-api/scripts/smoke-realtime.mjs`: hint order/chat tới đúng user, user khác không nhận, chat 400/404 — `c63070f`
 - Brief vẫn poll: brief job ẩn danh (landing chưa login), không có kênh user
-- [ ] Token không refresh (24h, reconnect lấy token mới) và không recovery hint lỡ khi offline — đang dựa vào poll 30s
+- [x] Token refresh tại chỗ trước hạn (`refresh` command, kiểm với Centrifugo thật) — `b6b4773`; hint lỡ khi offline không replay: socket không live thì poll 3s đã bù
 - [x] `centrifugo_outbox` phình nếu Centrifugo không chạy → core-api xoá hint quá 10 phút, mỗi 10 phút — `a83414c`
 - [ ] Coder app: chưa verify trên browser luồng nhận offer qua hint (chỉ typecheck + smoke API)
 - [ ] 👤 Tài khoản Zalo ZNS, Firebase (FCM), VAPID key WebPush
