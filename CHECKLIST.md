@@ -85,7 +85,8 @@
 - [x] Coder: trạng thái online/offline lưu server `PUT /v1/me/presence` (6eeec73, da40a03)
 - [x] Test: 2 coder nhận cùng lúc → chỉ 1 thắng — `pnpm --filter @grabcode/core-api smoke:dispatch` 17 check (6eeec73, 87a517e)
 - [x] Push offer qua Centrifugo thay vì poll — `2fe55c7`
-- [ ] Đơn không có coder nào online: chờ vô hạn — cần cảnh báo khách / admin, hoàn tiền sau N giờ
+- [x] Đơn đã nạp mà 30 phút không coder nào nhận → hiện ở tab Orders của admin, admin hoàn tiền + huỷ (offer mở hết hạn) — `0e34333` `e46db66` `a589ef7`
+- [ ] Cảnh báo khách trên web khi đơn chờ lâu không có coder; tự hoàn sau N giờ (hiện admin làm tay)
 - [x] Đồng hồ offer: API trả `secondsLeft` theo giờ DB, client đếm theo đó — `63ddacc` `5711771` `18ab6ed`
 
 ## S4 — Milestone & nghiệm thu
