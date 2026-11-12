@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { and, asc, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
@@ -39,6 +39,8 @@ const paidSql = sql<string>`(select coalesce(sum(e.amount_vnd), 0) from core.led
 const REFUNDABLE = ['DRAFT', 'ACCEPTED', 'RESOLVED', 'CANCELLED'] as const;
 /** Paid but no coder has accepted yet: the admin may cancel + refund (no online coder, nobody wants it). */
 const UNASSIGNED = ['FUNDED', 'DISPATCHED'] as const;
+/** Unassigned paid orders older than this are cancelled + refunded automatically; 0 turns it off. */
+const AUTO_REFUND_HOURS = Number(process.env.AUTO_REFUND_HOURS ?? 24);
 const cancellable = (o: OrderRow) => o.status === 'DRAFT' || ((UNASSIGNED as readonly string[]).includes(o.status) && !o.coderUserId);
 
 /** Wallet minus PENDING payout requests: what a coder may still request / an admin may still pay. */
@@ -57,7 +59,9 @@ async function freeWallet(tx: Tx, userId: string, exceptId?: string) {
 }
 
 @Injectable()
-export class AdminService {
+export class AdminService implements OnModuleInit, OnModuleDestroy {
+  private sweeper?: NodeJS.Timeout;
+
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(ReposService) private readonly repos: ReposService,
@@ -161,10 +165,34 @@ export class AdminService {
   }
 
   /** Refunds what escrow holds. DRAFT -> CANCELLED (even with nothing paid); closed orders: overpayment only. */
-  async refund(id: string): Promise<AdminOrder> {
+  onModuleInit() {
+    if (AUTO_REFUND_HOURS > 0) this.sweeper = setInterval(() => void this.refundStale().catch((e) => console.error('auto refund failed', e)), 10 * 60_000);
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.sweeper);
+  }
+
+  /** Paid orders nobody accepted within AUTO_REFUND_HOURS: same path as the admin refund button. Returns ids refunded. */
+  async refundStale(hours = AUTO_REFUND_HOURS): Promise<string[]> {
+    const rows = await this.db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - make_interval(hours => ${hours})`));
+    const done: string[] = [];
+    for (const { id } of rows) {
+      // Another replica or a coder accept may win the row lock first; refund() then throws 409 and we skip.
+      await this.refund(id, true).then(() => done.push(id), (e) => console.warn(`auto refund ${id} skipped:`, e.message));
+    }
+    return done;
+  }
+
+  /** onlyCancel: the sweeper must never refund an order that turned in-progress between its select and this lock. */
+  async refund(id: string, onlyCancel = false): Promise<AdminOrder> {
     await this.db.transaction(async (tx) => {
       const row = await this.lockOrder(tx, id);
       const cancel = cancellable(row);
+      if (onlyCancel && !cancel) throw new ConflictException({ message: `Order ${row.status} is no longer unassigned` });
       if (!cancel && !(REFUNDABLE as readonly string[]).includes(row.status)) throw new ConflictException({ message: `Order ${row.status} is in progress` });
       const escrow = await balanceOf(tx, escrowOf(id));
       if (escrow <= 0 && !cancel) throw new ConflictException({ message: 'Escrow is empty' });
