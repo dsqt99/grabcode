@@ -301,7 +301,7 @@ write('openapi/core-api.openapi.json', {
     '/v1/orders/{id}/milestones/{milestoneId}/approve': {
       post: {
         operationId: 'approveMilestone',
-        summary: 'Customer approves a SUBMITTED milestone: COMPLETED, its weight share of escrow is released to the coder, the next milestone starts.',
+        summary: 'Customer approves a SUBMITTED milestone: COMPLETED, its weight share of escrow is released to the coder, the next milestone starts. 409 while its QA gate is FAILED (request changes instead); QA ERROR/SKIPPED/RUNNING do not block.',
         parameters: [orderId, milestoneId],
         responses: {
           '200': { description: 'OK', content: json('Order') },
