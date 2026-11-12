@@ -157,7 +157,8 @@
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
-- [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica; sau proxy/LB phải bật `trust proxy` để `req.ip` đúng
+- [x] `TRUST_PROXY` (vd `1` trên Cloud Run) bật express trust proxy để `req.ip` là IP khách — `52614af`
+- [ ] Rate limit: bộ đếm in-memory từng instance → Redis khi chạy nhiều replica
 - [ ] Liên kết tài khoản cùng email giữa các provider — `api/core-api/src/db/schema.ts:33`
 - [ ] Gộp `RequireAuth` + `lib/auth.tsx` trùng giữa web và coder vào package UI chung — `apps/*/components/RequireAuth.tsx`, `apps/*/lib/auth.tsx`
 - [x] Múi giờ đầy đủ (`Intl.supportedValuesOf`) trong `/profile`, contract từ chối múi giờ lạ (400) — `d4cd6a6` `39b366c`
