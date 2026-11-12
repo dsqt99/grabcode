@@ -115,3 +115,13 @@ ok(m.body.failedJobs.some((j) => j.kind === 'repo' && j.orderId === d.id && j.re
 ok((await admin('POST', `/v1/admin/jobs/repo/${d.id}/retry`)).status === 204, 'repo retry queued');
 ok(psql(`select status from core.order_repos where order_id = '${d.id}'`) === 'PENDING', 'repo job PENDING again');
 ok((await admin('POST', `/v1/admin/jobs/repo/${d.id}/retry`)).status === 409, 'retry non-FAILED 409');
+
+// ---- sandbox retry (order p: no repo yet, then a READY repo) ----
+psql(`update core.orders set sandbox = '{"status":"FAILED","url":null,"error":"smoke","expiresAt":null}' where id = '${p.id}'`);
+ok((await admin('GET', '/v1/admin/monitor')).body.failedJobs.some((j) => j.kind === 'sandbox' && j.orderId === p.id && j.retryable), 'FAILED sandbox listed');
+ok((await admin('POST', `/v1/admin/jobs/sandbox/${p.id}/retry`)).status === 409, 'sandbox retry without READY repo 409');
+psql(`insert into core.order_repos (order_id, coder_user_id, status, repo_full_name) values ('${p.id}', '${coderId}', 'READY', 'grabcode-sandbox/smoke-${run}') on conflict (order_id) do update set status = 'READY', repo_full_name = 'grabcode-sandbox/smoke-${run}'`);
+ok((await admin('POST', `/v1/admin/jobs/sandbox/${p.id}/retry`)).status === 204, 'sandbox retry queued');
+ok(psql(`select sandbox->>'status' from core.orders where id = '${p.id}'`) === 'PENDING', 'sandbox PENDING again');
+ok(psql(`select count(*) from core.outbox where subject = 'deploy.requested' and payload->'data'->>'orderId' = '${p.id}'`) === '1', 'deploy.requested in outbox');
+ok((await admin('POST', `/v1/admin/jobs/sandbox/${p.id}/retry`)).status === 409, 'retry non-FAILED sandbox 409');
