@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
-import { AuthError, useAuth } from '../lib/auth';
+import { AuthError, useAuth } from '@grabcode/auth-ui';
 import Navbar from './Navbar';
 
 const AUTH_ERRORS: Record<string, string> = {

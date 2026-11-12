@@ -7,7 +7,7 @@ import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
 import Navbar from '../../../components/Navbar';
 import { createOrder, ordersApiEnabled, requestBrief } from '../../../lib/api';
-import { useAuth } from '../../../lib/auth';
+import { useAuth } from '@grabcode/auth-ui';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
 import { FRAMEWORKS, estimate, getTemplate, getTier, isTier } from '../../../lib/pricing';

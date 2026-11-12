@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
-import { RequireAuth } from '../components/RequireAuth';
-import { AuthProvider } from '../lib/auth';
+import { RequireAuth } from '@grabcode/auth-ui';
+import { AuthProvider } from '@grabcode/auth-ui';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });

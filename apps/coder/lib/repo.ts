@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { onRealtimeHint, pollDelay } from '@grabcode/contracts';
 import type { OrderRepo } from '@grabcode/contracts/schemas';
-import { API_URL } from './auth';
+import { API_URL } from '@grabcode/auth-ui';
 
 const POLL_MS = 3000;
 

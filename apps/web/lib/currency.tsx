@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { useAuth } from './auth';
+import { useAuth } from '@grabcode/auth-ui';
 import { formatMoney, type Currency } from './pricing';
 
 interface Ctx {

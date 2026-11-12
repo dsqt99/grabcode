@@ -1,7 +1,7 @@
 "use client";
 
 import { SEED_CODER } from "@grabcode/contracts";
-import { useAuth } from "../lib/auth";
+import { useAuth } from "@grabcode/auth-ui";
 import { formatVnd } from "../lib/coderStore";
 
 const TIER_LABEL: Record<string, string> = {

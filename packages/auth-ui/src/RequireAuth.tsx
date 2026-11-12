@@ -1,9 +1,8 @@
 'use client';
 
-// shortcut: identical copy in apps/coder/components/RequireAuth.tsx; share once a UI package exists.
 import { useEffect, useState, type ReactNode } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
-import { useAuth } from '../lib/auth';
+import { useAuth } from './auth';
 
 const ROLE_COPY: Record<UserRole, { title: string; text: string; icon: string }> = {
   CUSTOMER: { title: 'Bật vai trò Khách hàng', text: 'Để đặt POC, ký quỹ và theo dõi đơn hàng.', icon: 'business_center' },

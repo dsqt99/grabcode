@@ -4,7 +4,7 @@ import type { NextConfig } from 'next';
 // (required for BroadcastChannel / localStorage cross-app sync).
 const nextConfig: NextConfig = {
   basePath: '/coder',
-  transpilePackages: ['@grabcode/contracts'],
+  transpilePackages: ['@grabcode/contracts', '@grabcode/auth-ui'],
 };
 
 export default nextConfig;

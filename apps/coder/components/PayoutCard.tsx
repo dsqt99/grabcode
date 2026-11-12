@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Payout, PayoutList } from '@grabcode/contracts/schemas';
-import { API_URL } from '../lib/auth';
+import { API_URL } from '@grabcode/auth-ui';
 import { formatVnd } from '../lib/coderStore';
 
 const LABEL: Record<Payout['status'], string> = { PENDING: 'Chờ duyệt', PAID: 'Đã chuyển', REJECTED: 'Từ chối' };

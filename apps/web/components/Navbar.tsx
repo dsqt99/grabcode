@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '@grabcode/auth-ui';
 
 const LINKS = [
   { href: '/#dispatch', label: 'Đặt đơn' },

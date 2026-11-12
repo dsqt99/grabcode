@@ -15,7 +15,7 @@ import {
 } from '@grabcode/contracts';
 import { onRealtimeHint } from '@grabcode/contracts';
 import type { ChatList, DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
-import { API_URL, useAuth } from './auth';
+import { API_URL, useAuth } from '@grabcode/auth-ui';
 
 const STORAGE_KEY = 'grabcode_coder_state';
 const DEFAULT_OFFER_SECONDS = 30;

@@ -6,7 +6,7 @@ import OnlineRadar from '../components/OnlineRadar';
 import WaveOfferModal from '../components/WaveOfferModal';
 import ActiveJobWorkspace from '../components/ActiveJobWorkspace';
 import PayoutCard from '../components/PayoutCard';
-import { API_URL } from '../lib/auth';
+import { API_URL } from '@grabcode/auth-ui';
 import { formatVnd, useCoder } from '../lib/coderStore';
 
 export default function Page() {

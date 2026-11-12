@@ -14,7 +14,6 @@ import type {
   UserRole,
 } from '@grabcode/contracts/schemas';
 
-// shortcut: duplicated in apps/coder/lib/auth.tsx; extract to a shared package when a third app needs it.
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type AuthStatus = 'disabled' | 'loading' | 'anon' | 'authed';

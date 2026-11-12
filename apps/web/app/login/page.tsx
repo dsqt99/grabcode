@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { LoginBanner, LoginPanel, RolePicker } from '../../components/AuthGate';
-import { useAuth } from '../../lib/auth';
+import { useAuth } from '@grabcode/auth-ui';
 
 /** Only same-site paths, so ?next= cannot bounce the user to another site. */
 const safeNext = (next: string | null) => (next?.startsWith('/') && !next.startsWith('//') ? next : null);

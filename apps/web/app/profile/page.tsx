@@ -13,8 +13,8 @@ import type {
   UserRole,
 } from '@grabcode/contracts/schemas';
 import Navbar from '../../components/Navbar';
-import { RequireAuth } from '../../components/RequireAuth';
-import { AuthError, useAuth } from '../../lib/auth';
+import { RequireAuth } from '@grabcode/auth-ui';
+import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
 
 const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-50 disabled:text-slate-500';
