@@ -1210,6 +1210,151 @@
         }
       }
     },
+    "/v1/orders/{id}/messages": {
+      "get": {
+        "operationId": "listOrderMessages",
+        "summary": "Customer / assigned coder: chat of the order, oldest first (last 200).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "sendOrderMessage",
+        "summary": "Customer / assigned coder posts a chat message; both parties get a `chat` realtime hint.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatSend"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/realtime/token": {
+      "get": {
+        "operationId": "getRealtimeToken",
+        "summary": "Centrifugo connection token for the caller, subscribed server-side to user.<id>. Pushes are RealtimeHint objects: refetch over REST.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Realtime not configured"
+          }
+        }
+      }
+    },
     "/v1/orders/{id}/payment": {
       "get": {
         "operationId": "getOrderPayment",
@@ -4602,6 +4747,143 @@
         },
         "required": [
           "online"
+        ],
+        "additionalProperties": false
+      },
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "sender": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "CODER",
+              "SYSTEM"
+            ]
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "sender",
+          "senderName",
+          "text",
+          "timestamp"
+        ],
+        "additionalProperties": false
+      },
+      "ChatSend": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "ChatList": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": "string"
+                },
+                "sender": {
+                  "type": "string",
+                  "enum": [
+                    "CUSTOMER",
+                    "CODER",
+                    "SYSTEM"
+                  ]
+                },
+                "senderName": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "orderId",
+                "sender",
+                "senderName",
+                "text",
+                "timestamp"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "messages"
+        ],
+        "additionalProperties": false
+      },
+      "RealtimeToken": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "token"
+        ],
+        "additionalProperties": false
+      },
+      "RealtimeHint": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "order",
+              "repo",
+              "offer",
+              "chat"
+            ]
+          },
+          "orderId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "orderId"
         ],
         "additionalProperties": false
       }

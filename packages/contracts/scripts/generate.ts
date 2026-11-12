@@ -43,6 +43,7 @@ import {
   OrderTransitionSchema,
 } from '../src/schemas/order.ts';
 import { OrderRepoSchema, RepoCreateSchema } from '../src/schemas/repo.ts';
+import { ChatListSchema, ChatMessageSchema, ChatSendSchema, RealtimeHintSchema, RealtimeTokenSchema } from '../src/schemas/realtime.ts';
 import {
   AddRoleSchema,
   AuthProvidersSchema,
@@ -308,6 +309,33 @@ write('openapi/core-api.openapi.json', {
         },
       },
     },
+    '/v1/orders/{id}/messages': {
+      get: {
+        operationId: 'listOrderMessages',
+        summary: 'Customer / assigned coder: chat of the order, oldest first (last 200).',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('ChatList') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
+      },
+      post: {
+        operationId: 'sendOrderMessage',
+        summary: 'Customer / assigned coder posts a chat message; both parties get a `chat` realtime hint.',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('ChatSend') },
+        responses: {
+          '201': { description: 'Created', content: json('ChatMessage') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+        },
+      },
+    },
+    '/v1/realtime/token': {
+      get: {
+        operationId: 'getRealtimeToken',
+        summary: 'Centrifugo connection token for the caller, subscribed server-side to user.<id>. Pushes are RealtimeHint objects: refetch over REST.',
+        responses: { '200': { description: 'OK', content: json('RealtimeToken') }, '401': unauthorized, '404': { description: 'Realtime not configured' } },
+      },
+    },
     '/v1/orders/{id}/payment': {
       get: {
         operationId: 'getOrderPayment',
@@ -411,6 +439,11 @@ write('openapi/core-api.openapi.json', {
       Wallet: schema(WalletSchema),
       OfferList: schema(OfferListSchema),
       Presence: schema(PresenceSchema),
+      ChatMessage: schema(ChatMessageSchema),
+      ChatSend: schema(ChatSendSchema, 'input'),
+      ChatList: schema(ChatListSchema),
+      RealtimeToken: schema(RealtimeTokenSchema),
+      RealtimeHint: schema(RealtimeHintSchema),
     },
   },
 });
