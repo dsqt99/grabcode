@@ -125,3 +125,14 @@ ok((await admin('POST', `/v1/admin/jobs/sandbox/${p.id}/retry`)).status === 204,
 ok(psql(`select sandbox->>'status' from core.orders where id = '${p.id}'`) === 'PENDING', 'sandbox PENDING again');
 ok(psql(`select count(*) from core.outbox where subject = 'deploy.requested' and payload->'data'->>'orderId' = '${p.id}'`) === '1', 'deploy.requested in outbox');
 ok((await admin('POST', `/v1/admin/jobs/sandbox/${p.id}/retry`)).status === 409, 'retry non-FAILED sandbox 409');
+
+// ---- paid order nobody took: listed after 30 min, refund cancels it ----
+const u = await newOrder(cust);
+await cust('POST', '/v1/payments/dev-deposit', { orderId: u.id });
+ok(!(await admin('GET', '/v1/admin/orders')).body.orders.some((o) => o.id === u.id), 'fresh unassigned order not listed');
+psql(`update core.orders set created_at = now() - interval '1 hour' where id = '${u.id}'`);
+const ul = (await admin('GET', '/v1/admin/orders')).body.orders.find((o) => o.id === u.id);
+ok(ul && ['FUNDED', 'DISPATCHED'].includes(ul.status) && ul.escrowVnd === u.priceVnd, `stuck ${ul?.status} order listed with escrow`);
+const uc = await admin('POST', `/v1/admin/orders/${u.id}/refund`);
+ok(uc.status === 200 && uc.body.status === 'CANCELLED' && uc.body.escrowVnd === 0, 'stuck order refunded -> CANCELLED');
+ok(psql(`select count(*) from core.dispatch_offers where order_id = '${u.id}' and status = 'PENDING'`) === '0', 'no open offers left');
