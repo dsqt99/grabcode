@@ -260,6 +260,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too many failed attempts for this email or IP; retry later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }

@@ -158,7 +158,7 @@ write('openapi/core-api.openapi.json', {
         operationId: 'passwordLogin',
         summary: 'Email/password login. Sets the gc_session cookie.',
         requestBody: { required: true, content: json('PasswordLogin') },
-        responses: { '200': { description: 'OK', content: json('Me') }, '401': { description: 'Wrong email or password', content: json('ErrorResponse') } },
+        responses: { '200': { description: 'OK', content: json('Me') }, '401': { description: 'Wrong email or password', content: json('ErrorResponse') }, '429': { description: 'Too many failed attempts for this email or IP; retry later', content: json('ErrorResponse') } },
       },
     },
     '/v1/auth/dev-login': {
