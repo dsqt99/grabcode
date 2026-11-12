@@ -152,7 +152,8 @@
 - [x] `.gitattributes` cố định line ending LF — `e06534b`
 - [x] Một lệnh chạy cả stack local: `pnpm stack` (compose --wait + migrate + dev) — `00303ec`
 - [ ] Test API: auth (đăng ký, login, session hết hạn), briefs, repos (webhook chữ ký sai, push trùng)
-- [ ] Dockerfile / cấu hình deploy cho core-api + workers
+- [x] Dockerfile chung `infra/node-service.Dockerfile` (`PKG` = core-api / worker), non-root, đã build + chạy thử core-api, outbox-relay — `f6a2d0c`
+- [ ] Image Next.js (web/coder/admin) + cấu hình deploy thật (Cloud Run service, secret manager)
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
