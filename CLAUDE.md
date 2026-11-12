@@ -158,7 +158,8 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 
 ### Image deploy (core-api + workers)
 - `docker build -f infra/node-service.Dockerfile --build-arg PKG=@grabcode/core-api -t grabcode/core-api .` (đổi `PKG` cho từng worker). Chạy bằng tsx, user `node`, cấu hình qua env (không copy `.env`/`credentials`).
-- qa-worker cần Docker CLI + socket, deploy-worker cần `gcloud`: chạy nơi host có sẵn. Web/coder/admin (Next.js) chưa có image.
+- qa-worker cần Docker CLI + socket, deploy-worker cần `gcloud`: chạy nơi host có sẵn.
+- Web/coder/admin: `docker build -f infra/next-app.Dockerfile --build-arg PKG=@grabcode/web --build-arg NEXT_PUBLIC_API_URL=<api> [--build-arg CODER_ORIGIN=… ADMIN_ORIGIN=…] -t grabcode/web .` (biến build-time, mỗi môi trường build lại; `next start` port 3000/3001/3002).
 
 ### Quy ước Git & Commit
 - Tiền tố theo component:
