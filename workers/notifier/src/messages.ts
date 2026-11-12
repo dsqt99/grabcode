@@ -1,4 +1,4 @@
-import { SUBJECTS, type DispatchEvent, type OrderEvent } from '@grabcode/contracts/schemas';
+import { SUBJECTS, type ChatPostedEvent, type DispatchEvent, type OrderEvent } from '@grabcode/contracts/schemas';
 
 export interface Notice {
   userIds: string[];
@@ -12,8 +12,16 @@ const order = (id: string) => `/order/${id}`;
 const CODER = '/coder';
 
 /** Which users hear about an event, and what they read. Events nobody needs to hear about map to []. */
-export function noticesFor(e: OrderEvent | DispatchEvent): Notice[] {
+export function noticesFor(e: OrderEvent | DispatchEvent | ChatPostedEvent): Notice[] {
   const { orderId } = e.data;
+  if (e.type === SUBJECTS.CHAT_POSTED) {
+    const { toCustomerUserId: cust, toCoderUserId: coder, senderName, preview } = (e as ChatPostedEvent).data;
+    const title = `${senderName} · ${orderId}`;
+    return [
+      ...(cust ? [{ userIds: [cust], title, body: preview, url: order(orderId) }] : []),
+      ...(coder ? [{ userIds: [coder], title, body: preview, url: CODER }] : []),
+    ];
+  }
   if (e.type === SUBJECTS.DISPATCH_OFFERED) {
     const ids = (e as DispatchEvent).data.coderUserIds;
     return ids.length ? [{ userIds: ids, title: 'Cuốc đơn mới', body: `Đơn ${orderId} đang chờ bạn nhận`, url: CODER }] : [];

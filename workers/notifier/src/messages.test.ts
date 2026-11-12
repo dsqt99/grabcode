@@ -22,3 +22,10 @@ test('order events pick the right side', () => {
   assert.deepEqual(noticesFor(ev('order.cancelled', 'DRAFT')), []);
   assert.deepEqual(noticesFor(ev('order.created', null)), []);
 });
+
+test('chat goes to the other party, coder to the coder app', () => {
+  const chat = (toCustomerUserId: string | null, toCoderUserId: string | null) =>
+    noticesFor({ event_id: 'e', type: 'chat.posted', occurred_at: '', data: { orderId: 'GC-1', senderName: 'An', toCustomerUserId, toCoderUserId, preview: 'hi' } });
+  assert.deepEqual(chat(null, K).map((n) => [n.userIds, n.url, n.body]), [[[K], '/coder', 'hi']]);
+  assert.deepEqual(chat(C, null).map((n) => [n.userIds, n.url]), [[[C], '/order/GC-1']]);
+});
