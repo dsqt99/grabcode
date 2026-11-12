@@ -35,6 +35,7 @@ export const ChatListSchema = z.object({ messages: z.array(ChatMessageSchema) })
 export type RealtimeHint = z.infer<typeof RealtimeHintSchema>;
 export type RealtimeToken = z.infer<typeof RealtimeTokenSchema>;
 export type ChatList = z.infer<typeof ChatListSchema>;
+export type { ChatMessage };
 
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const _chatMatches: Same<z.infer<typeof ChatMessageSchema>, ChatMessage> = true;
