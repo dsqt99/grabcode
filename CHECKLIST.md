@@ -150,7 +150,7 @@
 - [ ] ESLint thật cho các package (chưa có linter nào)
 - [x] CI GitHub Actions: install, check contract drift, typecheck, test trên mỗi PR — `25fef4e` (chưa chạy trên GitHub, branch chưa có PR)
 - [x] `.gitattributes` cố định line ending LF — `e06534b`
-- [ ] Một lệnh chạy cả stack local (api + relay + workers + apps)
+- [x] Một lệnh chạy cả stack local: `pnpm stack` (compose --wait + migrate + dev) — `00303ec`
 - [ ] Test API: auth (đăng ký, login, session hết hạn), briefs, repos (webhook chữ ký sai, push trùng)
 - [ ] Dockerfile / cấu hình deploy cho core-api + workers
 
