@@ -53,6 +53,14 @@ const c = client();
 await c('POST', '/v1/auth/login', { email, password: 'smoke-pass-2' });
 ok((await c('POST', '/v1/auth/logout')).status < 300 && (await c('GET', '/v1/me')).status === 401, 'logout ends session');
 
+// Lockout: 10 failures per email -> 429 even with the right password (counter in core.rate_limits, shared by replicas).
+const lockEmail = `x${email}`;
+await client()('POST', '/v1/auth/register', { email: lockEmail, password: 'smoke-pass-1', name: 'Lock', role: 'CUSTOMER' });
+for (let i = 0; i < 10; i++) await client()('POST', '/v1/auth/login', { email: lockEmail, password: 'nope-nope' });
+ok((await client()('POST', '/v1/auth/login', { email: lockEmail, password: 'smoke-pass-1' })).status === 429, 'login locked after 10 failures 429');
+// The smoke itself sends from one IP: clear its login/brief IP counters so reruns stay under the caps.
+psql(`delete from core.rate_limits where key like 'login-ip:%' or key like 'brief-ip:%'`);
+
 // --- briefs ---
 const anon = client();
 ok((await anon('POST', '/v1/briefs', { prompt: '', tier: 'EXPRESS' })).status === 400, 'brief empty prompt 400');
@@ -61,6 +69,9 @@ ok(job.status === 202 && job.body.status === 'PENDING', 'brief 202 PENDING');
 ok((await anon('GET', `/v1/briefs/${job.body.id}`)).body?.id === job.body.id, 'brief GET by id');
 ok((await anon('GET', '/v1/briefs/not-a-uuid')).status === 404 && (await anon('GET', `/v1/briefs/${randomUUID()}`)).status === 404, 'brief unknown / bad id 404');
 ok(psql(`select count(*) from core.outbox where subject = 'brief.requested' and payload->'data'->>'jobId' = '${job.body.id}'`) === '1', 'brief.requested outbox row');
+psql(`update core.rate_limits set n = 20 where key like 'brief-ip:%'`);
+ok((await anon('POST', '/v1/briefs', { prompt: 'smoke over cap', tier: 'EXPRESS' })).status === 429, 'brief over 20/hour per IP 429');
+psql(`delete from core.rate_limits where key like 'brief-ip:%'`);
 
 // --- repos ---
 ok((await anon('POST', '/v1/repos', { orderId: 'GC-1' })).status === 401, 'repo request without session 401');

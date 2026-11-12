@@ -55,10 +55,13 @@ const toMe = (
 
 @Injectable()
 export class AuthService {
-  private readonly emailFails = new Throttle(10, 15 * 60_000);
-  private readonly ipFails = new Throttle(30, 15 * 60_000);
+  private readonly emailFails: Throttle;
+  private readonly ipFails: Throttle;
 
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(@Inject(DB) private readonly db: Db) {
+    this.emailFails = new Throttle(db, 'login-email', 10, 15 * 60_000);
+    this.ipFails = new Throttle(db, 'login-ip', 30, 15 * 60_000);
+  }
 
   /** Me with both profiles loaded. */
   async me(user: UserRow): Promise<Me> {
@@ -173,16 +176,15 @@ export class AuthService {
    */
   async passwordLogin(input: PasswordLogin, ip = ''): Promise<{ token: string; user: UserRow }> {
     const keys = [`e:${input.email}`, `i:${ip}`];
-    if (this.emailFails.blocked(keys[0]) || this.ipFails.blocked(keys[1]))
+    if ((await this.emailFails.blocked(keys[0])) || (await this.ipFails.blocked(keys[1])))
       throw new HttpException({ message: 'Too many failed attempts, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
     const [row] = await this.db.select().from(users).where(eq(users.providerKey, `email:${input.email}`));
     const ok = await verifyPassword(input.password, row?.passwordHash ?? (await DUMMY_HASH));
     if (!row || !ok) {
-      this.emailFails.fail(keys[0]);
-      this.ipFails.fail(keys[1]);
+      await Promise.all([this.emailFails.fail(keys[0]), this.ipFails.fail(keys[1])]);
       throw new UnauthorizedException({ message: 'Wrong email or password' });
     }
-    this.emailFails.reset(keys[0]);
+    await this.emailFails.reset(keys[0]);
     const { email, githubLogin, name, avatarUrl, providerKey } = row;
     return this.login({ providerKey, email, githubLogin, name, avatarUrl });
   }

@@ -66,6 +66,13 @@ export const userIdentities = core.table('user_identities', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Fixed-window attempt counters (login failures, public brief requests) shared by all core-api replicas. */
+export const rateLimits = core.table('rate_limits', {
+  key: text('key').primaryKey(),
+  n: integer('n').notNull(),
+  until: timestamp('until', { withTimezone: true }).notNull(),
+});
+
 export const sessions = core.table('sessions', {
   tokenHash: text('token_hash').primaryKey(),
   userId: uuid('user_id')
