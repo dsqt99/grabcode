@@ -109,6 +109,7 @@ write('openapi/core-api.openapi.json', {
         responses: {
           '202': { description: 'Accepted', content: json('BriefJob') },
           '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '429': { description: 'Too many briefs from this IP (20 per hour), retry later', content: json('ErrorResponse') },
         },
       },
     },

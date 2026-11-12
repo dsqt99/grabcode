@@ -44,6 +44,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too many briefs from this IP (20 per hour), retry later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
