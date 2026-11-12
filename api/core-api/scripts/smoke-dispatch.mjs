@@ -55,6 +55,7 @@ const newOrder = async () => {
 // Race: two coders accept the same order at once -> exactly one wins.
 const o1 = await newOrder();
 const [oa, ob] = await Promise.all([offerFor(a, o1.id), offerFor(b, o1.id)]);
+ok(oa && oa.secondsLeft > 0 && oa.secondsLeft <= 30, `offer secondsLeft ${oa?.secondsLeft}`);
 ok(oa && ob && oa.wave === ob.wave, `${o1.id} offered to a + b in wave ${oa?.wave}`);
 ok(!(await c('GET', '/v1/me/offers')).body.offers.length, 'offline coder gets no offer');
 ok((await cust('GET', `/v1/orders/${o1.id}`)).body.status === 'DISPATCHED', 'order DISPATCHED after first wave');

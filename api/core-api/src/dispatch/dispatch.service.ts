@@ -117,16 +117,17 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
     this.requireCoder(user);
     await this.db.update(users).set({ lastSeenAt: sql`now()` }).where(eq(users.id, user.id));
     const rows = await this.db
-      .select()
+      .select({ r: dispatchOffers, left: sql<number>`ceil(extract(epoch from ${dispatchOffers.expiresAt} - now()))::int` })
       .from(dispatchOffers)
       .where(and(eq(dispatchOffers.coderUserId, user.id), eq(dispatchOffers.status, 'PENDING'), gt(dispatchOffers.expiresAt, sql`now()`)));
     return Promise.all(
-      rows.map(async (r) => ({
+      rows.map(async ({ r, left }) => ({
         id: r.id,
         orderId: r.orderId,
         wave: r.wave,
         status: r.status,
         expiresAt: r.expiresAt.toISOString(),
+        secondsLeft: Math.max(0, left),
         createdAt: r.createdAt.toISOString(),
         order: (await this.orders.load(eq(orders.id, r.orderId)))[0],
       })),
