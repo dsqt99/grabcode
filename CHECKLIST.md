@@ -140,7 +140,7 @@
 - [x] Smoke `scripts/smoke-admin.mjs` (34 check) — `3a04826`
 - [ ] Cấu hình AI model & bảng giá (đọc từ DB thay `.env`) — hoãn: bảng giá dùng chung với ước tính ở web qua contracts, chuyển DB phải đổi cả web + API
 - [x] Thử lại sandbox FAILED từ admin (cùng repo) — `fa92323` `3d393a1` `abe9c8f`; brief không retry (khách tạo lại ở web), QA chạy lại khi coder nộp lại
-- [ ] Chuyển khoản payout tự động (hiện admin CK tay rồi bấm duyệt)
+- [ ] Chuyển khoản payout tự động (hiện admin CK tay rồi bấm duyệt) — chờ 👤: cần API chi hộ (hợp đồng doanh nghiệp với ngân hàng/cổng chi hộ); SePay chỉ báo tiền vào
 
 ---
 
