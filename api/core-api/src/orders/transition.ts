@@ -67,6 +67,8 @@ export function reviewMilestone(o: OrderState, user: Actor, milestoneId: string,
     return { denied: 409, message: 'Milestone is not waiting for review' };
   }
   if (!approve) return { brief: setAt(o.brief, idx, (m) => ({ ...m, status: 'IN_PROGRESS', ...(note ? { note } : {}) })), index: idx };
+  // Only a real check failure blocks; ERROR (QA infra broke) and RUNNING must not hold the customer's money hostage.
+  if (o.brief.milestones[idx].qa?.status === 'FAILED') return { denied: 409, message: 'QA gate failed for this milestone; request changes' };
   const done = setAt(o.brief, idx, (m) => ({ ...m, status: 'COMPLETED', completedAt: now }));
   return { brief: idx + 1 < done.milestones.length ? setAt(done, idx + 1, (m) => ({ ...m, status: 'IN_PROGRESS' })) : done, index: idx };
 }

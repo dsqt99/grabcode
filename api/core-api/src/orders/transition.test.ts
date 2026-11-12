@@ -58,6 +58,10 @@ test('submit -> reject -> resubmit -> approve, in order, starting the next miles
   const ok = reviewMilestone(o2, CUST, 'M1', true, null, 't') as { brief: AIBrief; index: number };
   assert.deepEqual([ok.index, ...ok.brief.milestones.map((m) => m.status)], [0, 'COMPLETED', 'IN_PROGRESS']);
   assert.ok(isDenied(reviewMilestone({ ...o, brief: ok.brief }, CUST, 'M1', true, null, 't')), 'no double approve');
+  const qa = (status: 'FAILED' | 'ERROR') => ({ ...o2, brief: { ...sub, milestones: sub.milestones.map((m, i) => (i ? m : { ...m, qa: { status, commitHash: 'abc1234', checks: [] } })) } });
+  assert.ok(isDenied(reviewMilestone(qa('FAILED'), CUST, 'M1', true, null, 't')), 'QA FAILED blocks approve');
+  assert.ok(!isDenied(reviewMilestone(qa('FAILED'), CUST, 'M1', false, 'fix QA', 't')), 'QA FAILED still allows request changes');
+  assert.ok(!isDenied(reviewMilestone(qa('ERROR'), CUST, 'M1', true, null, 't')), 'QA ERROR does not block');
 });
 
 test('a PENDING first milestone (order just accepted) can be submitted', () => {
