@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. **Tiếp theo:** S5 Workers bàn giao.
+**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). **Tiếp theo:** S6 Realtime & thông báo.
 
 ---
 
@@ -102,10 +102,16 @@
 
 ## S5 — Workers bàn giao
 
-- [ ] `qa-worker`: build, test, static analysis, security scan; kết quả gắn vào mốc
-- [ ] 👤 Tài khoản GCP + project cho Cloud Run sandbox
-- [ ] `deploy-worker`: deploy sandbox preview Cloud Run, trả URL cho `SandboxFrame`
-- [ ] Dọn sandbox hết hạn
+- [x] Contract: `qa` theo mốc, `sandbox` theo đơn, event `qa.*` / `deploy.*` — `274f203`
+- [x] API: nộp mốc → `qa.requested`; DELIVERED → `deploy.requested`; nhận kết quả về `brief.milestones[].qa` / `orders.sandbox` — `1da6a1b`
+- [x] `qa-worker`: quét secret + install/lint/typecheck/build/test/audit, mỗi bước 1 container Docker (giới hạn RAM/CPU/pids, checkout không có `.git`); kết quả gắn vào mốc — `b533e51`
+- [x] UI: badge QA + check lỗi theo mốc (web + coder), `SandboxFrame` iframe URL thật / đang dựng / lỗi / hết hạn — `af6546a`
+- [x] Smoke `api/core-api/scripts/smoke-qa.mjs` (repo bare local qua `GIT_CLONE_BASE`): lộ `.env` → FAILED, sửa → PASSED, sandbox FAILED khi chưa có GCP — `4463cb4`
+- [ ] 👤 Tài khoản GCP + project cho Cloud Run sandbox (`gcloud auth login`, bật Cloud Run + Cloud Build, điền `GCP_PROJECT`)
+- [~] `deploy-worker`: `gcloud run deploy --source` → `deploy.ready` URL cho `SandboxFrame` — code xong `b533e51`, chưa deploy thật (chờ GCP)
+- [~] Dọn sandbox hết hạn: tick 10 phút xóa service quá `SANDBOX_TTL_HOURS` (72h) → `deploy.expired` — code xong `b533e51`, chưa test với GCP
+- [ ] QA container còn mạng ra ngoài (cần cho install); cân nhắc `--network none` cho bước sau install
+- [ ] Coder submit chờ QA? Hiện QA chỉ là thông tin, khách vẫn duyệt được khi QA FAILED
 
 ## S6 — Realtime & thông báo
 
