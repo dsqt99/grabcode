@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import {
   SUBJECTS,
@@ -123,7 +123,10 @@ export class ReposService {
 
   /** Push webhook: store commits of a known repo; unknown repos are ignored. sha PK dedupes redeliveries. */
   async recordPush(repoFullName: string, commits: { id: string; message: string; author?: { name?: string; username?: string }; url: string; timestamp: string }[]) {
-    const [r] = await this.db.select({ orderId: orderRepos.orderId }).from(orderRepos).where(eq(orderRepos.repoFullName, repoFullName));
+    let [r] = await this.db.select({ orderId: orderRepos.orderId }).from(orderRepos).where(eq(orderRepos.repoFullName, repoFullName));
+    // The CLAUDE.md commit's push can beat repo.provisioned (row still PENDING, no full name): match gc-<n> to its order instead.
+    const n = /\/gc-(\d+)$/.exec(repoFullName)?.[1];
+    if (!r && n) [r] = await this.db.select({ orderId: orderRepos.orderId }).from(orderRepos).where(and(eq(orderRepos.orderId, `GC-${n}`), isNull(orderRepos.repoFullName)));
     if (!r || commits.length === 0) return;
     await this.db
       .insert(repoCommits)
