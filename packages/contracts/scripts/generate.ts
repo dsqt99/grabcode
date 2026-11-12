@@ -471,6 +471,14 @@ write('openapi/core-api.openapi.json', {
         responses: { '204': { description: 'Re-queued' }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Repo job not FAILED', content: json('ErrorResponse') } },
       },
     },
+    '/v1/admin/jobs/sandbox/{id}/retry': {
+      post: {
+        operationId: 'adminRetrySandbox',
+        summary: 'Admin: re-deploy the FAILED sandbox preview of the order (last submitted commit).',
+        parameters: [orderId],
+        responses: { '204': { description: 'Re-queued' }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Sandbox not FAILED, or repo not READY', content: json('ErrorResponse') } },
+      },
+    },
     '/v1/me/presence': {
       get: { operationId: 'getPresence', summary: 'Coder online toggle.', responses: { '200': { description: 'OK', content: json('Presence') }, '401': unauthorized } },
       put: {

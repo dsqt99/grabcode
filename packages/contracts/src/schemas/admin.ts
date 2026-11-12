@@ -120,12 +120,13 @@ export const MonitorSchema = z.object({
   realtimePending: z.number().int(),
   failedJobs: z.array(
     z.object({
-      kind: z.enum(['brief', 'repo']),
+      /** brief jobs are not retried: the customer just generates again on the web. */
+      kind: z.enum(['brief', 'repo', 'sandbox']),
       id: z.string(),
       orderId: z.string().nullable(),
       error: z.string().nullable(),
       updatedAt: z.string(),
-      /** POST /v1/admin/jobs/repo/{orderId}/retry is available. */
+      /** POST /v1/admin/jobs/{kind}/{orderId}/retry is available (repo, sandbox). */
       retryable: z.boolean(),
     }),
   ),

@@ -2299,6 +2299,67 @@
         }
       }
     },
+    "/v1/admin/jobs/sandbox/{id}/retry": {
+      "post": {
+        "operationId": "adminRetrySandbox",
+        "summary": "Admin: re-deploy the FAILED sandbox preview of the order (last submitted commit).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Re-queued"
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sandbox not FAILED, or repo not READY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/presence": {
       "get": {
         "operationId": "getPresence",
@@ -6293,7 +6354,8 @@
                   "type": "string",
                   "enum": [
                     "brief",
-                    "repo"
+                    "repo",
+                    "sandbox"
                   ]
                 },
                 "id": {
