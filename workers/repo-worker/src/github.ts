@@ -56,11 +56,13 @@ export function createGitHubApp(cfg: { appId: string; installationId: string; pr
   }
 
   /** Returns any response; callers decide which statuses are fine (e.g. 404 = "does not exist yet"). */
-  return async function gh(method: string, path: string, body?: unknown) {
+  async function gh(method: string, path: string, body?: unknown) {
     const r = await raw(method, path, await token(), body);
     if (r.status === 401) cached = undefined; // token revoked/expired early: next attempt mints a new one
     return r;
-  };
+  }
+  // token: git clone over HTTPS (checkout.ts).
+  return Object.assign(gh, { token });
 }
 
 /** Throws GitHubError unless the status is one of `ok`. */
