@@ -112,7 +112,7 @@
 - [~] `deploy-worker`: `gcloud run deploy --source` → `deploy.ready` URL cho `SandboxFrame` — code xong `b533e51`, chưa deploy thật (chờ GCP)
 - [~] Dọn sandbox hết hạn: tick 10 phút xóa service quá `SANDBOX_TTL_HOURS` (72h) → `deploy.expired` — code xong `b533e51`, chưa test với GCP
 - [ ] QA container còn mạng ra ngoài (cần cho install); cân nhắc `--network none` cho bước sau install
-- [ ] Coder submit chờ QA? Hiện QA chỉ là thông tin, khách vẫn duyệt được khi QA FAILED
+- [x] QA FAILED chặn khách duyệt mốc (409, nút Duyệt tắt), vẫn yêu cầu sửa được; ERROR/RUNNING không chặn để lỗi hạ tầng QA không giam tiền — `0d8c2d5` `24fa251`
 
 ## S6 — Realtime & thông báo
 
