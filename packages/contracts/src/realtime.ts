@@ -18,8 +18,10 @@ let opening = false;
 export const pollDelay = (fast: number) => (live ? 30_000 : fast);
 
 async function open() {
-  if (ws || !listeners.size) return;
+  if (ws || opening || !listeners.size) return;
+  opening = true;
   const res = await fetch(`${apiBase}/v1/realtime/token`, { credentials: 'include' }).catch(() => null);
+  opening = false;
   if (!res?.ok) return res?.status === 404 ? undefined : schedule(); // 404: realtime not configured, stay on polling
   const { url, token } = (await res.json()) as RealtimeToken;
   if (ws || !listeners.size) return;
