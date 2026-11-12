@@ -5086,6 +5086,11 @@
                 "expiresAt": {
                   "type": "string"
                 },
+                "secondsLeft": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -5499,6 +5504,7 @@
                 "wave",
                 "status",
                 "expiresAt",
+                "secondsLeft",
                 "createdAt",
                 "order"
               ],

@@ -20,6 +20,8 @@ export const DispatchOfferSchema = z.object({
   wave: z.number().int().positive(),
   status: OfferStatusSchema,
   expiresAt: z.string(),
+  /** Seconds until expiry by the DB clock, so the client countdown ignores its own clock skew. */
+  secondsLeft: z.number().int().nonnegative(),
   createdAt: z.string(),
   order: OrderSchema,
 });
