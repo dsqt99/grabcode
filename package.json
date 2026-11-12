@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm -r --parallel --stream run dev",
+    "stack": "docker compose up -d --wait && pnpm --filter @grabcode/core-api db:migrate && pnpm dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run lint",

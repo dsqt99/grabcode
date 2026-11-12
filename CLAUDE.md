@@ -99,7 +99,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Root script gọi `pnpm -r` bên trong nên `npm run dev` hay `pnpm dev` đều được; cài deps vẫn bắt buộc `pnpm install` (repo dùng `workspace:*`).
 - **Cài đặt dependencies**: `pnpm install`
 - **Sinh mã từ Contract**: `pnpm --filter @grabcode/contracts run generate`
-- **Chạy môi trường Dev toàn bộ**: `pnpm dev`
+- **Chạy môi trường Dev toàn bộ**: `pnpm stack` (docker compose `--wait` + migrate + `pnpm dev` mọi app/worker); đã có infra thì `pnpm dev`
 - **Chạy riêng từng thành phần**:
   * Chạy Web: `pnpm --filter @grabcode/web dev`
   * Chạy Coder PWA: `pnpm --filter @grabcode/coder dev`
