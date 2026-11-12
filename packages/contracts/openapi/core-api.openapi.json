@@ -116,7 +116,7 @@
     "/v1/auth/{provider}": {
       "get": {
         "operationId": "startOAuthLogin",
-        "summary": "Browser navigation: redirects to the OAuth provider. `redirect` must be an allowed web origin URL.",
+        "summary": "Browser navigation: redirects to the OAuth provider. `redirect` must be an allowed web origin URL. `link=1` (signed in) attaches that provider login to the current account instead of signing in; never merges two existing accounts.",
         "parameters": [
           {
             "name": "provider",
@@ -151,6 +151,17 @@
               "type": "string",
               "format": "uri"
             }
+          },
+          {
+            "name": "link",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
           }
         ],
         "responses": {
@@ -166,7 +177,7 @@
     "/v1/auth/{provider}/callback": {
       "get": {
         "operationId": "oauthCallback",
-        "summary": "Provider redirects here; sets the gc_session cookie and redirects back (adds ?auth_error=state|oauth on failure).",
+        "summary": "Provider redirects here; sets the gc_session cookie (or links the identity when started with link=1) and redirects back (adds ?auth_error=state|oauth|link_taken|link_session on failure).",
         "parameters": [
           {
             "name": "provider",
@@ -2738,6 +2749,16 @@
               "dev"
             ]
           },
+          "linkedProviders": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "github",
+                "google"
+              ]
+            }
+          },
           "coderProfile": {
             "anyOf": [
               {
@@ -2957,6 +2978,7 @@
           "notifications",
           "hasPassword",
           "loginMethod",
+          "linkedProviders",
           "coderProfile",
           "customerProfile",
           "coderStats",

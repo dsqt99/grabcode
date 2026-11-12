@@ -1,9 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { and, count, eq, gt, ne, sql } from 'drizzle-orm';
 import { createHash, randomBytes } from 'node:crypto';
-import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
+import { coderTierFor, type ChangePassword, type CoderProfileDetails, type CustomerProfile, type Me, type OAuthProvider, type PasswordLogin, type Register, type UpdateMe, type AccountRole } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { coderProfiles, customerProfiles, orders, sessions, users } from '../db/schema';
+import { coderProfiles, customerProfiles, orders, sessions, userIdentities, users } from '../db/schema';
 import { DUMMY_HASH, hashPassword, verifyPassword } from './password';
 import { Throttle } from './throttle';
 
@@ -28,6 +28,7 @@ const toMe = (
   coder: typeof coderProfiles.$inferSelect | undefined,
   customer: typeof customerProfiles.$inferSelect | undefined,
   accepted: number,
+  linked: string[],
 ): Me => ({
   id: u.id,
   name: u.name,
@@ -42,6 +43,9 @@ const toMe = (
   notifications: u.notifications,
   hasPassword: u.passwordHash !== null,
   loginMethod: u.providerKey.slice(0, u.providerKey.indexOf(':')) as Me['loginMethod'],
+  linkedProviders: [u.providerKey, ...linked]
+    .map((k) => k.slice(0, k.indexOf(':')))
+    .filter((p): p is OAuthProvider => p === 'github' || p === 'google'),
   coderProfile: coder ? (({ userId, updatedAt, ...rest }) => rest)(coder) : null,
   customerProfile: customer ? { companyName: customer.companyName, companySize: customer.companySize, website: customer.website } : null,
   // rating stays null until customer reviews (S4).
@@ -58,12 +62,13 @@ export class AuthService {
 
   /** Me with both profiles loaded. */
   async me(user: UserRow): Promise<Me> {
-    const [[coder], [customer], [stats]] = await Promise.all([
+    const [[coder], [customer], [stats], linked] = await Promise.all([
       this.db.select().from(coderProfiles).where(eq(coderProfiles.userId, user.id)),
       this.db.select().from(customerProfiles).where(eq(customerProfiles.userId, user.id)),
       this.db.select({ n: count() }).from(orders).where(and(eq(orders.coderUserId, user.id), eq(orders.status, 'ACCEPTED'))),
+      this.db.select({ k: userIdentities.providerKey }).from(userIdentities).where(eq(userIdentities.userId, user.id)),
     ]);
-    return toMe(user, coder, customer, stats?.n ?? 0);
+    return toMe(user, coder, customer, stats?.n ?? 0, linked.map((r) => r.k));
   }
 
   /**
@@ -71,6 +76,15 @@ export class AuthService {
    * Provider name/avatar only seed a NEW account, so edits made in settings survive the next login.
    */
   async login(id: Identity, role?: AccountRole): Promise<{ token: string; user: UserRow }> {
+    const [linked] = await this.db.select({ userId: userIdentities.userId }).from(userIdentities).where(eq(userIdentities.providerKey, id.providerKey));
+    if (linked) {
+      const [user] = await this.db
+        .update(users)
+        .set({ ...(id.githubLogin ? { githubLogin: id.githubLogin } : {}), roles: role ? addRoleSql(role) : users.roles, updatedAt: sql`now()` })
+        .where(eq(users.id, linked.userId))
+        .returning();
+      return { token: await this.createSession(user.id), user };
+    }
     const [user] = await this.db
       .insert(users)
       .values({ ...id, roles: role ? [role] : [] })
@@ -85,6 +99,24 @@ export class AuthService {
       })
       .returning();
     return { token: await this.createSession(user.id), user };
+  }
+
+  /**
+   * Attach an OAuth identity to the signed-in account: the user proved control of both, so no email matching is needed
+   * (password emails are unverified, matching on them would let a squatter capture a later OAuth sign-up).
+   * Never merges two existing accounts: an identity that already owns or is linked to another account is refused.
+   */
+  async link(user: UserRow, id: Identity): Promise<void> {
+    const [owner] = await this.db.select({ id: users.id }).from(users).where(eq(users.providerKey, id.providerKey));
+    if (owner && owner.id !== user.id) throw new ConflictException({ message: 'This login already has its own account' });
+    if (owner) return;
+    await this.db.transaction(async (tx) => {
+      await tx.insert(userIdentities).values({ providerKey: id.providerKey, userId: user.id }).onConflictDoNothing();
+      const [row] = await tx.select({ userId: userIdentities.userId }).from(userIdentities).where(eq(userIdentities.providerKey, id.providerKey));
+      if (row.userId !== user.id) throw new ConflictException({ message: 'This login is linked to another account' });
+      // A linked GitHub login is what repo invites and handover use.
+      if (id.githubLogin) await tx.update(users).set({ githubLogin: id.githubLogin, updatedAt: sql`now()` }).where(eq(users.id, user.id));
+    });
   }
 
   async addRole(userId: string, role: AccountRole): Promise<UserRow> {

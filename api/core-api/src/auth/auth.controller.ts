@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Get,
@@ -96,6 +97,7 @@ export class AuthController {
     @Param('provider') providerName: string,
     @Query('role') role: string,
     @Query('redirect') redirect: string | undefined,
+    @Query('link') link: string | undefined,
     @Res() res: Response,
   ) {
     const name = OAuthProviderSchema.safeParse(providerName);
@@ -104,7 +106,7 @@ export class AuthController {
     if (!parsedRole.success) throw invalid(parsedRole.error.issues);
     const state = randomBytes(16).toString('base64url');
     // state is checked against this httpOnly cookie on callback (CSRF protection for the OAuth flow).
-    res.cookie(OAUTH_COOKIE, JSON.stringify({ state, provider: name.data, role: parsedRole.data, redirect: safeRedirect(redirect) }), {
+    res.cookie(OAUTH_COOKIE, JSON.stringify({ state, provider: name.data, role: parsedRole.data, redirect: safeRedirect(redirect), link: link === '1' }), {
       ...oauthCookie,
       maxAge: 10 * 60 * 1000,
     });
@@ -119,7 +121,7 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    let pending: { state?: string; provider?: string; role?: UserRole; redirect?: string } = {};
+    let pending: { state?: string; provider?: string; role?: UserRole; redirect?: string; link?: boolean } = {};
     try {
       pending = JSON.parse(readCookie(req, OAUTH_COOKIE) ?? '{}');
     } catch {}
@@ -134,11 +136,18 @@ export class AuthController {
     try {
       // Auth is core-api's job; the code exchange is two short calls with 5s timeouts, not heavy lifting.
       const identity = await OAUTH_PROVIDERS[name.data].exchange(code, callbackUrl(name.data));
-      const { token } = await this.auth.login(identity, role.data);
-      this.setSession(res, token);
+      if (pending.link) {
+        const user = await this.auth.userForToken(readCookie(req, SESSION_COOKIE));
+        if (!user) back.searchParams.set('auth_error', 'link_session');
+        else await this.auth.link(user, identity);
+      } else {
+        const { token } = await this.auth.login(identity, role.data);
+        this.setSession(res, token);
+      }
     } catch (err) {
-      console.error(`${name.data} login failed`, err);
-      back.searchParams.set('auth_error', 'oauth');
+      const taken = err instanceof ConflictException;
+      if (!taken) console.error(`${name.data} login failed`, err);
+      back.searchParams.set('auth_error', taken ? 'link_taken' : 'oauth');
     }
     res.redirect(back.toString());
   }

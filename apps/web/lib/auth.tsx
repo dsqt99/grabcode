@@ -24,7 +24,8 @@ interface Ctx {
   me: Me | null;
   providers: AuthProviders;
   /** `role` only matters when the OAuth login creates a new account (sign-up). */
-  oauthUrl: (provider: OAuthProvider, role?: UserRole) => string;
+  /** `link`: attach this provider to the signed-in account instead of signing in. */
+  oauthUrl: (provider: OAuthProvider, role?: UserRole, link?: boolean) => string;
   /** All mutations reject with AuthError (status 400/401/403/409) on failure. */
   register: (input: Register) => Promise<void>;
   passwordLogin: (input: PasswordLogin) => Promise<void>;
@@ -69,11 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  const oauthUrl = useCallback((provider: OAuthProvider, role?: UserRole) => {
+  const oauthUrl = useCallback((provider: OAuthProvider, role?: UserRole, link?: boolean) => {
     const back = new URL(window.location.href);
     back.searchParams.delete('auth_error');
     const q = new URLSearchParams({ redirect: back.toString() });
     if (role) q.set('role', role);
+    if (link) q.set('link', '1');
     return `${API_URL}/v1/auth/${provider}?${q}`;
   }, []);
 

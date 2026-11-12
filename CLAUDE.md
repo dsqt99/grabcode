@@ -142,7 +142,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
 - GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
 - Google OAuth: Google Cloud Console → OAuth client (Web application), Authorized redirect URI `{API_PUBLIC_URL}/v1/auth/google/callback`, điền `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Provider chưa cấu hình thì nút ẩn, `/v1/auth/{provider}` trả 404.
-- Email/mật khẩu: `POST /v1/auth/register` (409 nếu trùng email), `POST /v1/auth/login` (401 chung cho sai email/mật khẩu); hash scrypt. Mỗi provider là 1 user riêng (chưa link tài khoản theo email).
+- Email/mật khẩu: `POST /v1/auth/register` (409 nếu trùng email), `POST /v1/auth/login` (401 chung cho sai email/mật khẩu); hash scrypt. Đăng ký mới qua provider khác = user riêng; gộp bằng nút "Liên kết" ở /profile (`/v1/auth/{provider}?link=1`, cần đang login, lưu `core.user_identities`). Không tự gộp theo email (email mật khẩu chưa xác minh).
 - Dev login không cần GitHub: `AUTH_DEV_LOGIN=true` (tự tắt khi `NODE_ENV=production`).
 - `apps/web` và `apps/coder` cần `NEXT_PUBLIC_API_URL` trong `.env.local`; không có biến này = chế độ mock, bỏ qua đăng nhập.
 - Một trang login duy nhất: web `/login` cho cả 2 vai trò. Role chỉ chọn lúc đăng ký (thẻ Khách hàng/Coder), 1 tài khoản có thể có cả 2 role. Sau login: về `?next=` hoặc theo role (CUSTOMER → `/`, chỉ CODER → `/coder`).

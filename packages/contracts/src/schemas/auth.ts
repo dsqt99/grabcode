@@ -42,6 +42,8 @@ export const CustomerProfileSchema = z.object({
   website: UrlSchema.nullable(),
 });
 
+export const OAuthProviderSchema = z.enum(['github', 'google']);
+
 export const MeSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -61,6 +63,8 @@ export const MeSchema = z.object({
   /** True for email/password accounts (they can change password). */
   hasPassword: z.boolean(),
   loginMethod: z.enum(['email', 'github', 'google', 'dev']),
+  /** OAuth providers that sign in to this account: the one it was created with plus any linked from /profile. */
+  linkedProviders: z.array(OAuthProviderSchema),
   /** null until the user saves that profile. */
   coderProfile: CoderProfileDetailsSchema.nullable(),
   customerProfile: CustomerProfileSchema.nullable(),
@@ -110,7 +114,6 @@ export const AuthProvidersSchema = z.object({
 });
 
 /** OAuth providers reachable via GET /v1/auth/{provider}. */
-export const OAuthProviderSchema = z.enum(['github', 'google']);
 
 const EmailSchema = z.string().trim().toLowerCase().email().max(254);
 

@@ -31,7 +31,7 @@ export const outbox = core.table('outbox', {
 export const users = core.table('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   // 'github:<id>' | 'google:<sub>' | 'email:<lowercased email>' | 'dev:<login>'; stable across profile renames.
-  // shortcut: no cross-provider account linking (same email via Google and password = 2 users); add when needed.
+  // Further OAuth logins of the same person live in user_identities (linked explicitly while signed in, never by email).
   providerKey: text('provider_key').notNull().unique(),
   githubLogin: text('github_login'),
   email: text('email'),
@@ -57,6 +57,15 @@ export const users = core.table('users', {
 });
 
 // Only the SHA-256 of the session token is stored, so a DB leak does not leak live sessions.
+/** Extra OAuth identities linked to an account from /profile; a providerKey is either a users row or here, never both. */
+export const userIdentities = core.table('user_identities', {
+  providerKey: text('provider_key').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const sessions = core.table('sessions', {
   tokenHash: text('token_hash').primaryKey(),
   userId: uuid('user_id')

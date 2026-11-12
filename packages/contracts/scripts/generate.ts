@@ -129,15 +129,21 @@ write('openapi/core-api.openapi.json', {
     '/v1/auth/{provider}': {
       get: {
         operationId: 'startOAuthLogin',
-        summary: 'Browser navigation: redirects to the OAuth provider. `redirect` must be an allowed web origin URL.',
-        parameters: [provider, role, { name: 'redirect', in: 'query', required: false, schema: { type: 'string', format: 'uri' } }],
+        summary:
+          'Browser navigation: redirects to the OAuth provider. `redirect` must be an allowed web origin URL. `link=1` (signed in) attaches that provider login to the current account instead of signing in; never merges two existing accounts.',
+        parameters: [
+          provider,
+          role,
+          { name: 'redirect', in: 'query', required: false, schema: { type: 'string', format: 'uri' } },
+          { name: 'link', in: 'query', required: false, schema: { type: 'string', enum: ['1'] } },
+        ],
         responses: { '302': { description: 'Redirect to provider' }, '404': { description: 'Provider not configured' } },
       },
     },
     '/v1/auth/{provider}/callback': {
       get: {
         operationId: 'oauthCallback',
-        summary: 'Provider redirects here; sets the gc_session cookie and redirects back (adds ?auth_error=state|oauth on failure).',
+        summary: 'Provider redirects here; sets the gc_session cookie (or links the identity when started with link=1) and redirects back (adds ?auth_error=state|oauth|link_taken|link_session on failure).',
         parameters: [provider],
         responses: { '302': { description: 'Redirect to app' } },
       },

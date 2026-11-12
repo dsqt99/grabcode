@@ -456,9 +456,11 @@ function PrefsForm({ me }: { me: Me }) {
 }
 
 function SecurityForm({ me }: { me: Me }) {
-  const { changePassword, logout } = useAuth();
+  const { changePassword, logout, providers, oauthUrl } = useAuth();
   const { run, footer } = useSave();
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
+  const [linkError] = useState(() => (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('auth_error')));
+  const linkable = (['github', 'google'] as const).filter((p) => providers[p]);
   return (
     <>
       <p className="text-sm text-slate-600">
@@ -487,6 +489,30 @@ function SecurityForm({ me }: { me: Me }) {
         </form>
       ) : (
         <p className="mt-2 text-sm text-slate-500">Mật khẩu do {LOGIN_METHOD[me.loginMethod]} quản lý.</p>
+      )}
+      {linkable.length > 0 && (
+        <div className="mt-6">
+          <p className="text-sm font-semibold text-ink">Liên kết đăng nhập</p>
+          <ul className="mt-2 space-y-2">
+            {linkable.map((p) => (
+              <li key={p} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <span>{LOGIN_METHOD[p]}</span>
+                {me.linkedProviders.includes(p) ? (
+                  <span className="font-semibold text-emerald-dark">Đã liên kết</span>
+                ) : (
+                  <a href={oauthUrl(p, undefined, true)} className="font-semibold text-emerald-dark hover:underline">
+                    Liên kết
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+          {linkError && (
+            <p role="alert" className="mt-2 text-sm text-red-700">
+              {linkError === 'link_taken' ? 'Tài khoản này đã gắn với một tài khoản GrabCode khác.' : 'Liên kết chưa thành công, thử lại.'}
+            </p>
+          )}
+        </div>
       )}
       <button type="button" onClick={() => logout()} className="btn-ghost mt-4 border border-slate-200 text-red-700">
         <span className="material-symbols-outlined !text-[18px]" aria-hidden>logout</span> Đăng xuất
