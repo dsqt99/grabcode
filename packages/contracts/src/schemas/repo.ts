@@ -1,0 +1,52 @@
+import { z } from 'zod';
+
+// Per-order private GitHub repo, created by workers/repo-worker through the GitHub App.
+
+/** Mock order ids today (GC-3428); backend orders will keep the same shape. */
+export const OrderIdSchema = z.string().regex(/^[A-Za-z0-9-]{1,40}$/);
+
+export const RepoCreateSchema = z.object({
+  orderId: OrderIdSchema,
+  title: z.string().trim().min(1).max(200),
+  /** Committed as CLAUDE.md at the repo root. */
+  claudeMd: z.string().max(64_000),
+});
+
+export const RepoStatusSchema = z.enum(['PENDING', 'READY', 'FAILED']);
+
+export const RepoCommitSchema = z.object({
+  sha: z.string(),
+  message: z.string(),
+  author: z.string(),
+  url: z.string(),
+  pushedAt: z.string(),
+});
+
+export const OrderRepoSchema = z.object({
+  orderId: z.string(),
+  status: RepoStatusSchema,
+  repoFullName: z.string().nullable(),
+  htmlUrl: z.string().nullable(),
+  cloneUrl: z.string().nullable(),
+  /** GitHub login invited with push access; null when the coder has no GitHub account linked. */
+  collaborator: z.string().nullable(),
+  error: z.string().nullable(),
+  /** Set once repo-worker handed the repo over after ACCEPTED (customer admin, coder read-only). */
+  handedOverAt: z.string().nullable(),
+  /** Customer GitHub login given admin; null = customer has no GitHub login (repo stays in the org). */
+  handedOverTo: z.string().nullable(),
+  /** Newest first, from the push webhook. */
+  commits: z.array(RepoCommitSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+/** ACCEPTED order whose customer has no GitHub-linked account: the GitHub login that should receive admin on the repo. */
+export const RepoHandoverSchema = z.object({
+  githubLogin: z.string().trim().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/, 'Invalid GitHub login'),
+});
+
+export type RepoCreate = z.input<typeof RepoCreateSchema>;
+export type RepoHandover = z.infer<typeof RepoHandoverSchema>;
+export type RepoCommit = z.infer<typeof RepoCommitSchema>;
+export type OrderRepo = z.infer<typeof OrderRepoSchema>;

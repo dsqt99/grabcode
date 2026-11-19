@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "qa.requested"
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]{1,40}$"
+        },
+        "milestoneId": {
+          "type": "string"
+        },
+        "repoFullName": {
+          "type": "string"
+        },
+        "commitHash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "orderId",
+        "milestoneId",
+        "repoFullName",
+        "commitHash"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "additionalProperties": false
+}

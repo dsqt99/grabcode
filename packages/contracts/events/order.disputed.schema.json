@@ -1,0 +1,100 @@
+{
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "order.created",
+        "order.funded",
+        "order.dispatched",
+        "order.started",
+        "order.delivered",
+        "order.accepted",
+        "order.disputed",
+        "order.cancelled",
+        "order.resolved"
+      ]
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "FUNDED",
+            "DISPATCHED",
+            "IN_PROGRESS",
+            "DELIVERED",
+            "ACCEPTED",
+            "DISPUTED",
+            "CANCELLED",
+            "RESOLVED"
+          ]
+        },
+        "from": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "FUNDED",
+                "DISPATCHED",
+                "IN_PROGRESS",
+                "DELIVERED",
+                "ACCEPTED",
+                "DISPUTED",
+                "CANCELLED",
+                "RESOLVED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "customerUserId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "coderUserId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "orderId",
+        "status",
+        "from",
+        "customerUserId",
+        "coderUserId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "additionalProperties": false
+}

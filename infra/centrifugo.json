@@ -1,0 +1,19 @@
+{
+  "client": {
+    "allowed_origins": ["http://localhost:3100", "http://localhost:3000", "http://localhost:3001"]
+  },
+  "consumers": [
+    {
+      "enabled": true,
+      "name": "core_pg",
+      "type": "postgresql",
+      "postgresql": {
+        "dsn": "postgresql://grabcode:grabcode@postgres:5432/grabcode",
+        "outbox_table_name": "centrifugo_outbox",
+        "num_partitions": 1,
+        "partition_select_limit": 100,
+        "partition_poll_interval": "300ms"
+      }
+    }
+  ]
+}

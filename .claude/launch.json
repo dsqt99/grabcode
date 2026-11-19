@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@grabcode/web",
+        "exec",
+        "next",
+        "dev",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "coder",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@grabcode/coder",
+        "dev"
+      ],
+      "port": 3001
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@grabcode/admin",
+        "dev"
+      ],
+      "port": 3002
+    }
+  ]
+}

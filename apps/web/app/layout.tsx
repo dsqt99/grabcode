@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from '@grabcode/auth-ui';
 import { CurrencyProvider } from '../lib/currency';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <CurrencyProvider>{children}</CurrencyProvider>
+        <AuthProvider>
+          <CurrencyProvider>{children}</CurrencyProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss';
 
 // Emerald Mobility Design System tokens (see /DESIGN.md)
 const config: Config = {
-  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', '../../packages/auth-ui/src/**/*.tsx'],
   theme: {
     extend: {
       colors: {

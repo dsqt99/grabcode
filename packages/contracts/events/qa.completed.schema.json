@@ -1,0 +1,98 @@
+{
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "qa.completed"
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]{1,40}$"
+        },
+        "milestoneId": {
+          "type": "string"
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "RUNNING",
+                "PASSED",
+                "FAILED",
+                "SKIPPED",
+                "ERROR"
+              ]
+            },
+            "commitHash": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PASSED",
+                      "FAILED",
+                      "SKIPPED"
+                    ]
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "status",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "finishedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "commitHash",
+            "checks"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "orderId",
+        "milestoneId",
+        "result"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "additionalProperties": false
+}

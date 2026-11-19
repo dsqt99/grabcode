@@ -1,0 +1,3 @@
+-- Repos from the pre-S1 mock order ids (e.g. GC-3428) have no order row; drop them before adding the FK (commits cascade).
+DELETE FROM "core"."order_repos" WHERE "order_id" NOT IN (SELECT "id" FROM "core"."orders");--> statement-breakpoint
+ALTER TABLE "core"."order_repos" ADD CONSTRAINT "order_repos_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "core"."orders"("id") ON DELETE cascade ON UPDATE no action;

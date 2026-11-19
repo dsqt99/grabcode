@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useCurrency } from '../lib/currency';
+import { useAuth } from '@grabcode/auth-ui';
 
 const LINKS = [
   { href: '/#dispatch', label: 'Đặt đơn' },
@@ -12,8 +13,9 @@ const LINKS = [
 ];
 
 export default function Navbar() {
-  const { currency, setCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
+  const { status, me } = useAuth();
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-40">
@@ -24,11 +26,8 @@ export default function Navbar() {
       </div>
       <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2 font-display text-xl font-extrabold tracking-tight text-ink">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald text-white">
-              <span className="material-symbols-outlined !text-[20px]" aria-hidden>terminal</span>
-            </span>
-            Grab<span className="text-emerald">Code</span>
+          <Link href="/" className="flex shrink-0 items-center">
+            <img src="/logo.png" alt="GrabCode" width={240} height={47} className="h-8 w-auto md:h-9" />
           </Link>
 
           <ul className="hidden items-center gap-1 md:flex">
@@ -40,21 +39,25 @@ export default function Navbar() {
           </ul>
 
           <div className="flex items-center gap-2">
-            <div role="group" aria-label="Đơn vị tiền tệ" className="flex rounded-full bg-slate-100 p-1">
-              {(['VND', 'USD'] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-pressed={currency === c}
-                  onClick={() => setCurrency(c)}
-                  className={`rounded-full px-3 py-1 font-display text-xs font-bold transition ${
-                    currency === c ? 'bg-white text-emerald-dark shadow-l2' : 'text-slate-500 hover:text-ink'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
+            {status === 'anon' ? (
+              pathname !== '/login' && (
+                <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-secondary !px-4 !py-2 text-sm">
+                  <span className="material-symbols-outlined !text-[18px]" aria-hidden>login</span> Đăng nhập
+                </Link>
+              )
+            ) : (
+              <Link href="/profile" className="btn-ghost !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
+                {me?.avatarUrl ? (
+                  <img src={me.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : me ? (
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald font-display text-sm font-bold uppercase text-white" aria-hidden>
+                    {me.name.charAt(0)}
+                  </span>
+                ) : (
+                  <span className="material-symbols-outlined" aria-hidden>account_circle</span>
+                )}
+              </Link>
+            )}
             <Link href="/#dispatch" className="btn-primary hidden !py-2 sm:inline-flex">Đặt POC ngay</Link>
             <button
               type="button"

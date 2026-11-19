@@ -37,10 +37,14 @@ export interface Order {
   status: OrderStatus;
   brief: AIBrief;
   assignedCoder?: CoderProfile;
-  demoUrl?: string;
+  demoUrl?: string; // live Cloud Run preview (sandbox READY)
+  sandboxStatus?: 'PENDING' | 'READY' | 'FAILED' | 'EXPIRED';
+  sandboxError?: string;
   repoUrl?: string;
+  repoHandoverPending?: boolean; // ACCEPTED, repo READY but not yet handed to a customer GitHub login
   createdAt: string;
   etaHours: number;
   completedAt?: string;
   commits?: CommitLogItem[];
+  disputeReason?: string; // set while the order is DISPUTED (shown as CANCELLED)
 }

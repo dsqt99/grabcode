@@ -2,13 +2,24 @@
   "name": "grabcode",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint"
+    "dev": "pnpm -r --parallel --stream run dev",
+    "stack": "docker compose up -d --wait && pnpm --filter @grabcode/core-api db:migrate && pnpm dev",
+    "build": "pnpm -r run build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "generate": "pnpm --filter @grabcode/contracts run generate"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
-    "typescript": "^5.7.3"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.72.2"
   },
-  "packageManager": "pnpm@10.15.1"
+  "packageManager": "pnpm@10.15.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

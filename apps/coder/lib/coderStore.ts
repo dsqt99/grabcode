@@ -5,12 +5,17 @@ import {
   SEED_CODER,
   INITIAL_DEMO_ORDER,
   eventBus,
+  pollDelay,
+  toViewOrder,
   type ChatMessage,
   type CoderProfile,
   type Milestone,
   type Order,
   type WaveOffer,
 } from '@grabcode/contracts';
+import { onRealtimeHint } from '@grabcode/contracts';
+import type { ChatList, DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
+import { API_URL, useAuth } from '@grabcode/auth-ui';
 
 const STORAGE_KEY = 'grabcode_coder_state';
 const DEFAULT_OFFER_SECONDS = 30;
@@ -49,6 +54,44 @@ export interface ToastMsg {
   text: string;
 }
 
+// ---- API mode (NEXT_PUBLIC_API_URL set): core-api orders are the source of truth ----
+
+const POLL_MS = 3000;
+
+async function api<T>(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST'): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+  });
+  if (!res.ok) throw Object.assign(new Error(`core-api ${res.status}`), { status: res.status });
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+const orderPath = (id: string) => `/v1/orders/${encodeURIComponent(id)}`;
+const transition = (id: string, status: OrderStatus) => api<OrderDto>(`${orderPath(id)}/transitions`, { status });
+
+/** Server wave offer -> the modal's card. */
+const pendingOf = ({ id, order: o, expiresAt, createdAt, secondsLeft }: DispatchOffer): PendingOffer => {
+  const view = toViewOrder(o);
+  const seconds = Math.round((Date.parse(expiresAt) - Date.parse(createdAt)) / 1000);
+  // Countdown from the server's secondsLeft, not the client clock (skew-proof).
+  return { order: view, offer: waveOf(id, o, view, seconds, createdAt), expiresAt: Date.now() + secondsLeft * 1000 };
+};
+const waveOf = (id: string, o: OrderDto, view: Order, expiresInSeconds: number, createdAt: string): WaveOffer => ({
+  id,
+  orderId: o.id,
+  title: o.title,
+  tier: o.tier,
+  customerName: o.customer.name,
+  netPayoutVnd: o.payoutVnd,
+  deadlineHours: o.etaHours,
+  summary: o.brief.scopeSummary,
+  expiresInSeconds,
+  createdAt,
+  templateName: view.templateName,
+});
+
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
 const initialState = (): CoderState => ({
@@ -69,6 +112,7 @@ const initialState = (): CoderState => ({
 export const formatVnd = (n: number): string =>
   `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
 
+// Only for mock-mode orders saved before briefs had milestones; core-api orders always carry at least one.
 const GENERIC_MILESTONES: Milestone[] = [
   { id: 'M1', title: 'Khởi tạo dự án & dữ liệu mẫu', description: 'Dựng khung dự án, schema và seed data.', weightPercent: 20, status: 'PENDING' },
   { id: 'M2', title: 'Hoàn thiện giao diện & tính năng chính', description: 'Làm các màn hình và luồng chính theo brief.', weightPercent: 50, status: 'PENDING' },
@@ -146,6 +190,7 @@ export function useCoder() {
   const stateRef = useRef<CoderState>(state);
   const offerRef = useRef<PendingOffer | null>(null);
   const toastId = useRef(0);
+  const meId = useAuth().me?.id;
 
   const commit = useCallback((next: CoderState) => {
     stateRef.current = next;
@@ -181,6 +226,87 @@ export function useCoder() {
     }),
     []
   );
+
+  /** Mirror a server order into the job workspace. Balance comes from the ledger (sync); this only logs history once. */
+  const applyDto = useCallback(
+    (o: OrderDto) => {
+      const s = stateRef.current;
+      const same = s.activeOrder?.id === o.id;
+      const completed = o.status === 'ACCEPTED';
+      const paid = completed && same && !s.completed;
+      commit({
+        ...s,
+        activeOrder: toViewOrder(o),
+        activePayoutVnd: o.payoutVnd,
+        completedMilestones: o.brief.milestones.filter((m) => m.status === 'COMPLETED').map((m) => m.id),
+        delivered: o.status === 'DELIVERED' || completed || o.status === 'DISPUTED',
+        completed,
+        chat: same ? s.chat : [],
+        ...(paid && {
+          history: [{ orderId: o.id, title: o.title, payoutVnd: o.payoutVnd, at: nowIso() }, ...s.history].slice(0, 20),
+        }),
+      });
+      if (paid) toast(`Tiền đã vào ví +${formatVnd(o.payoutVnd)}`, 'ok');
+    },
+    [commit, toast]
+  );
+
+  /** Appends server chat messages for the active order (dedupe by id). */
+  const mergeChat = useCallback(
+    (msgs: ChatMessage[]) => {
+      const s = stateRef.current;
+      const fresh = msgs.filter((m) => m.orderId === s.activeOrder?.id && !s.chat.some((c) => c.id === m.id));
+      if (fresh.length) patch({ chat: [...s.chat, ...fresh].slice(-100) });
+    },
+    [patch]
+  );
+  const loadChat = useCallback(async () => {
+    const id = stateRef.current.activeOrder?.id;
+    if (id) mergeChat((await api<ChatList>(`/v1/orders/${encodeURIComponent(id)}/messages`)).messages);
+  }, [mergeChat]);
+
+  const sync = useCallback(async () => {
+    const [{ orders: mine }, wallet] = await Promise.all([api<OrderList>('/v1/orders?scope=mine'), api<Wallet>('/v1/me/wallet')]);
+    const today = todayKey();
+    patch({
+      walletVnd: wallet.balanceVnd,
+      todayEarningsVnd: wallet.entries.filter((e) => e.createdAt.startsWith(today)).reduce((sum, e) => sum + e.amountVnd, 0),
+    });
+    const s = stateRef.current;
+    const assigned = mine.filter((o) => o.coder?.id === meId);
+    const job =
+      assigned.find((o) => o.id === s.activeOrder?.id) ?? assigned.find((o) => o.status === 'IN_PROGRESS' || o.status === 'DELIVERED');
+    if (job) return applyDto(job), loadChat();
+    if (s.activeOrder) patch({ activeOrder: null, completedMilestones: [], delivered: false, completed: false, chat: [], activePayoutVnd: 0 });
+    if (!s.isOnline) return;
+    // The offers poll is also the presence heartbeat (TTL 60s), so it keeps running, slower while the socket is live.
+    const { offers } = await api<OfferList>('/v1/me/offers');
+    const shown = offerRef.current;
+    if (shown && !offers.some((o) => o.id === shown.offer.id)) {
+      setPending(null);
+      if (shown.expiresAt > Date.now()) toast(`Đơn ${shown.order.id} đã có Coder khác nhận.`, 'info');
+    }
+    const next = offers.map(pendingOf).find((p) => p.expiresAt > Date.now());
+    if (!offerRef.current && next) setPending(next);
+  }, [meId, applyDto, loadChat, patch, setPending, toast]);
+
+  useEffect(() => {
+    if (!hydrated || !API_URL || !meId) return;
+    let stop = false;
+    let t: ReturnType<typeof setTimeout>;
+    const tick = () => void sync().catch(console.warn).finally(() => !stop && (t = setTimeout(tick, pollDelay(POLL_MS))));
+    api<Presence>('/v1/me/presence').then((p) => patch({ isOnline: p.online }), console.warn);
+    tick();
+    // Hint = something changed for this coder (offer, order, repo, chat): refetch now instead of waiting for the poll.
+    const off = onRealtimeHint(API_URL, (h) => void (h.type === 'chat' ? loadChat() : sync()).catch(console.warn));
+    return () => {
+      stop = true;
+      clearTimeout(t);
+      off();
+    };
+  }, [hydrated, meId, sync, loadChat, patch]);
+
+  const apiFail = useCallback((e: unknown) => (console.warn(e), toast('Thao tác chưa thành công, thử lại sau.', 'warn')), [toast]);
 
   // Rehydrate (client only)
   useEffect(() => {
@@ -255,6 +381,7 @@ export function useCoder() {
   const setOnline = useCallback(
     (isOnline: boolean) => {
       patch({ isOnline });
+      if (API_URL) api<Presence>('/v1/me/presence', { online: isOnline }, 'PUT').catch((e) => (console.warn(e), toast('Chưa lưu được trạng thái Online.', 'warn')));
       eventBus.publish({
         type: 'CODER_STATUS_CHANGED',
         payload: { coderId: SEED_CODER.id, isOnline },
@@ -262,7 +389,7 @@ export function useCoder() {
       });
       if (!isOnline) setPending(null);
     },
-    [patch, setPending]
+    [patch, setPending, toast]
   );
 
   const acceptOffer = useCallback(() => {
@@ -271,6 +398,13 @@ export function useCoder() {
     const s = stateRef.current;
     const ms = getMilestones(o.order);
     setPending(null);
+    if (API_URL) {
+      // 409 when another coder accepted first or the offer expired.
+      api<OrderDto>(`/v1/offers/${encodeURIComponent(o.offer.id)}/accept`, {}).then(applyDto, () =>
+        toast(`Đơn ${o.order.id} đã có Coder khác nhận hoặc hết hạn.`, 'warn')
+      );
+      return;
+    }
     commit({
       ...s,
       activeOrder: { ...o.order, status: 'ACCEPTED', assignedCoder: profile() },
@@ -291,7 +425,7 @@ export function useCoder() {
       payload: { orderId: o.order.id, milestoneId: ms[0].id, status: 'IN_PROGRESS' },
       timestamp: nowIso(),
     });
-  }, [commit, profile, setPending]);
+  }, [commit, profile, setPending, applyDto, toast]);
 
   const rejectOffer = useCallback(
     (reason: 'DECLINED' | 'TIMEOUT') => {
@@ -299,6 +433,11 @@ export function useCoder() {
       if (!o) return;
       const s = stateRef.current;
       setPending(null);
+      if (API_URL) {
+        // TIMEOUT needs no call: the server expires the offer and sends the next wave.
+        if (reason === 'DECLINED') api(`/v1/offers/${encodeURIComponent(o.offer.id)}/decline`, {}).catch(console.warn);
+        return;
+      }
       patch({ seenOrderIds: [...s.seenOrderIds, o.order.id] });
       eventBus.publish({
         type: 'ORDER_REJECTED',
@@ -309,8 +448,9 @@ export function useCoder() {
     [patch, setPending]
   );
 
+  /** API mode: submit for customer review (commit = latest pushed sha); mock mode: completes at once. */
   const completeMilestone = useCallback(
-    (milestoneId: string) => {
+    (milestoneId: string, commitHash?: string) => {
       const s = stateRef.current;
       const order = s.activeOrder;
       if (!order || s.delivered) return;
@@ -319,6 +459,10 @@ export function useCoder() {
       const expected = ms.findIndex((m) => !s.completedMilestones.includes(m.id));
       if (idx < 0 || idx !== expected) return; // enforce order
       const m = ms[idx];
+      if (API_URL) {
+        api<OrderDto>(`${orderPath(order.id)}/milestones/${encodeURIComponent(m.id)}/submit`, commitHash ? { commitHash } : {}).then(applyDto, apiFail);
+        return;
+      }
       patch({ completedMilestones: [...s.completedMilestones, m.id] });
       eventBus.publish({
         type: 'MILESTONE_UPDATED',
@@ -340,7 +484,7 @@ export function useCoder() {
         });
       }
     },
-    [patch]
+    [patch, applyDto, apiFail]
   );
 
   const deliver = useCallback(() => {
@@ -349,6 +493,10 @@ export function useCoder() {
     if (!order || s.delivered) return;
     const ms = getMilestones(order);
     if (!ms.every((m) => s.completedMilestones.includes(m.id))) return;
+    if (API_URL) {
+      transition(order.id, 'DELIVERED').then(applyDto, apiFail);
+      return;
+    }
     patch({ delivered: true });
     eventBus.publish({
       type: 'ORDER_DELIVERED',
@@ -359,12 +507,16 @@ export function useCoder() {
       },
       timestamp: nowIso(),
     });
-  }, [patch]);
+  }, [patch, applyDto, apiFail]);
 
   const sendChat = useCallback((text: string) => {
     const order = stateRef.current.activeOrder;
     const clean = text.trim();
     if (!order || !clean) return;
+    if (API_URL) {
+      api<ChatMessage>(`/v1/orders/${encodeURIComponent(order.id)}/messages`, { text: clean }).then((m) => mergeChat([m]), apiFail);
+      return;
+    }
     eventBus.publish({
       type: 'CHAT_MESSAGE_SENT',
       payload: {
@@ -377,7 +529,7 @@ export function useCoder() {
       },
       timestamp: nowIso(),
     });
-  }, []);
+  }, [mergeChat, apiFail]);
 
   const dismissJob = useCallback(() => {
     patch({ activeOrder: null, completedMilestones: [], delivered: false, completed: false, chat: [], activePayoutVnd: 0 });

@@ -1,0 +1,216 @@
+{
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "const": "brief.generated"
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "brief": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "scopeSummary": {
+              "type": "string"
+            },
+            "features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "outOfScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "acceptanceCriteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "passed": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "text",
+                  "passed"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "milestones": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "weightPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "IN_PROGRESS",
+                      "SUBMITTED",
+                      "COMPLETED"
+                    ]
+                  },
+                  "submittedAt": {
+                    "type": "string"
+                  },
+                  "completedAt": {
+                    "type": "string"
+                  },
+                  "commitHash": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "qa": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "RUNNING",
+                          "PASSED",
+                          "FAILED",
+                          "SKIPPED",
+                          "ERROR"
+                        ]
+                      },
+                      "commitHash": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PASSED",
+                                "FAILED",
+                                "SKIPPED"
+                              ]
+                            },
+                            "detail": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "status",
+                            "detail"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "finishedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "commitHash",
+                      "checks"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "description",
+                  "weightPercent",
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "claudeMdContent": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "scopeSummary",
+            "features",
+            "inScope",
+            "outOfScope",
+            "acceptanceCriteria",
+            "milestones",
+            "claudeMdContent"
+          ],
+          "additionalProperties": false
+        },
+        "model": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId",
+        "brief",
+        "model"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "event_id",
+    "type",
+    "occurred_at",
+    "data"
+  ],
+  "additionalProperties": false
+}

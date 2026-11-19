@@ -6,12 +6,15 @@ import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/co
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
 import Navbar from '../../../components/Navbar';
+import { createOrder, ordersApiEnabled, requestBrief } from '../../../lib/api';
+import { useAuth } from '@grabcode/auth-ui';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
 import { FRAMEWORKS, estimate, getTemplate, getTier, isTier } from '../../../lib/pricing';
 
 function NewOrder() {
   const router = useRouter();
+  const { me } = useAuth();
   const sp = useSearchParams();
   const tierParam = sp.get('tier');
   const tier = isTier(tierParam) ? tierParam : 'EXPRESS';
@@ -24,6 +27,7 @@ function NewOrder() {
   const [analyzing, setAnalyzing] = useState(true);
   const [run, setRun] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!prompt.trim() && tier !== 'TEMPLATE') {
@@ -32,11 +36,23 @@ function NewOrder() {
       return;
     }
     setAnalyzing(true);
-    const t = setTimeout(() => {
-      setBrief(genBrief(prompt, tier, templateId, framework));
-      setAnalyzing(false);
-    }, 2000);
-    return () => clearTimeout(t);
+    const ctrl = new AbortController();
+    const local = () => genBrief(prompt, tier, templateId, framework);
+    requestBrief({ prompt, tier, templateId, framework }, ctrl.signal)
+      // No API configured: keep the POC's simulated 2s analysis.
+      .then((b) => b ?? new Promise<AIBrief>((r) => setTimeout(() => r(local()), 2000)))
+      .catch((err) => {
+        if (ctrl.signal.aborted) throw err;
+        console.warn('AI brief unavailable, using local template:', err);
+        return local();
+      })
+      .then((b) => {
+        if (ctrl.signal.aborted) return;
+        setBrief(b);
+        setAnalyzing(false);
+      })
+      .catch(() => {}); // aborted by a newer run
+    return () => ctrl.abort();
     // Re-run only when the user requests a new analysis (run) or inputs from URL change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run, tier, templateId, framework]);
@@ -45,16 +61,29 @@ function NewOrder() {
   const tpl = getTemplate(templateId);
   const est = estimate(tier, prompt, templateId);
 
-  const dispatch = () => {
+  const dispatch = async () => {
     if (!brief) return;
     setSubmitting(true);
+    if (ordersApiEnabled) {
+      // Server prices the order (DRAFT); the order page shows the bank transfer that funds and dispatches it.
+      setError(null);
+      try {
+        const created = await createOrder({ prompt, tier, templateId, framework, brief });
+        router.push(`/order/${created.id}`);
+      } catch (e) {
+        console.error(e);
+        setError('Không tạo được đơn. Vui lòng thử lại.');
+        setSubmitting(false);
+      }
+      return;
+    }
     const id = newOrderId();
     const now = new Date().toISOString();
     const order: Order = {
       id,
       tier,
       title: brief.title.replace(/^Đặc tả kỹ thuật:\s*/, ''),
-      customerName: 'Khách hàng Demo',
+      customerName: me?.name ?? 'Khách hàng Demo',
       customerPrompt: prompt,
       templateId: tpl?.id,
       templateName: tpl?.title,
@@ -92,6 +121,7 @@ function NewOrder() {
         <div className="mb-6">
           <span className="chip-ok">Gói {cfg.label} • ~{est.etaHours}h</span>
           <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">Xác nhận đặc tả & ký quỹ</h1>
+          {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-600">{error}</p>}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">

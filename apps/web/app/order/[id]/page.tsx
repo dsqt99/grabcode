@@ -2,16 +2,46 @@
 
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { INITIAL_DEMO_ORDER, eventBus, type ChatMessage, type Order } from '@grabcode/contracts';
+import { INITIAL_DEMO_ORDER, eventBus, pollDelay, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
 import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
 import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
+import PaymentPanel from '../../../components/PaymentPanel';
 import SandboxFrame from '../../../components/SandboxFrame';
+import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
+
+const POLL_MS = 3000;
+const LONG_WAIT_MS = 30 * 60_000;
+
+/** Paid order still without a coder after 30 min (admin sees it too); core-api auto-refunds after AUTO_REFUND_HOURS. */
+function LongWaitNote({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (now - new Date(since).getTime() < LONG_WAIT_MS) return null;
+  return (
+    <p className="mt-2 text-sm font-semibold text-amber-700">
+      Đã hơn 30 phút chưa có Coder nhận. Vận hành đã được báo; nếu vẫn không ai nhận, đơn sẽ tự huỷ và hoàn ký quỹ.
+    </p>
+  );
+}
+const fetchView = async (id: string) => {
+  const [o, repo] = await Promise.all([getOrder(id), getOrderRepo(id)]);
+  return toViewOrder(o, repo);
+};
+/** System chat line when the server moves the order (API mode). */
+const STATUS_MSG: Partial<Record<Order['status'], (o: Order) => string>> = {
+  DISPATCHING: (o) => `Đã nhận đủ ${o.priceVnd.toLocaleString('de-DE')} đ ký quỹ. Đang tìm Coder.`,
+  BUILDING: (o) => `Coder ${o.assignedCoder?.name ?? ''} đang triển khai đơn của bạn.`,
+  DELIVERED: () => 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.',
+};
 
 const uid = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -25,6 +55,7 @@ export default function OrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [revisions, setRevisions] = useState(2);
+  const [missing, setMissing] = useState(false);
   const orderRef = useRef<Order | null>(null);
   const chatRef = useRef<ChatMessage[]>([]);
 
@@ -45,15 +76,65 @@ export default function OrderPage() {
     setChat(next);
   }, []);
 
+  const showOrder = useCallback((next: Order) => {
+    orderRef.current = next;
+    setOrder(next);
+  }, []);
+
   // Initial load
   useEffect(() => {
-    const found = loadOrder(id) ?? INITIAL_DEMO_ORDER;
+    if (ordersApiEnabled) {
+      fetchView(id).then(initChat, () => setMissing(true));
+      return;
+    }
+    initChat(loadOrder(id) ?? INITIAL_DEMO_ORDER);
+  }, [id]);
+
+  // API mode: the server is the source of truth. Refetch on a realtime hint; slow poll as safety net (fast if no socket).
+  useEffect(() => {
+    if (!ordersApiEnabled || !order) return;
+    const oid = order.id;
+    const refresh = () =>
+      fetchView(oid).then((next) => {
+        const prev = orderRef.current;
+        if (prev && prev.status !== next.status) {
+          const msg = STATUS_MSG[next.status]?.(next);
+          if (msg) pushChat(systemMsg(next.id, msg));
+        }
+        showOrder(next);
+      }, console.warn);
+    const refreshChat = () => getMessages(oid).then((ms) => ms.forEach(pushChat), console.warn);
+    refreshChat();
+    let t: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      t = setTimeout(() => void Promise.all([refresh(), refreshChat()]).finally(tick), pollDelay(POLL_MS));
+    };
+    tick();
+    const off = onHint((h) => {
+      if (h.orderId !== oid) return;
+      if (h.type === 'chat') void refreshChat();
+      else void refresh();
+    });
+    return () => {
+      clearTimeout(t);
+      off();
+    };
+  }, [order?.id, pushChat, showOrder]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function initChat(found: Order) {
     orderRef.current = found;
     setOrder(found);
     let msgs = loadChat(found.id);
     if (msgs.length === 0) {
-      msgs = [systemMsg(found.id, `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`)];
-      if (found.assignedCoder) {
+      msgs = [
+        systemMsg(
+          found.id,
+          found.escrowStatus === 'UNPAID'
+            ? `Đơn ${found.id} đã tạo. Chuyển khoản ${found.priceVnd.toLocaleString('de-DE')} đ để ký quỹ và dispatch.`
+            : `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`,
+        ),
+      ];
+      if (found.assignedCoder && !ordersApiEnabled) {
         msgs.push({
           id: uid(),
           orderId: found.id,
@@ -67,7 +148,7 @@ export default function OrderPage() {
     }
     chatRef.current = msgs;
     setChat(msgs);
-  }, [id]);
+  }
 
   // Real-time subscriptions
   useEffect(() => {
@@ -149,7 +230,7 @@ export default function OrderPage() {
     return (
       <>
         <Navbar />
-        <p className="p-10 text-center text-slate-500">Đang tải đơn hàng...</p>
+        <p className="p-10 text-center text-slate-500">{missing ? 'Không tìm thấy đơn hàng.' : 'Đang tải đơn hàng...'}</p>
       </>
     );
   }
@@ -160,6 +241,10 @@ export default function OrderPage() {
   const percent = progressPercent(order);
 
   const sendChat = (text: string) => {
+    if (ordersApiEnabled) {
+      sendMessage(order.id, text).then(pushChat, () => pushChat(systemMsg(order.id, 'Gửi tin nhắn chưa thành công, vui lòng thử lại.')));
+      return;
+    }
     const msg: ChatMessage = {
       id: uid(),
       orderId: order.id,
@@ -172,17 +257,74 @@ export default function OrderPage() {
     pushChat(msg); // no-op if the local listener already added it
   };
 
-  const accept = () => {
+  const accept = async () => {
+    if (ordersApiEnabled) {
+      try {
+        await transitionOrder(order.id, 'ACCEPTED');
+        showOrder(await fetchView(order.id));
+        pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
+      } catch (e) {
+        console.error(e);
+        pushChat(systemMsg(order.id, 'Nghiệm thu chưa thành công, vui lòng thử lại.'));
+      }
+      return;
+    }
     applyOrder((o) => ({ ...o, status: 'COMPLETED', escrowStatus: 'RELEASED', completedAt: new Date().toISOString() }));
     eventBus.publish({ type: 'ORDER_COMPLETED', payload: { orderId: order.id, payoutVnd: payout }, timestamp: new Date().toISOString() });
     pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
   };
 
-  const requestRevision = () => {
+  const requestRevision = async () => {
     if (revisions <= 0) return;
+    if (ordersApiEnabled) {
+      try {
+        // Sends the order back to the coder (DELIVERED -> IN_PROGRESS).
+        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS'), await getOrderRepo(order.id)));
+      } catch (e) {
+        console.error(e);
+        return;
+      }
+    }
     setRevisions((r) => r - 1);
     sendChat('Mình muốn yêu cầu chỉnh sửa một số điểm trên bản demo, bạn xem giúp nhé.');
   };
+
+  const review = async (milestoneId: string, approve: boolean, note?: string) => {
+    try {
+      showOrder(toViewOrder(await reviewMilestone(order.id, milestoneId, approve, note), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, approve ? `Đã duyệt mốc ${milestoneId}, giải ngân phần ký quỹ của mốc cho Coder.` : `Đã yêu cầu Coder sửa mốc ${milestoneId}: ${note}`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, `Thao tác mốc ${milestoneId} chưa thành công, vui lòng thử lại.`));
+    }
+  };
+
+  // Freezes the escrow still held; ops resolve it from admin (S6).
+  const dispute = async () => {
+    const reason = window.prompt('Lý do mở tranh chấp (ký quỹ còn lại sẽ bị giữ cho tới khi xử lý xong):')?.trim();
+    if (!reason) return;
+    try {
+      showOrder(toViewOrder(await transitionOrder(order.id, 'DISPUTED', reason), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, `Đã mở tranh chấp: ${reason}`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, 'Mở tranh chấp chưa thành công, vui lòng thử lại.'));
+    }
+  };
+  const claimRepo = async () => {
+    const login = window.prompt('GitHub username nhận quyền admin repo:')?.trim();
+    if (!login) return;
+    try {
+      await handoverRepo(order.id, login);
+      showOrder(await fetchView(order.id));
+      pushChat(systemMsg(order.id, `Đang chuyển quyền admin repo cho GitHub ${login}. Kiểm tra lời mời trong email GitHub.`));
+    } catch (e) {
+      console.error(e);
+      pushChat(systemMsg(order.id, 'Chưa chuyển được repo: kiểm tra lại GitHub username.'));
+    }
+  };
+  const disputed = order.disputeReason !== undefined;
+  const canDispute = ordersApiEnabled && ['BUILDING', 'QA_TESTING', 'DELIVERED'].includes(order.status);
 
   return (
     <>
@@ -192,19 +334,30 @@ export default function OrderPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="chip-dark">{order.id}</span>
-              <span className={completed ? 'chip-ok' : 'chip-warn'}>{completed ? 'Đã nghiệm thu' : delivered ? 'Chờ nghiệm thu' : 'Đang thực hiện'}</span>
+              <span className={completed ? 'chip-ok' : 'chip-warn'}>
+                {completed ? 'Đã nghiệm thu' : delivered ? 'Chờ nghiệm thu' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang thực hiện'}
+              </span>
               <span className="chip bg-slate-100 text-slate-600">{order.tier}</span>
             </div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
           </div>
           <dl className="flex gap-6 text-sm">
             <div><dt className="text-slate-500">Ký quỹ</dt><dd className="font-display font-extrabold text-emerald-dark">{money(order.priceVnd)}</dd></div>
-            <div><dt className="text-slate-500">Trạng thái ký quỹ</dt><dd className="font-semibold">{order.escrowStatus === 'RELEASED' ? 'Đã giải ngân' : 'Đang giữ an toàn'}</dd></div>
+            <div><dt className="text-slate-500">Trạng thái ký quỹ</dt><dd className="font-semibold">{order.escrowStatus === 'RELEASED' ? 'Đã giải ngân' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang giữ an toàn'}</dd></div>
             <div><dt className="text-slate-500">ETA</dt><dd className="font-semibold">~{order.etaHours}h</dd></div>
           </dl>
         </header>
 
         <LiveStepper status={order.status} percent={percent} />
+
+        {disputed && (
+          <div className="card border-red-200 bg-red-50 text-sm text-red-800" role="status">
+            <p className="font-display font-bold">Đơn đang tranh chấp — ký quỹ còn lại được giữ tới khi vận hành xử lý.</p>
+            {order.disputeReason && <p className="mt-1">Lý do: {order.disputeReason}</p>}
+          </div>
+        )}
+
+        {ordersApiEnabled && order.escrowStatus === 'UNPAID' && <PaymentPanel orderId={order.id} />}
 
         {order.status === 'DISPATCHING' && (
           <div className="card flex items-center gap-4 border-emerald/40 bg-emerald-mint/50 shadow-l2" role="status">
@@ -215,6 +368,7 @@ export default function OrderPage() {
             <div>
               <p className="font-display font-bold text-ink">Đang gửi offer tới các Coder gần nhất...</p>
               <p className="text-sm text-slate-600">Offer có hiệu lực 30 giây mỗi đợt. Mở ứng dụng Coder (/coder) để nhận đơn khi demo.</p>
+              <LongWaitNote since={order.createdAt} />
             </div>
           </div>
         )}
@@ -233,7 +387,9 @@ export default function OrderPage() {
                   </span>
                   <div>
                     <p className="font-display text-sm font-bold text-ink">{order.assignedCoder.name}</p>
-                    <p className="text-xs text-slate-500">{order.assignedCoder.tier} • {order.assignedCoder.rating} sao • {order.assignedCoder.completedOrders} đơn</p>
+                    {order.assignedCoder.rating > 0 && (
+                      <p className="text-xs text-slate-500">{order.assignedCoder.tier} • {order.assignedCoder.rating} sao • {order.assignedCoder.completedOrders} đơn</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -244,13 +400,23 @@ export default function OrderPage() {
               <button type="button" className="btn-secondary w-full" disabled={order.status !== 'DELIVERED' || revisions <= 0} onClick={requestRevision}>
                 Yêu cầu sửa (Còn {revisions} lượt)
               </button>
+              {canDispute && (
+                <button type="button" className="w-full text-center text-sm font-semibold text-red-600 hover:underline" onClick={dispute}>
+                  Mở tranh chấp
+                </button>
+              )}
               {order.repoUrl && delivered && (
                 <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
                   Xem repo bàn giao
                 </a>
               )}
+              {ordersApiEnabled && order.repoHandoverPending && (
+                <button type="button" className="w-full text-center text-sm font-semibold text-emerald-dark hover:underline" onClick={claimRepo}>
+                  Nhận repo về tài khoản GitHub của bạn
+                </button>
+              )}
             </div>
-            <MilestoneList milestones={order.brief.milestones} />
+            <MilestoneList milestones={order.brief.milestones} onReview={ordersApiEnabled && !disputed ? review : undefined} />
             <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
           </div>
         </div>

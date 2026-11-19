@@ -3,11 +3,27 @@ import { formatTime } from '../lib/orderView';
 
 const META = {
   COMPLETED: { icon: 'check_circle', cls: 'text-emerald', label: 'Hoàn thành' },
+  SUBMITTED: { icon: 'rate_review', cls: 'text-amber', label: 'Chờ bạn duyệt' },
   IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber', label: 'Đang làm' },
   PENDING: { icon: 'radio_button_unchecked', cls: 'text-slate-300', label: 'Chờ' },
 } as const;
 
-export default function MilestoneList({ milestones }: { milestones: Milestone[] }) {
+const QA = {
+  RUNNING: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA đang chạy' },
+  PASSED: { cls: 'chip-ok', label: 'QA đạt' },
+  FAILED: { cls: 'chip bg-red-50 text-red-600', label: 'QA trượt' },
+  SKIPPED: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA bỏ qua' },
+  ERROR: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA lỗi hệ thống' },
+} as const;
+
+/** `onReview` (API mode, order not disputed) shows approve / request-changes on the SUBMITTED milestone. */
+export default function MilestoneList({
+  milestones,
+  onReview,
+}: {
+  milestones: Milestone[];
+  onReview?: (milestoneId: string, approve: boolean, note?: string) => void;
+}) {
   return (
     <section aria-label="Các mốc bàn giao" className="space-y-3">
       <h2 className="font-display text-base font-bold text-ink">Mốc bàn giao</h2>
@@ -16,7 +32,7 @@ export default function MilestoneList({ milestones }: { milestones: Milestone[] 
         return (
           <article
             key={m.id}
-            className={`card !p-4 transition ${m.status === 'IN_PROGRESS' ? 'border-emerald/50 shadow-l2' : ''} ${m.status === 'COMPLETED' ? 'bg-emerald-mint/40' : ''}`}
+            className={`card !p-4 transition ${m.status === 'IN_PROGRESS' || m.status === 'SUBMITTED' ? 'border-emerald/50 shadow-l2' : ''} ${m.status === 'COMPLETED' ? 'bg-emerald-mint/40' : ''}`}
           >
             <div className="flex items-start gap-3">
               <span className={`material-symbols-outlined ${meta.cls} ${m.status === 'IN_PROGRESS' ? 'animate-spin' : ''}`} aria-hidden>{meta.icon}</span>
@@ -29,8 +45,50 @@ export default function MilestoneList({ milestones }: { milestones: Milestone[] 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-500'}>{meta.label}</span>
                   {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
+                  {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
                   {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
                 </div>
+                {m.qa && m.qa.checks.length > 0 && (
+                  <details className="mt-2 text-xs text-slate-600">
+                    <summary className="cursor-pointer">Chi tiết QA Gate</summary>
+                    <ul className="mt-1 space-y-1">
+                      {m.qa.checks.map((c) => (
+                        <li key={c.name}>
+                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-400'}>
+                            {c.name}: {c.status}
+                          </span>
+                          {c.status === 'FAILED' && c.detail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px]">{c.detail}</pre>}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {m.note && m.status !== 'COMPLETED' && (
+                  <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Coder ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
+                )}
+                {m.status === 'SUBMITTED' && onReview && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-primary !min-h-[36px] flex-1 !py-1 text-sm"
+                      disabled={m.qa?.status === 'FAILED'}
+                      title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
+                      onClick={() => onReview(m.id, true)}
+                    >
+                      Duyệt & giải ngân {m.weightPercent}%
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary !min-h-[36px] flex-1 !py-1 text-sm"
+                      onClick={() => {
+                        const note = window.prompt(`Cần Coder sửa gì ở ${m.id}?`)?.trim();
+                        if (note) onReview(m.id, false, note);
+                      }}
+                    >
+                      Yêu cầu sửa
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </article>

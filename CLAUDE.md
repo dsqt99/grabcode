@@ -19,7 +19,7 @@ grabcode / multi-repo
 │   ├── core-api/                # NestJS Modular Monolith: Auth (GitHub OAuth), State Machine đơn hàng, Ledger ký quỹ, Idempotency, Dispatch job
 │   └── matching/                # Go Service: Matching engine thuật toán chấm điểm và gửi Wave offer (đường nóng latency thấp)
 ├── [4] workers/ (hoặc repo-worker)
-│   ├── brief-worker/            # Gọi Claude Sonnet 3.5 phân tích brief, tạo spec & milestones JSON
+│   ├── brief-worker/            # Gọi LLM OpenAI-compatible (vLLM, Qwen) phân tích brief, tạo spec & milestones JSON
 │   ├── repo-worker/             # GitHub App bot: Tạo private repo, gán collaborator, khởi tạo CLAUDE.md cho Coder, parse webhook commit
 │   ├── qa-worker/               # QA Gate: Chạy build test, static analysis, security scan trước khi bàn giao
 │   ├── deploy-worker/           # Tạo sandbox preview trên Cloud Run
@@ -52,6 +52,11 @@ grabcode / multi-repo
 ### Nguyên tắc 4: Postgres là Single Source of Truth
 - Mọi thay đổi trạng thái nghiệp vụ (đơn hàng, thanh toán, mốc) lưu trong Postgres schema riêng của từng module.
 - Redis, Vector index, Cache chỉ là dữ liệu dẫn xuất (phải tái tạo lại được 100% từ Postgres).
+
+### Nguyên tắc 5: Cập nhật `CHECKLIST.md` sau mỗi việc
+- Xong một việc (hoặc bắt đầu làm dở) → cập nhật ngay [CHECKLIST.md](CHECKLIST.md): `[x]` xong, `[~]` đang làm, kèm commit hash ngắn.
+- Việc mới phát sinh (bug, nợ kỹ thuật, bước thiếu) → thêm dòng `[ ]` vào đúng sprint.
+- Commit checklist cùng commit của việc đó, không để lệch với code.
 
 ---
 
@@ -90,18 +95,76 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 
 ## 5. Quy chuẩn phát triển (Development Guidelines)
 
-### Lệnh chạy phổ biến (Turborepo / Monorepo)
+### Lệnh chạy phổ biến (pnpm workspace)
+- Root script gọi `pnpm -r` bên trong nên `npm run dev` hay `pnpm dev` đều được; cài deps vẫn bắt buộc `pnpm install` (repo dùng `workspace:*`).
 - **Cài đặt dependencies**: `pnpm install`
 - **Sinh mã từ Contract**: `pnpm --filter @grabcode/contracts run generate`
-- **Chạy môi trường Dev toàn bộ**: `pnpm dev`
+- **Chạy môi trường Dev toàn bộ**: `pnpm stack` (docker compose `--wait` + migrate + `pnpm dev` mọi app/worker); đã có infra thì `pnpm dev`
 - **Chạy riêng từng thành phần**:
   * Chạy Web: `pnpm --filter @grabcode/web dev`
   * Chạy Coder PWA: `pnpm --filter @grabcode/coder dev`
   * Chạy Admin: `pnpm --filter @grabcode/admin dev`
   * Chạy API: `pnpm --filter @grabcode/core-api dev`
   * Chạy Worker: `pnpm --filter @grabcode/brief-worker dev`
-- **Kiểm tra Lint & Typecheck**: `pnpm lint && pnpm typecheck`
+- **Kiểm tra Lint & Typecheck**: `pnpm lint && pnpm typecheck` (ESLint flat config ở root `eslint.config.mjs`; typecheck = `tsc --noEmit` từng package)
 - **Chạy Unit Test**: `pnpm test`
+
+### Chạy luồng AI Brief local (S0)
+1. `cp .env.example .env` rồi điền `LLM_API_KEY` (endpoint `LLM_BASE_URL`, model `LLM_MODEL`) (thiếu key: job thành `FAILED`, web tự fallback brief mẫu).
+2. `docker compose up -d` — Postgres `127.0.0.1:5433`, NATS `127.0.0.1:4223`.
+3. `pnpm --filter @grabcode/core-api db:migrate`
+4. Chạy 3 tiến trình: `pnpm --filter @grabcode/core-api dev`, `pnpm --filter @grabcode/outbox-relay dev`, `pnpm --filter @grabcode/brief-worker dev`.
+5. Web gọi API khi có `NEXT_PUBLIC_API_URL=http://localhost:4000` trong `apps/web/.env.local`; origin web phải nằm trong `WEB_ORIGIN` (CORS).
+- Luồng: `POST /v1/briefs` → `core.outbox` → outbox-relay → NATS `brief.requested` → brief-worker (LLM) → `brief.generated|failed` → core-api cập nhật `core.brief_jobs` → web poll `GET /v1/briefs/:id`.
+
+### Repo GitHub riêng cho mỗi đơn (repo-worker)
+- GitHub App cài trên org `GITHUB_ORG` (mặc định `grabcode-sandbox`). Quyền: Administration RW, Contents RW, Metadata R. Webhook event Push → `{API_PUBLIC_URL}/v1/github/webhook` (cần URL public: smee.io/ngrok).
+- `.env`: `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY` (hoặc `GITHUB_APP_PRIVATE_KEY_PATH`), `GITHUB_APP_WEBHOOK_SECRET`. Thiếu → job thành `FAILED`, coder app hiện lỗi + nút Thử lại.
+- Chạy: `pnpm --filter @grabcode/repo-worker dev` (cùng core-api + outbox-relay).
+- Luồng: coder nhận đơn → `POST /v1/repos` (idempotent theo `orderId`, FAILED thì xếp lại) → outbox `repo.requested` → repo-worker: tạo repo private (`gc-<số đơn>`), commit `CLAUDE.md`, branch protection (chặn force-push; org Free + repo private sẽ bị 403, chỉ cảnh báo), mời coder quyền push → `repo.provisioned|failed` → `core.order_repos`. Push webhook → `core.repo_commits` → `GET /v1/repos/:orderId`.
+- Coder được mời theo `users.github_login` (login GitHub) hoặc link GitHub trong hồ sơ Coder; không có thì repo vẫn tạo nhưng chưa mời.
+- Đơn ACCEPTED: `repo.handover.requested` → khách (`users.github_login`) thành admin, coder còn quyền đọc. Khách không có login → nút "Nhận repo" ở web gọi `POST /v1/repos/:orderId/handover {githubLogin}`.
+
+### QA Gate & sandbox (qa-worker, deploy-worker)
+- Chạy: `pnpm --filter @grabcode/qa-worker dev`, `pnpm --filter @grabcode/deploy-worker dev` (cùng core-api + outbox-relay). qa-worker cần Docker (image `QA_IMAGE`, mặc định `node:22-alpine`); deploy-worker cần `gcloud` đã login + `GCP_PROJECT` (thiếu → sandbox `FAILED`).
+- Luồng QA: coder nộp mốc (repo READY) → `qa.requested` → clone commit (bỏ `.git`) → quét secret + install/lint/typecheck/build/test/audit, mỗi bước 1 container → `qa.completed` → `brief.milestones[].qa`.
+- Luồng sandbox: đơn DELIVERED → `deploy.requested` → `gcloud run deploy --source` → `deploy.ready|failed` → `orders.sandbox`; quá `SANDBOX_TTL_HOURS` → xóa service, `deploy.expired`.
+- Test không cần GitHub: `GIT_CLONE_BASE=file:///<dir>` cho cả 2 worker, rồi `REPOS=<dir> node api/core-api/scripts/smoke-qa.mjs`.
+
+### Realtime & chat (Centrifugo)
+- `.env`: `CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY` (chuỗi ngẫu nhiên, dùng chung cho core-api ký JWT và Centrifugo), `REALTIME_WS_URL`. Thiếu secret → `GET /v1/realtime/token` trả 404, app tự về polling 3s.
+- Chạy: `docker compose up -d centrifugo` (`127.0.0.1:8000`, config `infra/centrifugo.json`, `allowed_origins` phải có origin web/coder).
+- Luồng: ghi DB (API, worker consumer, webhook) → trigger `core.realtime_hint()` ghi `public.centrifugo_outbox` cùng transaction → Centrifugo consumer `core_pg` broadcast kênh `user.<id>` → client (`onRealtimeHint` trong contracts) refetch REST. Hint chỉ `{type, orderId}`, không mang state.
+- Chat: `GET/POST /v1/orders/:id/messages` (`core.order_messages`), chỉ khách/coder của đơn; tin SYSTEM ở web vẫn là local.
+- Smoke: `node api/core-api/scripts/smoke-realtime.mjs` (core-api `AUTH_DEV_LOGIN=true` + Centrifugo chạy).
+
+### Thông báo đẩy (notifier, WebPush)
+- `.env`: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (sinh: `npx web-push generate-vapid-keys`). Thiếu → `GET /v1/push/key` 404, nút ở `/profile` ẩn, notifier ack bỏ qua.
+- Chạy: `pnpm --filter @grabcode/notifier dev` (cùng core-api + outbox-relay).
+- Luồng: `/profile` bật "Thông báo đẩy" → "Bật trên trình duyệt này" → `public/sw.js` + `PUT /v1/me/push-subscriptions` (`core.push_subscriptions`) → notifier nghe `order.*` + `dispatch.offered` + `chat.posted` (tin chat, chỉ bên kia) → push tới user liên quan (`notifications.push` bật); endpoint 404/410 tự xoá. Zalo ZNS / FCM chưa làm.
+
+### Đăng nhập (Auth) local
+- core-api giữ session: cookie httpOnly `gc_session` (chỉ lưu SHA-256 token trong `core.sessions`), user ở `core.users` (`roles`: CUSTOMER/CODER, `currency`).
+- GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
+- Google OAuth: Google Cloud Console → OAuth client (Web application), Authorized redirect URI `{API_PUBLIC_URL}/v1/auth/google/callback`, điền `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Provider chưa cấu hình thì nút ẩn, `/v1/auth/{provider}` trả 404.
+- Email/mật khẩu: `POST /v1/auth/register` (409 nếu trùng email), `POST /v1/auth/login` (401 chung cho sai email/mật khẩu); hash scrypt. Đăng ký mới qua provider khác = user riêng; gộp bằng nút "Liên kết" ở /profile (`/v1/auth/{provider}?link=1`, cần đang login, lưu `core.user_identities`). Không tự gộp theo email (email mật khẩu chưa xác minh).
+- Dev login không cần GitHub: `AUTH_DEV_LOGIN=true` (tự tắt khi `NODE_ENV=production`).
+- `apps/web` và `apps/coder` cần `NEXT_PUBLIC_API_URL` trong `.env.local`; không có biến này = chế độ mock, bỏ qua đăng nhập.
+- Một trang login duy nhất: web `/login` cho cả 2 vai trò. Role chỉ chọn lúc đăng ký (thẻ Khách hàng/Coder), 1 tài khoản có thể có cả 2 role. Sau login: về `?next=` hoặc theo role (CUSTOMER → `/`, chỉ CODER → `/coder`).
+- Gate: web `/order/*` (role CUSTOMER), `/profile` (mọi user đã login); coder toàn app (role CODER). Chưa login → redirect `/login?next=...` (coder phải mở qua web `:3100/coder`, không mở trực tiếp `:3001`). Thiếu role → thẻ "Kích hoạt" gọi `POST /v1/me/roles`.
+- `/profile` (kiểu Upwork): thông tin liên hệ (`PATCH /v1/me`), hồ sơ Coder (`PUT /v1/me/coder-profile`), hồ sơ doanh nghiệp (`PUT /v1/me/customer-profile`), thông báo + tiền tệ, đổi mật khẩu (`POST /v1/me/password`, đăng xuất các phiên khác).
+
+### Admin portal (S7)
+- Chạy: `pnpm --filter @grabcode/admin dev` (`:3002`, basePath `/admin`), mở qua web `:3100/admin` (rewrite `ADMIN_ORIGIN`, chung cookie `gc_session`).
+- Cấp quyền: `update core.users set roles = array_append(roles, 'ADMIN') where email = '...'`; dev: `POST /v1/auth/dev-login {login, role: 'ADMIN'}`. Không có role ADMIN → `/v1/admin/*` trả 403.
+- Đơn đã nạp quá 30 phút chưa coder nhận: web hiện cảnh báo, admin thấy ở tab Orders; quá `AUTO_REFUND_HOURS` (mặc định 24, 0 = tắt) core-api tự huỷ + hoàn (quét 10 phút/lần).
+- Tab: Coders (tier override, khoá), Orders (chia tranh chấp, hoàn DRAFT nạp dở), Suspense (gán đơn / hoàn), Payouts (duyệt sau khi CK tay), Monitor (outbox, JetStream, job FAILED). Coder gửi yêu cầu rút ở coder app.
+- Smoke: `node api/core-api/scripts/smoke-admin.mjs` (core-api `AUTH_DEV_LOGIN=true`).
+
+### Image deploy (core-api + workers)
+- `docker build -f infra/node-service.Dockerfile --build-arg PKG=@grabcode/core-api -t grabcode/core-api .` (đổi `PKG` cho từng worker). Chạy bằng tsx, user `node`, cấu hình qua env (không copy `.env`/`credentials`).
+- qa-worker cần Docker CLI + socket, deploy-worker cần `gcloud`: chạy nơi host có sẵn.
+- Web/coder/admin: `docker build -f infra/next-app.Dockerfile --build-arg PKG=@grabcode/web --build-arg NEXT_PUBLIC_API_URL=<api> [--build-arg CODER_ORIGIN=… ADMIN_ORIGIN=…] -t grabcode/web .` (biến build-time, mỗi môi trường build lại; `next start` port 3000/3001/3002).
 
 ### Quy ước Git & Commit
 - Tiền tố theo component:

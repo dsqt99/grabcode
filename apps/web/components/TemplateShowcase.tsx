@@ -18,7 +18,6 @@ export default function TemplateShowcase() {
         {SEED_TEMPLATES.map((t) => (
           <article key={t.id} className="card card-hover flex flex-col overflow-hidden !p-0">
             <div className="relative aspect-[16/10] bg-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={t.thumbnail} alt={`Ảnh minh hoạ ${t.title}`} loading="lazy" className="h-full w-full object-cover" />
               {t.popular && <span className="chip-ok absolute left-3 top-3">Phổ biến</span>}
             </div>
