@@ -1,5 +1,6 @@
 import { Order } from '../types/order';
 import { CoderProfile } from '../types/coder';
+import { TEMPLATE_PRICING } from '../schemas/pricing';
 
 export interface POCTemplate {
   id: string;
@@ -21,8 +22,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "Mini CRM Bất Động Sản",
     tagline: "Quản lý khách nét F0, giỏ hàng căn hộ & thông báo Telegram bot tự động",
     category: "CRM & B2B",
-    basePriceVnd: 2800000,
-    etaHours: 3,
+    ...TEMPLATE_PRICING["tpl-realestate-crm"],
     techStack: ["Next.js 15", "Tailwind CSS", "Supabase", "Telegram Bot"],
     features: ["Kanban quản lý lead", "Bản đồ mặt bằng SVG", "Bắn tin Telegram khi có cọc", "Phân quyền Sale/Admin"],
     popular: true,
@@ -34,8 +34,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "SaaS Billing & Subscription",
     tagline: "Dashboard quản trị thành viên, gói thuê bao & đối soát thanh toán VietQR",
     category: "Fintech & SaaS",
-    basePriceVnd: 3500000,
-    etaHours: 4,
+    ...TEMPLATE_PRICING["tpl-saas-billing"],
     techStack: ["Next.js 15", "Recharts", "Prisma", "VietQR Hook"],
     features: ["Biểu đồ MRR/ARR thời gian thực", "Webhook tự động kích hoạt tài khoản", "Xuất báo cáo PDF", "Bảng so sánh gói dịch vụ"],
     popular: true,
@@ -47,8 +46,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "E-Commerce Checkout Siêu Tốc",
     tagline: "Luồng đặt hàng 1 trang (One-page Checkout) kèm VietQR động chuẩn hóa",
     category: "E-Commerce",
-    basePriceVnd: 2200000,
-    etaHours: 2,
+    ...TEMPLATE_PRICING["tpl-ecommerce-fast"],
     techStack: ["React 19", "Zustand", "Tailwind CSS", "Web Audio API"],
     features: ["Giỏ hàng kéo thả mượt mà", "Tự sinh QR theo số tiền", "Âm thanh chốt đơn", "Tối ưu chuyển đổi di động"],
     popular: false,
@@ -60,8 +58,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "AI Voice Agent Booking",
     tagline: "Giao diện trợ lý đàm thoại AI giọng nói đặt lịch hẹn nha khoa / spa tự động",
     category: "AI & Automation",
-    basePriceVnd: 4900000,
-    etaHours: 6,
+    ...TEMPLATE_PRICING["tpl-voice-agent"],
     techStack: ["Next.js 15", "ElevenLabs API", "FastAPI", "WebRTC"],
     features: ["Microphone visualizer thời gian thực", "Speech-to-Text độ trễ thấp", "Đồng bộ lịch Google Calendar", "Lưu biên bản cuộc gọi"],
     popular: true,
@@ -94,7 +91,7 @@ export const INITIAL_DEMO_ORDER: Order = {
   id: "GC-9821",
   tier: "EXPRESS",
   title: "Mini CRM Bất Động Sản Đô Thị Mới",
-  customerName: "Nguyễn Văn Tuấn (An Gia Land)",
+  customerName: "Khách demo (dữ liệu mẫu)",
   customerPrompt: "Cần gấp 1 web CRM quản lý 80 căn hộ phân khu Sun Grand, sale có thể kéo thả trạng thái chốt cọc và bắn tin qua Telegram cho giám đốc sàn.",
   templateId: "tpl-realestate-crm",
   templateName: "Mini CRM Bất Động Sản",

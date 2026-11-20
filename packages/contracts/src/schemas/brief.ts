@@ -34,6 +34,8 @@ export const MilestoneSchema = z.object({
   submittedAt: z.string().optional(),
   completedAt: z.string().optional(),
   commitHash: z.string().optional(),
+  /** What the coder handed in for this milestone: demo, repo or file link (http/https only). */
+  deliveryUrl: z.string().optional(),
   /** Coder's note on submit, or the customer's revision request. */
   note: z.string().optional(),
   /** QA Gate of the last submit; absent when the order has no repo. */

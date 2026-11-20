@@ -34,3 +34,9 @@ export type OfferList = z.infer<typeof OfferListSchema>;
 /** GET / PUT /v1/me/presence (coder online toggle, stored server side). */
 export const PresenceSchema = z.object({ online: z.boolean() });
 export type Presence = z.infer<typeof PresenceSchema>;
+
+// ---- Job board: paid orders nobody took yet. Any coder may claim one, alongside the wave offers. ----
+
+/** GET /v1/jobs: funded, unassigned orders (oldest first), not the caller's own. */
+export const JobListSchema = z.object({ jobs: z.array(OrderSchema) });
+export type JobList = z.infer<typeof JobListSchema>;

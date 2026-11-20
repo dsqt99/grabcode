@@ -105,9 +105,17 @@ export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+/** Push services of Chrome/Edge (FCM), Firefox, Edge legacy (WNS) and Safari. The notifier POSTs to the endpoint: no other hosts (SSRF). */
+const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.notify\.windows\.com|(web\.)?push\.apple\.com|[a-z0-9-]+\.push\.apple\.com)$/;
+
 /** Browser PushSubscription.toJSON() (WebPush). One row per endpoint; re-subscribing the same endpoint moves it to the caller. */
 export const PushSubscriptionSchema = z.object({
-  endpoint: z.string().url().startsWith('https://').max(1000),
+  endpoint: z
+    .string()
+    .url()
+    .startsWith('https://')
+    .max(1000)
+    .refine((u) => PUSH_HOSTS.test(new URL(u).hostname), 'Not a known push service'),
   keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
 });
 export const PushUnsubscribeSchema = z.object({ endpoint: z.string().max(1000) });
