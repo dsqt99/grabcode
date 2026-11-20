@@ -4,6 +4,7 @@
 import { execFileSync } from 'node:child_process';
 
 const API = process.env.API_URL ?? 'http://localhost:4000';
+const DEV_KEY = process.env.DEV_LOGIN_KEY ? { 'x-dev-login-key': process.env.DEV_LOGIN_KEY } : {}; // staging: dev-login needs this key (docs/STAGING.md)
 const ok = (c, m) => {
   console.log(c ? 'OK  ' : 'FAIL', m);
   if (!c) process.exitCode = 1;
@@ -14,7 +15,7 @@ const balance = (acct) => Number(psql(`select coalesce(sum(amount_vnd),0) from c
 async function client(login, role) {
   let cookie = '';
   const call = async (method, path, body) => {
-    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', ...DEV_KEY, cookie }, body: body && JSON.stringify(body) });
     const sc = r.headers.get('set-cookie');
     if (sc) cookie = sc.split(';')[0];
     const t = await r.text();

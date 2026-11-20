@@ -59,6 +59,8 @@ node api/core-api/scripts/smoke-milestones.mjs
 node api/core-api/scripts/smoke-admin.mjs
 ```
 
+> Muốn một bản chạy thử có dữ liệu mẫu cho CEO/Tester: xem [STAGING.md](STAGING.md) (`infra/deploy/staging-up.sh`).
+
 ## 2. Chọn cách triển khai: 1 VPS + Docker Compose
 
 Đây là cách rẻ và đơn giản nhất cho giai đoạn có vài chục đơn mỗi tháng. Một máy chủ chạy tất cả:

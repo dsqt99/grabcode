@@ -3,6 +3,7 @@
 // customer asks for changes / approves -> delivered -> revision -> accepted -> coder paid the order's payout.
 // Run: node api/core-api/scripts/smoke-mvp.mjs
 const API = process.env.API_URL ?? 'http://localhost:4000';
+const DEV_KEY = process.env.DEV_LOGIN_KEY ? { 'x-dev-login-key': process.env.DEV_LOGIN_KEY } : {}; // staging: dev-login needs this key (docs/STAGING.md)
 const ok = (c, m) => {
   console.log(c ? 'OK  ' : 'FAIL', m);
   if (!c) process.exitCode = 1;
@@ -11,7 +12,7 @@ const ok = (c, m) => {
 function client() {
   let cookie = '';
   return async (method, path, body) => {
-    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', ...DEV_KEY, cookie }, body: body && JSON.stringify(body) });
     const sc = r.headers.get('set-cookie');
     if (sc) cookie = sc.split(';')[0];
     const t = await r.text();
@@ -31,13 +32,22 @@ const coder = await register('CODER', 'fl');
 const coder2 = await register('CODER', 'fl2');
 const admin = client();
 await admin('POST', '/v1/auth/dev-login', { login: `mvp-admin-${run}`, role: 'ADMIN' });
+// P0-8: a new coder gets no jobs until an admin approves the application.
+ok((await coder('GET', '/v1/jobs')).status === 403, 'unapproved coder: 403 on the board');
+for (const c of [coder, coder2]) await admin('PATCH', `/v1/admin/coders/${c.id}`, { approval: 'APPROVED' });
 
 // 1. Customer posts. Client-chosen milestone ids are replaced (duplicates would merge two escrow releases).
 const milestones = [20, 80].map((w) => ({ id: 'dup', title: `m${w}`, description: '', weightPercent: w, status: 'COMPLETED' }));
 const brief = { title: 'MVP smoke', scopeSummary: 'shop', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones };
-const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', tier: 'STANDARD', brief, phone: '0912345678', acceptTerms: true });
+const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', menuItem: 'LANDING', brief, phone: '0912345678', acceptTerms: true });
 ok(created.status === 201 && created.body.status === 'DRAFT', `order ${created.body.id} DRAFT`);
-const o = created.body;
+let o = created.body;
+// Founder decision: the admin quotes the final price before the customer pays (the order starts at "giá từ").
+ok(o.priceQuotedAt === null, 'new order waits for a quote');
+ok((await cust('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 3_000_000, etaDays: 3 })).status === 403, 'customer cannot quote');
+const quoted = await admin('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 3_000_000, etaDays: 3 });
+ok(quoted.status === 200 && quoted.body.priceVnd === 3_000_000, 'admin quotes 3.000.000');
+o = (await cust('GET', `/v1/orders/${o.id}`)).body;
 ok(o.brief.milestones.map((m) => `${m.id}:${m.status}`).join() === 'M1:PENDING,M2:PENDING', 'server-assigned milestone ids, progress reset');
 ok(o.payoutVnd > 0 && o.payoutVnd < o.priceVnd, `payout ${o.payoutVnd} of ${o.priceVnd} fixed on the order`);
 
@@ -94,7 +104,12 @@ ok(w1 === Math.round(o.payoutVnd * 0.2), `M1 released 20% of the payout (${w1})`
 await k('POST', `${ms('M2')}/submit`, { deliveryUrl: 'https://github.com/someone/shop' });
 await cust('POST', `${ms('M2')}/approve`);
 ok((await k('POST', `/v1/orders/${o.id}/transitions`, { status: 'DELIVERED' })).body.status === 'DELIVERED', 'coder delivers');
-ok((await cust('POST', `/v1/orders/${o.id}/transitions`, { status: 'IN_PROGRESS' })).body.status === 'IN_PROGRESS', 'customer requests a final revision');
+// HON-21: the last milestone's share is held until acceptance; "Yêu cầu sửa" after delivery reopens that milestone.
+ok((await k('GET', '/v1/me/wallet')).body.balanceVnd === Math.round(o.payoutVnd * 0.2), 'last milestone share still held after delivery');
+const rev = await cust('POST', `/v1/orders/${o.id}/transitions`, { status: 'IN_PROGRESS', reason: 'sửa lại phần giỏ hàng giúp mình' });
+ok(rev.status === 200 && rev.body.status === 'IN_PROGRESS' && rev.body.brief.milestones[1].status === 'IN_PROGRESS', 'customer requests a final revision (reopens the last milestone)');
+await k('POST', `${ms('M2')}/submit`, { deliveryUrl: 'https://github.com/someone/shop-v2' });
+await cust('POST', `${ms('M2')}/approve`);
 await k('POST', `/v1/orders/${o.id}/transitions`, { status: 'DELIVERED' });
 ok((await cust('POST', `/v1/orders/${o.id}/transitions`, { status: 'ACCEPTED' })).body.status === 'ACCEPTED', 'customer accepts');
 ok((await k('GET', '/v1/me/wallet')).body.balanceVnd === o.payoutVnd, `coder paid the order payout ${o.payoutVnd}`);

@@ -17,7 +17,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { CookieOptions, Request, Response } from 'express';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
   AddRoleSchema,
   ChangePasswordSchema,
@@ -36,7 +36,7 @@ import {
   type PushKey,
   type UserRole,
 } from '@grabcode/contracts/schemas';
-import { API_PUBLIC_URL, DEV_LOGIN_ENABLED, IS_PROD, WEB_ORIGINS } from '../config';
+import { API_PUBLIC_URL, DEV_LOGIN_ENABLED, DEV_LOGIN_KEY, IS_PROD, WEB_ORIGINS } from '../config';
 import { AuthService, SESSION_COOKIE, SESSION_TTL_MS } from './auth.service';
 import { OAUTH_PROVIDERS } from './oauth';
 
@@ -63,6 +63,12 @@ const safeRedirect = (url: string | undefined): string => {
 
 const invalid = (issues: unknown) => new BadRequestException({ message: 'Invalid request', issues });
 
+const sameSecret = (got: string, expected: string) => {
+  const a = Buffer.from(got);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
+
 @Controller('v1')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
@@ -73,7 +79,7 @@ export class AuthController {
 
   @Get('auth/providers')
   providers(): AuthProviders {
-    return { password: true, github: OAUTH_PROVIDERS.github.configured, google: OAUTH_PROVIDERS.google.configured, dev: DEV_LOGIN_ENABLED };
+    return { password: true, github: OAUTH_PROVIDERS.github.configured, google: OAUTH_PROVIDERS.google.configured, dev: DEV_LOGIN_ENABLED && !DEV_LOGIN_KEY }; // with a key the UI button cannot send it
   }
 
   @Post('auth/register')
@@ -158,8 +164,9 @@ export class AuthController {
 
   @Post('auth/dev-login')
   @HttpCode(200)
-  async devLogin(@Body() body: unknown, @Res({ passthrough: true }) res: Response): Promise<Me> {
+  async devLogin(@Req() req: Request, @Body() body: unknown, @Res({ passthrough: true }) res: Response): Promise<Me> {
     if (!DEV_LOGIN_ENABLED) throw new NotFoundException();
+    if (DEV_LOGIN_KEY && !sameSecret(req.header('x-dev-login-key') ?? '', DEV_LOGIN_KEY)) throw new NotFoundException();
     const parsed = DevLoginSchema.safeParse(body);
     if (!parsed.success) throw invalid(parsed.error.issues);
     const { login, role } = parsed.data;

@@ -148,7 +148,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - GitHub OAuth: tạo GitHub OAuth App, callback `{API_PUBLIC_URL}/v1/auth/github/callback`, điền `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` trong `.env`.
 - Google OAuth: Google Cloud Console → OAuth client (Web application), Authorized redirect URI `{API_PUBLIC_URL}/v1/auth/google/callback`, điền `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Provider chưa cấu hình thì nút ẩn, `/v1/auth/{provider}` trả 404.
 - Email/mật khẩu: `POST /v1/auth/register` (409 nếu trùng email), `POST /v1/auth/login` (401 chung cho sai email/mật khẩu); hash scrypt. Đăng ký mới qua provider khác = user riêng; gộp bằng nút "Liên kết" ở /profile (`/v1/auth/{provider}?link=1`, cần đang login, lưu `core.user_identities`). Không tự gộp theo email (email mật khẩu chưa xác minh).
-- Dev login không cần GitHub: `AUTH_DEV_LOGIN=true` (tự tắt khi `NODE_ENV=production`).
+- Dev login không cần GitHub: `AUTH_DEV_LOGIN=true` (tự tắt khi `NODE_ENV=production`; riêng staging cần thêm `APP_ENV=staging` + `STAGING_DEV_LOGIN_KEY`, xem `docs/STAGING.md`).
 - `apps/web` và `apps/coder` cần `NEXT_PUBLIC_API_URL` trong `.env.local`; không có biến này = chế độ mock, bỏ qua đăng nhập.
 - Một trang login duy nhất: web `/login` cho cả 2 vai trò. Role chỉ chọn lúc đăng ký (thẻ Khách hàng/Coder), 1 tài khoản có thể có cả 2 role. Sau login: về `?next=` hoặc theo role (CUSTOMER → `/`, chỉ CODER → `/coder`).
 - Gate: web `/order/*` (role CUSTOMER), `/profile` (mọi user đã login); coder toàn app (role CODER). Chưa login → redirect `/login?next=...` (coder phải mở qua web `:3100/coder`, không mở trực tiếp `:3001`). Thiếu role → thẻ "Kích hoạt" gọi `POST /v1/me/roles`.
@@ -159,6 +159,7 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Thanh toán: `PAYMENT_BANK_ID` (mã VietQR/BIN), `PAYMENT_BANK_NAME`, `PAYMENT_ACCOUNT_NUMBER`, `PAYMENT_ACCOUNT_NAME` → QR `img.vietqr.io`. Admin xác nhận: `POST /v1/admin/orders/:id/confirm-payment {amountVnd, reference}` (tx `manual:<order>:<REF>`, chỉ đơn DRAFT). SePay webhook vẫn dùng được (`SEPAY_WEBHOOK_API_KEY` → `autoConfirm`).
 - Bảng việc: `GET /v1/jobs`, `POST /v1/jobs/:id/claim` (FUNDED|DISPATCHED → IN_PROGRESS, 1 đơn đang làm / coder). Nộp mốc: `{deliveryUrl?, commitHash?, note?}` ít nhất 1.
 - Id mốc luôn do server đặt (`M1..Mn`, `freshBrief`). Coder bị khoá: mất phiên, mọi API 403.
+- Staging demo (1 lệnh, dữ liệu mẫu, dev-login chỉ staging): `docs/STAGING.md`.
 - Deploy: `docs/DEPLOY.md` (1 VPS, `infra/deploy/docker-compose.prod.yml` + Caddy). Smoke: `node api/core-api/scripts/smoke-mvp.mjs`.
 
 ### Admin portal (S7)

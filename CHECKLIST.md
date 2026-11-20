@@ -211,6 +211,19 @@
 - [ ] 👤 Founder: danh sách coder được duyệt (migration đang duyệt toàn bộ coder hiện có)
 - [ ] P0-C: kênh báo admin (Telegram) tiêu thụ `payment.reported`
 
+## Staging demo cho CEO/Tester (HON-26) — branch `chore/staging-demo`
+
+- [x] `staging-up.sh` (1 lệnh: .env.staging + secrets tự sinh, build, migrate, seed), `staging-reset.sh`, `docker-compose.staging.yml`, `env.staging.example`
+- [x] `seed-staging.mjs`: 1 khách, 3 freelancer, 1 admin, 6 đơn ở các trạng thái (qua API thật); chặn khi không phải `APP_ENV=staging`
+- [x] Dev-login chỉ staging (`APP_ENV=staging` + `STAGING_DEV_LOGIN_KEY`, header `x-dev-login-key`), production vẫn bỏ qua; test `dev-login-guard.test.ts`
+- [x] `.github/workflows/deploy-staging.yml` (dispatch + push main, bỏ qua có thông báo khi thiếu secrets), `docs/STAGING.md`
+- [x] FIX: `@nestjs/platform-express` ^12 (dependabot) làm core-api không khởi động (core/common là 11): ghim lại ^11, dependabot bỏ qua major `@nestjs/*`
+- [x] `smoke-mvp.mjs` cập nhật theo P0 (menuItem, báo giá, duyệt coder, sửa sau bàn giao); các smoke script gửi `x-dev-login-key` khi có `DEV_LOGIN_KEY`
+- [ ] 👤 Founder: VPS + subdomain staging + secrets GitHub (`STAGING_SSH_HOST/USER/KEY`, `STAGING_DOMAIN`)
+- [ ] Chạy `staging-up.sh` thật trên máy có Docker (build image, Caddy HTTPS) — chưa chạy được ở môi trường agent (không có Docker)
+- [ ] Rà lại `smoke-admin/milestones/dispatch/auth/realtime/qa` sau P0; thêm Centrifugo vào compose prod nếu cần realtime
+- [ ] CI: thêm bước boot core-api (PGlite/Postgres service) để bắt lỗi kiểu bump `platform-express` mà `typecheck` không thấy
+
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
