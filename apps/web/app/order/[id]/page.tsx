@@ -5,21 +5,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { payoutOf } from '@grabcode/contracts/schemas';
 import { INITIAL_DEMO_ORDER, eventBus, pollDelay, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
+import ConfirmSheet from '../../../components/ConfirmSheet';
 import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
 import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
+import RefundAccountCard from '../../../components/RefundAccountCard';
 import SandboxFrame from '../../../components/SandboxFrame';
 import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
+import { milestoneAmount, statusInput, statusView, type Tone } from '../../../lib/orderStatus';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
+import { formatVnd } from '../../../lib/pricing';
 
 const POLL_MS = 3000;
 const LONG_WAIT_MS = 30 * 60_000;
 
-/** Paid order still without a coder after 30 min (admin sees it too); core-api auto-refunds after AUTO_REFUND_HOURS. */
+/** Paid order still without a coder 30 min after funding (admin sees it too); core-api auto-refunds after AUTO_REFUND_HOURS. */
 function LongWaitNote({ since }: { since: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -29,7 +33,7 @@ function LongWaitNote({ since }: { since: string }) {
   if (now - new Date(since).getTime() < LONG_WAIT_MS) return null;
   return (
     <p className="mt-2 text-sm font-semibold text-amber-700">
-      Đã hơn 30 phút chưa có Coder nhận. Vận hành đã được báo; nếu vẫn không ai nhận, đơn sẽ tự huỷ và hoàn ký quỹ.
+      Đã hơn 30 phút chưa có freelancer nhận. Vận hành đã được báo; không ai nhận trong 24 giờ thì đơn tự huỷ và GrabCode hoàn tiền.
     </p>
   );
 }
@@ -44,6 +48,30 @@ const STATUS_MSG: Partial<Record<Order['status'], (o: Order) => string>> = {
   DELIVERED: () => 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.',
 };
 
+const CHIP: Record<Tone, string> = {
+  warn: 'chip-warn',
+  info: 'chip bg-blue-50 text-blue-800',
+  brand: 'chip-ok',
+  ok: 'chip-ok',
+  danger: 'chip bg-red-50 text-red-700',
+  neutral: 'chip bg-slate-100 text-slate-700',
+};
+
+/** Confirmation sheets (UX spec "Màn C"): every money action and every free-text request goes through one. */
+type Sheet =
+  | { kind: 'approve' | 'reject'; milestoneId: string }
+  | { kind: 'accept' | 'revise' | 'dispute' | 'repo' };
+const MIN_NOTE = { reject: 10, revise: 10, dispute: 20 } as const;
+const REVISION_HINTS = ['Lỗi khi mở trên điện thoại', 'Thiếu tính năng trong đặc tả', 'Link không mở được'];
+
+/** API errors as a short Vietnamese reason for the sheet. */
+const reason = (e: unknown) => {
+  const status = (e as { status?: number }).status;
+  if (status === 409) return 'trạng thái đơn vừa thay đổi, hãy tải lại trang';
+  if (status === 403 || status === 404) return 'bạn không có quyền thao tác trên đơn này';
+  return status ? `máy chủ báo lỗi ${status}` : 'mất kết nối';
+};
+
 const uid = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 function systemMsg(orderId: string, text: string): ChatMessage {
@@ -52,7 +80,12 @@ function systemMsg(orderId: string, text: string): ChatMessage {
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
-  const { money } = useCurrency();
+  const { usd } = useCurrency();
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [note, setNote] = useState('');
+  const [ticked, setTicked] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [missing, setMissing] = useState(false);
@@ -230,15 +263,42 @@ export default function OrderPage() {
     return (
       <>
         <Navbar />
-        <p className="p-10 text-center text-slate-500">{missing ? 'Không tìm thấy đơn hàng.' : 'Đang tải đơn hàng...'}</p>
+        <p className="p-10 text-center text-slate-500">{missing ? 'Không tìm thấy đơn này hoặc bạn không có quyền xem.' : 'Đang tải đơn hàng...'}</p>
       </>
     );
   }
 
-  const delivered = order.status === 'DELIVERED' || order.status === 'COMPLETED';
-  const completed = order.status === 'COMPLETED';
+  const input = statusInput(order);
+  const sv = statusView(input);
+  const { heldVnd } = input.money;
   const payout = order.payoutVnd ?? payoutOf(order.priceVnd);
   const percent = progressPercent(order);
+  const delivered = input.status === 'DELIVERED' || input.status === 'ACCEPTED';
+  const amountOf = (milestoneId: string) => milestoneAmount(order, milestoneId);
+  /** What accepting the whole order pays now: the shares of milestones not approved yet (same as the server sweep). */
+  const acceptVnd = order.brief.milestones.reduce((s, m) => s + (m.status === 'COMPLETED' ? 0 : amountOf(m.id)), 0);
+
+  const openSheet = (next: Sheet) => {
+    setSheet(next);
+    setNote('');
+    setTicked(false);
+    setSheetError(null);
+  };
+  /** Runs the sheet action; on failure the sheet stays open with the error and what the user typed. */
+  const run = async (fn: () => Promise<void>) => {
+    setSending(true);
+    setSheetError(null);
+    try {
+      await fn();
+      setSheet(null);
+    } catch (e) {
+      console.error(e);
+      setSheetError(reason(e));
+    } finally {
+      setSending(false);
+    }
+  };
+  const refreshView = async () => showOrder(await fetchView(order.id));
 
   const sendChat = (text: string) => {
     if (ordersApiEnabled) {
@@ -257,126 +317,143 @@ export default function OrderPage() {
     pushChat(msg); // no-op if the local listener already added it
   };
 
-  const accept = async () => {
-    if (ordersApiEnabled) {
-      try {
+  // The customer's chat never shows the coder's payout (it would reveal the platform split).
+  const accept = () =>
+    run(async () => {
+      if (ordersApiEnabled) {
         await transitionOrder(order.id, 'ACCEPTED');
-        showOrder(await fetchView(order.id));
-        pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
-      } catch (e) {
-        console.error(e);
-        pushChat(systemMsg(order.id, 'Nghiệm thu chưa thành công, vui lòng thử lại.'));
+        await refreshView();
+      } else {
+        applyOrder((o) => ({ ...o, status: 'COMPLETED', escrowStatus: 'RELEASED', completedAt: new Date().toISOString() }));
+        eventBus.publish({ type: 'ORDER_COMPLETED', payload: { orderId: order.id, payoutVnd: payout }, timestamp: new Date().toISOString() });
       }
-      return;
-    }
-    applyOrder((o) => ({ ...o, status: 'COMPLETED', escrowStatus: 'RELEASED', completedAt: new Date().toISOString() }));
-    eventBus.publish({ type: 'ORDER_COMPLETED', payload: { orderId: order.id, payoutVnd: payout }, timestamp: new Date().toISOString() });
-    pushChat(systemMsg(order.id, `Đã nghiệm thu. Giải ngân ${payout.toLocaleString('de-DE')} đ cho Coder.`));
-  };
+      pushChat(systemMsg(order.id, 'Đã nghiệm thu đơn. Cảm ơn bạn!'));
+    });
 
-  const requestRevision = async () => {
-    if (ordersApiEnabled) {
-      try {
-        // Sends the order back to the coder (DELIVERED -> IN_PROGRESS).
+  // Order-level revision (DELIVERED -> IN_PROGRESS): the note goes to the coder as a real chat message first.
+  const requestRevision = () =>
+    run(async () => {
+      const text = `Yêu cầu sửa: ${note.trim()}`;
+      if (ordersApiEnabled) {
+        pushChat(await sendMessage(order.id, text));
         showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS'), await getOrderRepo(order.id)));
-      } catch (e) {
-        console.error(e);
-        return;
+      } else {
+        sendChat(text);
       }
-    }
-    sendChat('Mình muốn yêu cầu chỉnh sửa một số điểm trên bản demo, bạn xem giúp nhé.');
-  };
+    });
 
-  const review = async (milestoneId: string, approve: boolean, note?: string) => {
-    try {
-      showOrder(toViewOrder(await reviewMilestone(order.id, milestoneId, approve, note), await getOrderRepo(order.id)));
-      pushChat(systemMsg(order.id, approve ? `Đã duyệt mốc ${milestoneId}, giải ngân phần ký quỹ của mốc cho Coder.` : `Đã yêu cầu Coder sửa mốc ${milestoneId}: ${note}`));
-    } catch (e) {
-      console.error(e);
-      pushChat(systemMsg(order.id, `Thao tác mốc ${milestoneId} chưa thành công, vui lòng thử lại.`));
-    }
-  };
+  const review = (milestoneId: string, approve: boolean) =>
+    run(async () => {
+      showOrder(toViewOrder(await reviewMilestone(order.id, milestoneId, approve, approve ? undefined : note.trim()), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, approve ? `Đã duyệt mốc ${milestoneId}.` : `Đã yêu cầu freelancer sửa mốc ${milestoneId}: ${note.trim()}`));
+    });
 
   // Freezes the escrow still held; ops resolve it from admin (S6).
-  const dispute = async () => {
-    const reason = window.prompt('Lý do mở tranh chấp (ký quỹ còn lại sẽ bị giữ cho tới khi xử lý xong):')?.trim();
-    if (!reason) return;
-    try {
-      showOrder(toViewOrder(await transitionOrder(order.id, 'DISPUTED', reason), await getOrderRepo(order.id)));
-      pushChat(systemMsg(order.id, `Đã mở tranh chấp: ${reason}`));
-    } catch (e) {
-      console.error(e);
-      pushChat(systemMsg(order.id, 'Mở tranh chấp chưa thành công, vui lòng thử lại.'));
-    }
-  };
-  const claimRepo = async () => {
-    const login = window.prompt('GitHub username nhận quyền admin repo:')?.trim();
-    if (!login) return;
-    try {
+  const dispute = () =>
+    run(async () => {
+      showOrder(toViewOrder(await transitionOrder(order.id, 'DISPUTED', note.trim()), await getOrderRepo(order.id)));
+      pushChat(systemMsg(order.id, `Đã mở tranh chấp: ${note.trim()}`));
+    });
+
+  const claimRepo = () =>
+    run(async () => {
+      const login = note.trim().replace(/^@/, '');
       await handoverRepo(order.id, login);
-      showOrder(await fetchView(order.id));
+      await refreshView();
       pushChat(systemMsg(order.id, `Đang chuyển quyền admin repo cho GitHub ${login}. Kiểm tra lời mời trong email GitHub.`));
-    } catch (e) {
-      console.error(e);
-      pushChat(systemMsg(order.id, 'Chưa chuyển được repo: kiểm tra lại GitHub username.'));
-    }
-  };
-  const disputed = order.disputeReason !== undefined;
-  const canDispute = ordersApiEnabled && ['BUILDING', 'QA_TESTING', 'DELIVERED'].includes(order.status);
+    });
+
+  const sheetMilestone = sheet && 'milestoneId' in sheet ? order.brief.milestones.find((m) => m.id === sheet.milestoneId) : undefined;
+  const minNote = sheet && sheet.kind in MIN_NOTE ? MIN_NOTE[sheet.kind as keyof typeof MIN_NOTE] : 0;
+  const noteField = (label: string, hints?: string[]) => (
+    <label className="block">
+      <span className="font-semibold text-ink">{label}</span>
+      {hints && (
+        <span className="mt-2 flex flex-wrap gap-2">
+          {hints.map((h) => (
+            <button key={h} type="button" className="chip min-h-[32px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
+              {h}
+            </button>
+          ))}
+        </span>
+      )}
+      <textarea
+        className="mt-2 w-full p-3 !text-base"
+        rows={4}
+        maxLength={2000}
+        value={note}
+        disabled={sending}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <span className="block text-right text-xs text-slate-500">
+        {note.trim().length < minNote ? `Tối thiểu ${minNote} ký tự · ` : ''}
+        {note.length}/2000
+      </span>
+    </label>
+  );
+  const tick = (label: string) => (
+    <label className="flex min-h-[44px] items-center gap-3 rounded-md border border-slate-200 p-3 font-semibold text-ink">
+      <input type="checkbox" className="h-5 w-5" checked={ticked} disabled={sending} onChange={(e) => setTicked(e.target.checked)} />
+      {label}
+    </label>
+  );
+  const sheetProps = { open: true, busy: sending, error: sheetError, onClose: () => setSheet(null) };
 
   return (
     <>
       <Navbar />
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 md:px-8">
         <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="chip-dark">{order.id}</span>
-              <span className={completed ? 'chip-ok' : 'chip-warn'}>
-                {completed ? 'Đã nghiệm thu' : delivered ? 'Chờ nghiệm thu' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang thực hiện'}
-              </span>
+              <span className={CHIP[sv.tone]}>{sv.label}</span>
               <span className="chip bg-slate-100 text-slate-600">{order.tier}</span>
             </div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
+            <p className="mt-1 text-sm text-slate-600">{sv.description}</p>
           </div>
-          <dl className="flex gap-6 text-sm">
-            <div><dt className="text-slate-500">Ký quỹ</dt><dd className="font-display font-extrabold text-emerald-dark">{money(order.priceVnd)}</dd></div>
-            <div><dt className="text-slate-500">Trạng thái ký quỹ</dt><dd className="font-semibold">{order.escrowStatus === 'RELEASED' ? 'Đã giải ngân' : order.escrowStatus === 'UNPAID' ? 'Chờ thanh toán' : 'Đang giữ an toàn'}</dd></div>
-            <div><dt className="text-slate-500">ETA</dt><dd className="font-semibold">~{order.etaHours}h</dd></div>
+          <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div>
+              <dt className="text-slate-500">Giá đơn</dt>
+              <dd className="font-display font-extrabold text-emerald-dark">
+                {formatVnd(order.priceVnd)}
+                {usd(order.priceVnd) && <span className="ml-2 text-xs font-normal text-slate-500">{usd(order.priceVnd)}</span>}
+              </dd>
+            </div>
+            <div><dt className="text-slate-500">Tiền của đơn</dt><dd className="font-semibold">{sv.money}</dd></div>
+            <div><dt className="text-slate-500">Dự kiến xong</dt><dd className="font-semibold">~{order.etaHours} giờ</dd></div>
           </dl>
         </header>
 
-        <LiveStepper status={order.status} percent={percent} />
+        <LiveStepper step={sv.step} percent={percent} />
 
-        {disputed && (
+        {input.status === 'DISPUTED' && (
           <div className="card border-red-200 bg-red-50 text-sm text-red-800" role="status">
-            <p className="font-display font-bold">Đơn đang tranh chấp — ký quỹ còn lại được giữ tới khi vận hành xử lý.</p>
+            <p className="font-display font-bold">Đơn đang tranh chấp. {sv.description}</p>
             {order.disputeReason && <p className="mt-1">Lý do: {order.disputeReason}</p>}
           </div>
         )}
 
-        {ordersApiEnabled && order.escrowStatus === 'UNPAID' && <PaymentPanel orderId={order.id} />}
+        {ordersApiEnabled && input.status === 'DRAFT' && <PaymentPanel orderId={order.id} />}
 
-        {order.status === 'DISPATCHING' && (
+        {(input.status === 'FUNDED' || input.status === 'DISPATCHED') && (
           <div className="card flex items-center gap-4 border-emerald/40 bg-emerald-mint/50 shadow-l2" role="status">
-            <span className="relative grid h-12 w-12 shrink-0 place-items-center">
-              <span className="absolute h-12 w-12 animate-sonar rounded-full bg-emerald/40" />
-              <span className="material-symbols-outlined relative text-emerald" aria-hidden>radar</span>
-            </span>
+            <span className="material-symbols-outlined shrink-0 text-emerald-dark" aria-hidden>radar</span>
             <div>
-              <p className="font-display font-bold text-ink">Đang gửi offer tới các Coder gần nhất...</p>
-              <p className="text-sm text-slate-600">Offer có hiệu lực 30 giây mỗi đợt. Mở ứng dụng Coder (/coder) để nhận đơn khi demo.</p>
-              <LongWaitNote since={order.createdAt} />
+              <p className="font-display font-bold text-ink">{sv.label}</p>
+              <p className="text-sm text-slate-600">{sv.description}</p>
+              <LongWaitNote since={order.fundedAt ?? order.createdAt} />
             </div>
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <SandboxFrame order={order} delivered={delivered} />
             <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />
           </div>
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <div className="card space-y-3 shadow-l3">
               {order.assignedCoder && (
                 <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
@@ -391,15 +468,20 @@ export default function OrderPage() {
                   </div>
                 </div>
               )}
-              <button type="button" className="btn-primary w-full" disabled={order.status !== 'DELIVERED'} onClick={accept}>
-                <span className="material-symbols-outlined !text-[20px]" aria-hidden>paid</span>
-                {completed ? 'Đã giải ngân' : 'Nghiệm thu & Giải ngân'}
-              </button>
-              <button type="button" className="btn-secondary w-full" disabled={order.status !== 'DELIVERED'} onClick={requestRevision}>
-                Yêu cầu sửa
-              </button>
-              {canDispute && (
-                <button type="button" className="w-full text-center text-sm font-semibold text-red-600 hover:underline" onClick={dispute}>
+              <p className="text-sm text-slate-600">{sv.money}</p>
+              {sv.canAccept && (
+                <>
+                  <button type="button" className="btn-primary w-full" onClick={() => openSheet({ kind: 'accept' })}>
+                    <span className="material-symbols-outlined !text-[20px]" aria-hidden>verified</span>
+                    Nghiệm thu đơn
+                  </button>
+                  <button type="button" className="btn-secondary w-full" onClick={() => openSheet({ kind: 'revise' })}>
+                    Yêu cầu sửa
+                  </button>
+                </>
+              )}
+              {ordersApiEnabled && sv.canDispute && (
+                <button type="button" className="min-h-[44px] w-full text-center text-sm font-semibold text-red-700 hover:underline" onClick={() => openSheet({ kind: 'dispute' })}>
                   Mở tranh chấp
                 </button>
               )}
@@ -409,16 +491,140 @@ export default function OrderPage() {
                 </a>
               )}
               {ordersApiEnabled && order.repoHandoverPending && (
-                <button type="button" className="w-full text-center text-sm font-semibold text-emerald-dark hover:underline" onClick={claimRepo}>
+                <button type="button" className="min-h-[44px] w-full text-center text-sm font-semibold text-emerald-dark hover:underline" onClick={() => openSheet({ kind: 'repo' })}>
                   Nhận repo về tài khoản GitHub của bạn
                 </button>
               )}
             </div>
-            <MilestoneList milestones={order.brief.milestones} onReview={ordersApiEnabled && !disputed ? review : undefined} />
+            {ordersApiEnabled && sv.askRefundAccount && <RefundAccountCard orderId={order.id} />}
+            <MilestoneList
+              milestones={order.brief.milestones}
+              onReview={ordersApiEnabled && sv.canReview ? (id, approve) => openSheet({ kind: approve ? 'approve' : 'reject', milestoneId: id }) : undefined}
+              amountOf={amountOf}
+            />
             <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
           </div>
         </div>
       </main>
+
+      {sheet?.kind === 'approve' && sheetMilestone && (
+        <ConfirmSheet
+          {...sheetProps}
+          title={`Duyệt mốc ${sheetMilestone.id} · ${sheetMilestone.title}`}
+          confirmLabel={`Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}`}
+          canConfirm={ticked && sheetMilestone.qa?.status !== 'FAILED'}
+          onConfirm={() => review(sheetMilestone.id, true)}
+        >
+          {sheetMilestone.deliveryUrl ? (
+            <p>
+              Link bàn giao:{' '}
+              <a href={sheetMilestone.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="break-all font-semibold text-emerald-dark underline">
+                {sheetMilestone.deliveryUrl}
+              </a>
+            </p>
+          ) : (
+            <p>Freelancer chưa gửi link bàn giao cho mốc này.</p>
+          )}
+          {sheetMilestone.note && <p>Ghi chú của freelancer: “{sheetMilestone.note}”</p>}
+          {sheetMilestone.qa && <p>Kiểm tra tự động: {sheetMilestone.qa.status === 'PASSED' ? 'Đạt ✓' : sheetMilestone.qa.status === 'FAILED' ? 'Không đạt ✗ — hãy yêu cầu sửa' : 'Chưa có kết quả'}</p>}
+          <div className="rounded-md bg-amber-50 p-3">
+            <p className="flex justify-between gap-3 font-semibold text-ink">
+              <span>Bạn sẽ trả cho mốc này</span>
+              <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
+            </p>
+            <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
+          </div>
+          {tick('Tôi đã mở link và kiểm tra mốc này')}
+        </ConfirmSheet>
+      )}
+
+      {sheet?.kind === 'reject' && sheetMilestone && (
+        <ConfirmSheet
+          {...sheetProps}
+          title={`Cần freelancer sửa gì ở ${sheetMilestone.id}?`}
+          confirmLabel="Gửi yêu cầu sửa"
+          canConfirm={note.trim().length >= MIN_NOTE.reject}
+          onConfirm={() => review(sheetMilestone.id, false)}
+        >
+          {noteField('Mô tả cụ thể điều cần sửa', REVISION_HINTS)}
+        </ConfirmSheet>
+      )}
+
+      {sheet?.kind === 'accept' && (
+        <ConfirmSheet
+          {...sheetProps}
+          title={`Nghiệm thu đơn ${order.id}`}
+          cancelLabel="Để sau"
+          confirmLabel={acceptVnd > 0 ? `Nghiệm thu & trả ${formatVnd(acceptVnd)}` : 'Nghiệm thu đơn'}
+          canConfirm={ticked}
+          onConfirm={accept}
+        >
+          <ul className="space-y-1">
+            {order.brief.milestones.map((m) => (
+              <li key={m.id}>
+                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title} {m.status === 'COMPLETED' ? '(đã duyệt)' : '(chưa duyệt, sẽ được trả cùng lúc)'}
+              </li>
+            ))}
+          </ul>
+          <div className="rounded-md bg-amber-50 p-3">
+            <p className="flex justify-between gap-3 font-semibold text-ink">
+              <span>Số tiền sẽ trả freelancer ngay</span>
+              <span className="font-display tabular-nums">{formatVnd(acceptVnd)}</span>
+            </p>
+            <p className="mt-1 text-amber-900">Sau khi nghiệm thu: đơn hoàn tất, không mở tranh chấp được nữa, tiền đã trả không hoàn lại được.</p>
+          </div>
+          {tick('Tôi đã kiểm tra bản bàn giao và đồng ý nghiệm thu')}
+        </ConfirmSheet>
+      )}
+
+      {sheet?.kind === 'revise' && (
+        <ConfirmSheet
+          {...sheetProps}
+          title="Yêu cầu freelancer sửa"
+          confirmLabel="Gửi yêu cầu sửa"
+          canConfirm={note.trim().length >= MIN_NOTE.revise}
+          onConfirm={requestRevision}
+        >
+          {noteField('Cần freelancer sửa gì?', REVISION_HINTS)}
+          <p className="text-slate-600">Nội dung này được gửi vào chat của đơn và đơn quay lại trạng thái đang làm.</p>
+        </ConfirmSheet>
+      )}
+
+      {sheet?.kind === 'dispute' && (
+        <ConfirmSheet
+          {...sheetProps}
+          title="Mở tranh chấp"
+          danger
+          confirmLabel="Mở tranh chấp"
+          canConfirm={note.trim().length >= MIN_NOTE.dispute}
+          onConfirm={dispute}
+        >
+          {noteField('Lý do mở tranh chấp')}
+          <p className="rounded-md bg-red-50 p-3 text-red-800">
+            {heldVnd > 0
+              ? `Tiền còn giữ (${formatVnd(heldVnd)}) sẽ bị tạm khoá cho tới khi GrabCode xử lý.`
+              : 'Hiện không còn tiền giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer. GrabCode vẫn xem xét tranh chấp.'}
+          </p>
+        </ConfirmSheet>
+      )}
+
+      {sheet?.kind === 'repo' && (
+        <ConfirmSheet {...sheetProps} title="Nhận repo về GitHub" confirmLabel="Nhận repo" canConfirm={note.trim().replace(/^@/, '').length > 0} onConfirm={claimRepo}>
+          <label className="block">
+            <span className="font-semibold text-ink">Tên GitHub (username)</span>
+            <input
+              className="mt-2 w-full px-3 py-2 !text-base"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={note}
+              disabled={sending}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </label>
+          <p className="text-slate-600">Bạn sẽ nhận lời mời qua email GitHub.</p>
+        </ConfirmSheet>
+      )}
     </>
   );
 }

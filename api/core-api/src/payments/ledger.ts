@@ -1,4 +1,4 @@
-import { milestoneShare } from '@grabcode/contracts/schemas';
+import { disputeCoderShare, milestoneShare, type LedgerKind } from '@grabcode/contracts/schemas';
 
 // Pure ledger rules (no DB) so they are unit-testable. Account names: see contracts/schemas/payment.ts.
 
@@ -33,6 +33,13 @@ export function releaseEntries(orderId: string, priceVnd: number, payoutVnd: num
   ];
 }
 
+/**
+ * What a tx books back to a customer: the bank leg of a REFUND, or of a dispute split (RELEASE with a refund part).
+ * PAYOUT also credits the bank, but that is the coder's withdrawal.
+ */
+export const customerRefundOf = (kind: LedgerKind, entries: Entry[]) =>
+  kind === 'REFUND' || kind === 'RELEASE' ? entries.filter((e) => e.account === BANK && e.amountVnd > 0).reduce((s, e) => s + e.amountVnd, 0) : 0;
+
 export const isBalanced = (entries: Entry[]) => entries.length > 0 && entries.reduce((s, e) => s + e.amountVnd, 0) === 0;
 
 /** Money back out to the bank (customer refund, coder payout): debits `account`. */
@@ -53,8 +60,8 @@ export const moveEntries = (from: string, to: string, amountVnd: number): Entry[
  */
 export function resolveEntries(orderId: string, escrowVnd: number, refundVnd: number, coderUserId: string, priceVnd: number, payoutVnd: number): Entry[] {
   const rest = escrowVnd - refundVnd;
-  // Rounded to 1000 VND, which can exceed a tiny remainder.
-  const coder = Math.min(Math.round((rest * payoutVnd) / priceVnd / 1000) * 1000, rest);
+  // Same formula the admin portal shows before confirming the split.
+  const coder = disputeCoderShare(escrowVnd, refundVnd, priceVnd, payoutVnd);
   const entries: Entry[] = [
     { account: escrowOf(orderId), amountVnd: -escrowVnd },
     { account: BANK, amountVnd: refundVnd },

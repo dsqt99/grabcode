@@ -5,12 +5,14 @@ import type { PaymentInstructions } from '@grabcode/contracts/schemas';
 import { pollDelay } from '@grabcode/contracts';
 import { devDeposit, getOrderPayment, onHint } from '../lib/api';
 import { useCurrency } from '../lib/currency';
+import { formatVnd } from '../lib/pricing';
 
 const POLL_MS = 3000;
 
 /** Bank-transfer instructions for an unpaid (DRAFT) order. The order page's own poll picks up the status change. */
 export default function PaymentPanel({ orderId }: { orderId: string }) {
-  const { money } = useCurrency();
+  // Always VND: VietQR and the bank transfer are in VND whatever currency the user picked.
+  const { usd } = useCurrency();
   const [p, setP] = useState<PaymentInstructions | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +47,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
       </div>
       <div className="flex flex-col gap-5 md:flex-row">
         {p.bank && p.dueVnd > 0 && (
-          <img src={p.bank.qrUrl} alt={`Mã QR chuyển ${money(p.dueVnd)} nội dung ${p.content}`} width={200} height={200} className="h-[200px] w-[200px] shrink-0 rounded-xl border border-slate-200" />
+          <img src={p.bank.qrUrl} alt={`Mã QR chuyển ${formatVnd(p.dueVnd)} nội dung ${p.content}`} width={200} height={200} className="h-[200px] w-[200px] shrink-0 rounded-xl border border-slate-200" />
         )}
         <dl className="grid flex-1 grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
           {p.bank ? (
@@ -58,8 +60,11 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
             <><dt className="text-slate-500">Ngân hàng</dt><dd className="text-amber-700">Chưa cấu hình tài khoản nhận tiền. Vui lòng liên hệ GrabCode.</dd></>
           )}
           <dt className="text-slate-500">Nội dung</dt><dd className="font-mono text-base font-bold text-ink">{p.content}</dd>
-          <dt className="text-slate-500">Cần chuyển</dt><dd className="font-display font-extrabold text-emerald-dark">{money(p.dueVnd)}</dd>
-          <dt className="text-slate-500">Đã nhận</dt><dd>{money(p.paidVnd)} / {money(p.priceVnd)}</dd>
+          <dt className="text-slate-500">Cần chuyển</dt><dd className="font-display font-extrabold text-emerald-dark">
+            {formatVnd(p.dueVnd)}
+            {usd(p.dueVnd) && <span className="ml-2 text-xs font-normal text-slate-500">{usd(p.dueVnd)}</span>}
+          </dd>
+          <dt className="text-slate-500">Đã nhận</dt><dd>{formatVnd(p.paidVnd)} / {formatVnd(p.priceVnd)}</dd>
         </dl>
       </div>
       <p className="flex items-center gap-2 text-sm text-slate-500" role="status">

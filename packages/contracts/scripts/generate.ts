@@ -38,6 +38,7 @@ import {
   AdminCoderListSchema,
   AdminCoderPatchSchema,
   AdminOrderSchema,
+  AdminOrderDetailSchema,
   AdminOrderListSchema,
   ConfirmPaymentSchema,
   DisputeResolveSchema,
@@ -46,6 +47,9 @@ import {
   PayoutCreateSchema,
   PayoutDecisionSchema,
   PayoutListSchema,
+  RefundListSchema,
+  RefundPaidSchema,
+  RefundSchema,
   SuspenseListSchema,
   SuspenseResolveSchema,
 } from '../src/schemas/admin.ts';
@@ -58,6 +62,8 @@ import {
   OrderListSchema,
   OrderSchema,
   OrderTransitionSchema,
+  RefundAccountResponseSchema,
+  RefundAccountSchema,
 } from '../src/schemas/order.ts';
 import { OrderRepoSchema, RepoCreateSchema, RepoHandoverSchema } from '../src/schemas/repo.ts';
 import { ChatListSchema, ChatMessageSchema, ChatSendSchema, RealtimeHintSchema, RealtimeTokenSchema } from '../src/schemas/realtime.ts';
@@ -97,7 +103,7 @@ const orderId = { name: 'id', in: 'path', required: true, schema: { type: 'strin
 const milestoneId = { name: 'milestoneId', in: 'path', required: true, schema: { type: 'string' } };
 const adminOnly = { description: 'Missing ADMIN role', content: json('ErrorResponse') };
 const notFound = { description: 'Not found', content: json('ErrorResponse') };
-/** A uuid path id (user, payout). */
+/** A uuid path id (user, payout, refund). */
 const userId = { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } };
 const role = { name: 'role', in: 'query', required: false, description: 'Role for a new account (or added if missing).', schema: { type: 'string', enum: ['CUSTOMER', 'CODER'] } };
 
@@ -411,6 +417,26 @@ write('openapi/core-api.openapi.json', {
         responses: { '200': { description: 'OK', content: json('PaymentInstructions') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
       },
     },
+    '/v1/orders/{id}/refund-account': {
+      get: {
+        operationId: 'getRefundAccount',
+        summary: 'Customer only: the bank account a refund of this order goes to (null until entered).',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('RefundAccountResponse') }, '401': unauthorized, '404': { description: 'Not found', content: json('ErrorResponse') } },
+      },
+      put: {
+        operationId: 'putRefundAccount',
+        summary: 'Customer only: set the bank account refunds of this order are transferred to; admins see it on pending refunds.',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('RefundAccount') },
+        responses: {
+          '200': { description: 'OK', content: json('RefundAccountResponse') },
+          '400': { description: 'Validation error', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '404': { description: 'Not found', content: json('ErrorResponse') },
+        },
+      },
+    },
     '/v1/payments/sepay/webhook': {
       post: {
         operationId: 'sepayWebhook',
@@ -472,6 +498,14 @@ write('openapi/core-api.openapi.json', {
         responses: { '200': { description: 'OK', content: json('AdminOrderList') }, '401': unauthorized, '403': adminOnly },
       },
     },
+    '/v1/admin/orders/{id}': {
+      get: {
+        operationId: 'adminGetOrder',
+        summary: 'Admin, read only: prompt, brief (milestones, links, notes), dispute reason, refund account, chat and ledger of one order.',
+        parameters: [orderId],
+        responses: { '200': { description: 'OK', content: json('AdminOrderDetail') }, '401': unauthorized, '403': adminOnly, '404': notFound },
+      },
+    },
     '/v1/admin/orders/{id}/confirm-payment': {
       post: {
         operationId: 'adminConfirmPayment',
@@ -496,6 +530,30 @@ write('openapi/core-api.openapi.json', {
         summary: 'Admin: refund what escrow still holds. DRAFT, or FUNDED/DISPATCHED with no coder yet -> CANCELLED (open offers expire); on ACCEPTED/RESOLVED/CANCELLED refunds the overpayment.',
         parameters: [orderId],
         responses: { '200': { description: 'OK', content: json('AdminOrder') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order in progress or escrow empty', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/refunds': {
+      get: {
+        operationId: 'adminListRefunds',
+        summary: 'Admin: refunds booked in the ledger to transfer by hand. status=PENDING (default) or all (latest 200).',
+        parameters: [{ name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['PENDING', 'all'] } }],
+        responses: { '200': { description: 'OK', content: json('RefundList') }, '401': unauthorized, '403': adminOnly },
+      },
+    },
+    '/v1/admin/refunds/{id}/paid': {
+      post: {
+        operationId: 'adminMarkRefundPaid',
+        summary: 'Admin: the refund was transferred; closes it with the bank reference. A reference closes one refund only.',
+        parameters: [userId],
+        requestBody: { required: true, content: json('RefundPaid') },
+        responses: {
+          '200': { description: 'OK', content: json('Refund') },
+          '400': { description: 'Invalid body', content: json('ErrorResponse') },
+          '401': unauthorized,
+          '403': adminOnly,
+          '404': notFound,
+          '409': { description: 'Already PAID, or reference already used', content: json('ErrorResponse') },
+        },
       },
     },
     '/v1/admin/suspense': {
@@ -629,6 +687,8 @@ write('openapi/core-api.openapi.json', {
       OrderTransition: schema(OrderTransitionSchema, 'input'),
       MilestoneSubmit: schema(MilestoneSubmitSchema, 'input'),
       MilestoneReject: schema(MilestoneRejectSchema, 'input'),
+      RefundAccount: schema(RefundAccountSchema, 'input'),
+      RefundAccountResponse: schema(RefundAccountResponseSchema),
       PaymentInstructions: schema(PaymentInstructionsSchema),
       SepayWebhook: schema(SepayWebhookSchema, 'input'),
       DevDeposit: schema(DevDepositSchema, 'input'),
@@ -646,6 +706,10 @@ write('openapi/core-api.openapi.json', {
       AdminCoderPatch: schema(AdminCoderPatchSchema, 'input'),
       AdminOrder: schema(AdminOrderSchema),
       AdminOrderList: schema(AdminOrderListSchema),
+      AdminOrderDetail: schema(AdminOrderDetailSchema),
+      Refund: schema(RefundSchema),
+      RefundList: schema(RefundListSchema),
+      RefundPaid: schema(RefundPaidSchema, 'input'),
       DisputeResolve: schema(DisputeResolveSchema, 'input'),
       ConfirmPayment: schema(ConfirmPaymentSchema, 'input'),
       SuspenseList: schema(SuspenseListSchema),

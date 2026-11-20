@@ -1610,6 +1610,120 @@
         }
       }
     },
+    "/v1/orders/{id}/refund-account": {
+      "get": {
+        "operationId": "getRefundAccount",
+        "summary": "Customer only: the bank account a refund of this order goes to (null until entered).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundAccountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putRefundAccount",
+        "summary": "Customer only: set the bank account refunds of this order are transferred to; admins see it on pending refunds.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundAccount"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/payments/sepay/webhook": {
       "post": {
         "operationId": "sepayWebhook",
@@ -2009,6 +2123,64 @@
         }
       }
     },
+    "/v1/admin/orders/{id}": {
+      "get": {
+        "operationId": "adminGetOrder",
+        "summary": "Admin, read only: prompt, brief (milestones, links, notes), dispute reason, refund account, chat and ledger of one order.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/orders/{id}/confirm-payment": {
       "post": {
         "operationId": "adminConfirmPayment",
@@ -2242,6 +2414,147 @@
           },
           "409": {
             "description": "Order in progress or escrow empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/refunds": {
+      "get": {
+        "operationId": "adminListRefunds",
+        "summary": "Admin: refunds booked in the ledger to transfer by hand. status=PENDING (default) or all (latest 200).",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/refunds/{id}/paid": {
+      "post": {
+        "operationId": "adminMarkRefundPaid",
+        "summary": "Admin: the refund was transferred; closes it with the bank reference. A reference closes one refund only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundPaid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already PAID, or reference already used",
             "content": {
               "application/json": {
                 "schema": {
@@ -4769,6 +5082,44 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "money": {
+            "type": "object",
+            "properties": {
+              "paidVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "heldVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "releasedVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "refundedVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "paidVnd",
+              "heldVnd",
+              "releasedVnd",
+              "refundedVnd"
+            ],
+            "additionalProperties": false
+          },
+          "fundedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "etaHours": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -4933,6 +5284,8 @@
           "brief",
           "priceVnd",
           "payoutVnd",
+          "money",
+          "fundedAt",
           "etaHours",
           "disputeReason",
           "sandbox",
@@ -5180,6 +5533,44 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "money": {
+                  "type": "object",
+                  "properties": {
+                    "paidVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "heldVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "releasedVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "refundedVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "paidVnd",
+                    "heldVnd",
+                    "releasedVnd",
+                    "refundedVnd"
+                  ],
+                  "additionalProperties": false
+                },
+                "fundedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "etaHours": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -5344,6 +5735,8 @@
                 "brief",
                 "priceVnd",
                 "payoutVnd",
+                "money",
+                "fundedAt",
                 "etaHours",
                 "disputeReason",
                 "sandbox",
@@ -5430,6 +5823,71 @@
         "required": [
           "note"
         ]
+      },
+      "RefundAccount": {
+        "type": "object",
+        "properties": {
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "accountNumber": {
+            "type": "string",
+            "pattern": "^[0-9 ]{6,25}$"
+          },
+          "accountName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "bankName",
+          "accountNumber",
+          "accountName"
+        ]
+      },
+      "RefundAccountResponse": {
+        "type": "object",
+        "properties": {
+          "refundAccount": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "bankName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "accountNumber": {
+                    "type": "string",
+                    "pattern": "^[0-9 ]{6,25}$"
+                  },
+                  "accountName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "bankName",
+                  "accountNumber",
+                  "accountName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "refundAccount"
+        ],
+        "additionalProperties": false
       },
       "PaymentInstructions": {
         "type": "object",
@@ -5903,6 +6361,44 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "money": {
+                      "type": "object",
+                      "properties": {
+                        "paidVnd": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "heldVnd": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "releasedVnd": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "refundedVnd": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "paidVnd",
+                        "heldVnd",
+                        "releasedVnd",
+                        "refundedVnd"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "fundedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "etaHours": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -6067,6 +6563,8 @@
                     "brief",
                     "priceVnd",
                     "payoutVnd",
+                    "money",
+                    "fundedAt",
                     "etaHours",
                     "disputeReason",
                     "sandbox",
@@ -6334,6 +6832,44 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "money": {
+                  "type": "object",
+                  "properties": {
+                    "paidVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "heldVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "releasedVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "refundedVnd": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "paidVnd",
+                    "heldVnd",
+                    "releasedVnd",
+                    "refundedVnd"
+                  ],
+                  "additionalProperties": false
+                },
+                "fundedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "etaHours": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -6498,6 +7034,8 @@
                 "brief",
                 "priceVnd",
                 "payoutVnd",
+                "money",
+                "fundedAt",
                 "etaHours",
                 "disputeReason",
                 "sandbox",
@@ -6894,6 +7432,11 @@
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
+          "payoutVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "paidVnd": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -6925,6 +7468,12 @@
               "null"
             ]
           },
+          "fundedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "createdAt": {
             "type": "string"
           },
@@ -6937,12 +7486,14 @@
           "status",
           "title",
           "priceVnd",
+          "payoutVnd",
           "paidVnd",
           "escrowVnd",
           "disputeReason",
           "customerName",
           "customerEmail",
           "coderName",
+          "fundedAt",
           "createdAt",
           "updatedAt"
         ],
@@ -6981,6 +7532,11 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "payoutVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "paidVnd": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -7012,6 +7568,12 @@
                     "null"
                   ]
                 },
+                "fundedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -7024,12 +7586,14 @@
                 "status",
                 "title",
                 "priceVnd",
+                "payoutVnd",
                 "paidVnd",
                 "escrowVnd",
                 "disputeReason",
                 "customerName",
                 "customerEmail",
                 "coderName",
+                "fundedAt",
                 "createdAt",
                 "updatedAt"
               ],
@@ -7041,6 +7605,674 @@
           "orders"
         ],
         "additionalProperties": false
+      },
+      "AdminOrderDetail": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "FUNDED",
+                  "DISPATCHED",
+                  "IN_PROGRESS",
+                  "DELIVERED",
+                  "ACCEPTED",
+                  "DISPUTED",
+                  "CANCELLED",
+                  "RESOLVED"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "priceVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "payoutVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "paidVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "escrowVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "disputeReason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "customerName": {
+                "type": "string"
+              },
+              "customerEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "coderName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fundedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "title",
+              "priceVnd",
+              "payoutVnd",
+              "paidVnd",
+              "escrowVnd",
+              "disputeReason",
+              "customerName",
+              "customerEmail",
+              "coderName",
+              "fundedAt",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "brief": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "scopeSummary": {
+                "type": "string"
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "inScope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "outOfScope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "acceptanceCriteria": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "passed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "text",
+                    "passed"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "milestones": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "weightPercent": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "IN_PROGRESS",
+                        "SUBMITTED",
+                        "COMPLETED"
+                      ]
+                    },
+                    "submittedAt": {
+                      "type": "string"
+                    },
+                    "completedAt": {
+                      "type": "string"
+                    },
+                    "commitHash": {
+                      "type": "string"
+                    },
+                    "deliveryUrl": {
+                      "type": "string"
+                    },
+                    "note": {
+                      "type": "string"
+                    },
+                    "qa": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "RUNNING",
+                            "PASSED",
+                            "FAILED",
+                            "SKIPPED",
+                            "ERROR"
+                          ]
+                        },
+                        "commitHash": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "PASSED",
+                                  "FAILED",
+                                  "SKIPPED"
+                                ]
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "status",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "finishedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "commitHash",
+                        "checks"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "description",
+                    "weightPercent",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "claudeMdContent": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title",
+              "scopeSummary",
+              "features",
+              "inScope",
+              "outOfScope",
+              "acceptanceCriteria",
+              "milestones",
+              "claudeMdContent"
+            ],
+            "additionalProperties": false
+          },
+          "refundAccount": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "bankName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "accountNumber": {
+                    "type": "string",
+                    "pattern": "^[0-9 ]{6,25}$"
+                  },
+                  "accountName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "bankName",
+                  "accountNumber",
+                  "accountName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": "string"
+                },
+                "sender": {
+                  "type": "string",
+                  "enum": [
+                    "CUSTOMER",
+                    "CODER",
+                    "SYSTEM"
+                  ]
+                },
+                "senderName": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "orderId",
+                "sender",
+                "senderName",
+                "text",
+                "timestamp"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "ledger": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "txId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "DEPOSIT",
+                    "RELEASE",
+                    "REFUND",
+                    "PAYOUT",
+                    "ADJUST"
+                  ]
+                },
+                "entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "account": {
+                        "type": "string"
+                      },
+                      "amountVnd": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "account",
+                      "amountVnd"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "txId",
+                "kind",
+                "entries",
+                "reference",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "order",
+          "prompt",
+          "brief",
+          "refundAccount",
+          "messages",
+          "ledger"
+        ],
+        "additionalProperties": false
+      },
+      "Refund": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "txId": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amountVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PAID"
+            ]
+          },
+          "customerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customerEmail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "refundAccount": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "bankName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "accountNumber": {
+                    "type": "string",
+                    "pattern": "^[0-9 ]{6,25}$"
+                  },
+                  "accountName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "bankName",
+                  "accountNumber",
+                  "accountName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transferContent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "paidAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "txId",
+          "orderId",
+          "amountVnd",
+          "status",
+          "customerName",
+          "customerEmail",
+          "refundAccount",
+          "transferContent",
+          "reference",
+          "createdAt",
+          "paidAt"
+        ],
+        "additionalProperties": false
+      },
+      "RefundList": {
+        "type": "object",
+        "properties": {
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "txId": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "amountVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "PAID"
+                  ]
+                },
+                "customerName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "customerEmail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "refundAccount": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "bankName": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 100
+                        },
+                        "accountNumber": {
+                          "type": "string",
+                          "pattern": "^[0-9 ]{6,25}$"
+                        },
+                        "accountName": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 100
+                        }
+                      },
+                      "required": [
+                        "bankName",
+                        "accountNumber",
+                        "accountName"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "transferContent": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "paidAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "txId",
+                "orderId",
+                "amountVnd",
+                "status",
+                "customerName",
+                "customerEmail",
+                "refundAccount",
+                "transferContent",
+                "reference",
+                "createdAt",
+                "paidAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "refunds"
+        ],
+        "additionalProperties": false
+      },
+      "RefundPaid": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "reference"
+        ]
       },
       "DisputeResolve": {
         "type": "object",

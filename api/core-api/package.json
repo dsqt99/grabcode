@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/password.test.ts src/repos/repos.test.ts",
+    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/password.test.ts src/repos/repos.test.ts src/admin/admin.service.test.ts",
     "smoke:dispatch": "node scripts/smoke-dispatch.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs"
   },
@@ -25,6 +25,7 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "drizzle-kit": "^0.31.0",

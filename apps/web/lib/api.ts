@@ -1,5 +1,5 @@
 import { onRealtimeHint, type AIBrief, type OrderTier } from '@grabcode/contracts';
-import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint } from '@grabcode/contracts/schemas';
+import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint, RefundAccount, RefundAccountResponse } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const POLL_MS = 1500;
@@ -65,6 +65,10 @@ export const handoverRepo = (id: string, githubLogin: string) =>
 
 // ---- Escrow (S2): customer pays by bank transfer, SePay webhook funds the order. ----
 export const getOrderPayment = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment`);
+/** Customer's bank account for refunds of this order (B2); admins transfer refunds there. */
+export const getRefundAccount = (id: string) => api<RefundAccountResponse>(`/v1/orders/${encodeURIComponent(id)}/refund-account`).then((r) => r.refundAccount);
+export const putRefundAccount = (id: string, account: RefundAccount) =>
+  api<RefundAccountResponse>(`/v1/orders/${encodeURIComponent(id)}/refund-account`, { method: 'PUT', body: JSON.stringify(account) }).then((r) => r.refundAccount!);
 /** Dev only (AUTH_DEV_LOGIN): simulate the transfer of the remaining amount. */
 export const devDeposit = (orderId: string) => api<PaymentInstructions>('/v1/payments/dev-deposit', { method: 'POST', body: JSON.stringify({ orderId }) });
 

@@ -164,7 +164,9 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 ### Admin portal (S7)
 - Chạy: `pnpm --filter @grabcode/admin dev` (`:3002`, basePath `/admin`), mở qua web `:3100/admin` (rewrite `ADMIN_ORIGIN`, chung cookie `gc_session`).
 - Cấp quyền: `update core.users set roles = array_append(roles, 'ADMIN') where email = '...'`; dev: `POST /v1/auth/dev-login {login, role: 'ADMIN'}`. Không có role ADMIN → `/v1/admin/*` trả 403.
-- Đơn đã nạp quá 30 phút chưa coder nhận: web hiện cảnh báo, admin thấy ở tab Orders; quá `AUTO_REFUND_HOURS` (mặc định 24, 0 = tắt) core-api tự huỷ + hoàn (quét 10 phút/lần).
+- Đơn đủ tiền (`orders.funded_at`) quá 30 phút chưa coder nhận: web hiện cảnh báo, admin thấy ở tab Orders; quá `AUTO_REFUND_HOURS` (mặc định 24, 0 = tắt) tính từ `funded_at` core-api tự huỷ + hoàn (quét 10 phút/lần).
+- Hoàn tiền chỉ là ghi sổ: mỗi bút toán hoàn cho khách (`postTx`) mở 1 dòng `core.refunds` PENDING → tab "Chờ chuyển trả" (`GET /v1/admin/refunds`), CK tay tới STK khách nhập ở trang đơn (`PUT /v1/orders/:id/refund-account`) rồi `POST /v1/admin/refunds/:id/paid {reference}` (mã GD unique). Chi tiết đơn chỉ đọc: `GET /v1/admin/orders/:id`.
+- Test DB không cần Docker: `api/core-api/src/test/pglite.ts` (PGlite + toàn bộ migration).
 - Tab: Coders (tier override, khoá), Orders (chia tranh chấp, hoàn DRAFT nạp dở), Suspense (gán đơn / hoàn), Payouts (duyệt sau khi CK tay), Monitor (outbox, JetStream, job FAILED). Coder gửi yêu cầu rút ở coder app.
 - Smoke: `node api/core-api/scripts/smoke-admin.mjs` (core-api `AUTH_DEV_LOGIN=true`).
 

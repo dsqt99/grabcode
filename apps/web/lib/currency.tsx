@@ -2,18 +2,20 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@grabcode/auth-ui';
-import { formatMoney, type Currency } from './pricing';
+import { formatMoney, usdHint, type Currency } from './pricing';
 
 interface Ctx {
   currency: Currency;
   setCurrency: (c: Currency) => void;
   money: (vnd: number) => string;
+  /** "≈ $116" for USD users, null otherwise. Money screens show VND and only this as a reference. */
+  usd: (vnd: number) => string | null;
 }
 
 // Signed-in users keep the preference on their core-api profile; guests / mock mode fall back to this browser.
 const KEY = 'grabcode.currency';
 
-const CurrencyContext = createContext<Ctx>({ currency: 'VND', setCurrency: () => {}, money: (v) => formatMoney(v) });
+const CurrencyContext = createContext<Ctx>({ currency: 'VND', setCurrency: () => {}, money: (v) => formatMoney(v), usd: () => null });
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const { me, updateMe } = useAuth();
@@ -35,7 +37,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     if (me) updateMe({ currency: c }).catch((err) => console.warn('save currency failed:', err));
   };
   return (
-    <CurrencyContext.Provider value={{ currency, setCurrency, money: (v) => formatMoney(v, currency) }}>
+    <CurrencyContext.Provider value={{ currency, setCurrency, money: (v) => formatMoney(v, currency), usd: (v) => usdHint(v, currency) }}>
       {children}
     </CurrencyContext.Provider>
   );

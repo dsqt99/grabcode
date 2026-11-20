@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { milestoneShare, orderIdFromTransfer, paymentCodeOf, payoutOf } from '@grabcode/contracts/schemas';
-import { BANK, PLATFORM, SUSPENSE, coderOf, depositEntries, escrowOf, isBalanced, moveEntries, payoutEntries, releaseEntries, resolveEntries } from './ledger';
+import { BANK, PLATFORM, SUSPENSE, coderOf, customerRefundOf, depositEntries, escrowOf, isBalanced, moveEntries, payoutEntries, releaseEntries, resolveEntries } from './ledger';
 
 test('deposit and release always balance', () => {
   for (const amount of [1, 10_000, 2_800_000, 6_543_210]) {
@@ -73,4 +73,13 @@ test('payout is the order snapshot, not the current rate', () => {
   const r = resolveEntries('GC-7', 1_000_000, 500_000, 'k', 1_000_000, 800_000);
   assert.equal(r.find((x) => x.account === coderOf('k'))?.amountVnd, 400_000);
   assert.ok(isBalanced(r));
+});
+
+test('customer refund = bank leg of a REFUND or of a dispute split; never a coder payout', () => {
+  assert.equal(customerRefundOf('REFUND', payoutEntries(escrowOf('GC-7'), 2_900_000)), 2_900_000);
+  assert.equal(customerRefundOf('RELEASE', resolveEntries('GC-7', 2_900_000, 1_000_000, 'k', 2_900_000, 2_030_000)), 1_000_000);
+  assert.equal(customerRefundOf('RELEASE', resolveEntries('GC-7', 2_900_000, 0, 'k', 2_900_000, 2_030_000)), 0);
+  assert.equal(customerRefundOf('RELEASE', releaseEntries('GC-7', 2_900_000, 2_030_000, [100], 0, 'k')), 0);
+  assert.equal(customerRefundOf('PAYOUT', payoutEntries(coderOf('k'), 300_000)), 0);
+  assert.equal(customerRefundOf('DEPOSIT', depositEntries('GC-7', 1)), 0);
 });

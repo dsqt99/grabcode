@@ -1,5 +1,6 @@
 import { AIBrief } from './brief';
 import { CoderProfile } from './coder';
+import type { OrderDto, OrderMoney } from '../schemas/order';
 
 export type OrderTier = 'EXPRESS' | 'STANDARD' | 'PRO' | 'TEMPLATE';
 
@@ -35,6 +36,12 @@ export interface Order {
   priceVnd: number;
   /** Freelancer share fixed on the order (API mode); mock orders derive it from the current rate. */
   payoutVnd?: number;
+  /** API mode: core-api status, unmerged (the UI `status` folds DISPUTED/RESOLVED into CANCELLED). */
+  serverStatus?: OrderDto['status'];
+  /** API mode: paid / held / released / refunded from the escrow ledger. */
+  money?: OrderMoney;
+  /** API mode: when the order was funded (the waiting-for-a-coder clock). */
+  fundedAt?: string;
   escrowStatus: EscrowStatus;
   status: OrderStatus;
   brief: AIBrief;

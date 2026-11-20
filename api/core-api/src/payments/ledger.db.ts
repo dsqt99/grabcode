@@ -2,8 +2,8 @@ import { and, eq, gt, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { SUBJECTS, type EscrowEvent, type LedgerKind } from '@grabcode/contracts/schemas';
 import type { Db } from '../db/client';
-import { ledgerEntries, ledgerTxs, outbox } from '../db/schema';
-import { escrowOf, isBalanced, type Entry } from './ledger';
+import { ledgerEntries, ledgerTxs, outbox, refunds } from '../db/schema';
+import { customerRefundOf, escrowOf, isBalanced, type Entry } from './ledger';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 type Conn = Db | Tx;
@@ -22,10 +22,6 @@ export async function paidFor(db: Conn, orderId: string): Promise<number> {
   return Number(r.v);
 }
 
-/**
- * Writes one balanced ledger tx + its escrow.* outbox event. Returns false when `id` was already posted
- * (SePay retries, double ACCEPTED), so callers can treat a repeat as a no-op.
- */
 const SUBJECT_OF: Record<LedgerKind, EscrowEvent['type']> = {
   DEPOSIT: SUBJECTS.ESCROW_DEPOSITED,
   ADJUST: SUBJECTS.ESCROW_DEPOSITED,
@@ -34,11 +30,18 @@ const SUBJECT_OF: Record<LedgerKind, EscrowEvent['type']> = {
   PAYOUT: SUBJECTS.ESCROW_PAID_OUT,
 };
 
+/**
+ * Writes one balanced ledger tx + its escrow.* outbox event. Returns false when `id` was already posted
+ * (SePay retries, double ACCEPTED), so callers can treat a repeat as a no-op.
+ * Money booked back to a customer also opens a PENDING refund: the ledger alone transfers nothing.
+ */
 export async function postTx(tx: Tx, id: string, kind: LedgerKind, orderId: string | null, entries: Entry[], meta?: unknown) {
   if (!isBalanced(entries)) throw new Error(`Unbalanced ledger tx ${id}`);
   const [row] = await tx.insert(ledgerTxs).values({ id, kind, orderId, meta }).onConflictDoNothing().returning({ id: ledgerTxs.id });
   if (!row) return false;
   await tx.insert(ledgerEntries).values(entries.map((e) => ({ txId: id, account: e.account, amountVnd: e.amountVnd })));
+  const refundVnd = customerRefundOf(kind, entries);
+  if (refundVnd > 0) await tx.insert(refunds).values({ txId: id, orderId, amountVnd: refundVnd });
   const event: EscrowEvent = {
     event_id: randomUUID(),
     type: SUBJECT_OF[kind],

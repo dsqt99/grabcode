@@ -1,6 +1,7 @@
 'use client';
 
 import { useCurrency } from '../lib/currency';
+import { formatVnd } from '../lib/pricing';
 
 interface Props {
   tierLabel: string;
@@ -12,18 +13,22 @@ interface Props {
 }
 
 export default function EscrowCheckout({ tierLabel, priceVnd, etaHours, disabled, submitting, onConfirm }: Props) {
-  const { money } = useCurrency();
+  // Escrow is paid in VND (bank transfer); USD is only a reference.
+  const { usd } = useCurrency();
 
   return (
     <aside className="card sticky top-24 space-y-5 shadow-l3" aria-label="Ký quỹ thanh toán">
       <h2 className="font-display text-lg font-bold text-ink">Ký quỹ & đặt đơn</h2>
 
       <dl className="space-y-2 text-sm">
-        <div className="flex justify-between"><dt className="text-slate-500">Gói {tierLabel}</dt><dd className="font-semibold">{money(priceVnd)}</dd></div>
+        <div className="flex justify-between"><dt className="text-slate-500">Gói {tierLabel}</dt><dd className="font-semibold">{formatVnd(priceVnd)}</dd></div>
         <div className="flex justify-between"><dt className="text-slate-500">Thời gian dự kiến</dt><dd className="font-semibold">~{etaHours} giờ</dd></div>
         <div className="flex items-end justify-between border-t border-slate-100 pt-3">
           <dt className="font-display font-bold text-ink">Tổng ký quỹ</dt>
-          <dd className="font-display text-2xl font-extrabold text-emerald-dark">{money(priceVnd)}</dd>
+          <dd className="text-right font-display text-2xl font-extrabold text-emerald-dark">
+            {formatVnd(priceVnd)}
+            {usd(priceVnd) && <span className="block text-xs font-normal text-slate-500">{usd(priceVnd)}</span>}
+          </dd>
         </div>
       </dl>
 

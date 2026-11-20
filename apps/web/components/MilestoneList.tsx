@@ -1,5 +1,6 @@
 import type { Milestone } from '@grabcode/contracts';
 import { formatTime } from '../lib/orderView';
+import { formatVnd } from '../lib/pricing';
 
 const META = {
   COMPLETED: { icon: 'check_circle', cls: 'text-emerald', label: 'Hoàn thành' },
@@ -16,13 +17,18 @@ const QA = {
   ERROR: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA lỗi hệ thống' },
 } as const;
 
-/** `onReview` (API mode, order not disputed) shows approve / request-changes on the SUBMITTED milestone. */
+/**
+ * `onReview` (API mode, order IN_PROGRESS) shows approve / request-changes on the SUBMITTED milestone; the page opens
+ * a confirmation sheet for both. `amountOf`: escrow share the milestone releases (VND).
+ */
 export default function MilestoneList({
   milestones,
   onReview,
+  amountOf,
 }: {
   milestones: Milestone[];
-  onReview?: (milestoneId: string, approve: boolean, note?: string) => void;
+  onReview?: (milestoneId: string, approve: boolean) => void;
+  amountOf?: (milestoneId: string) => number;
 }) {
   return (
     <section aria-label="Các mốc bàn giao" className="space-y-3">
@@ -39,7 +45,7 @@ export default function MilestoneList({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-display text-sm font-bold text-ink">[{m.id}] {m.title}</span>
-                  <span className="font-display text-sm font-extrabold text-emerald-dark">{m.weightPercent}%</span>
+                  <span className="shrink-0 font-display text-sm font-extrabold text-emerald-dark">{amountOf ? formatVnd(amountOf(m.id)) : `${m.weightPercent}%`}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{m.description}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -76,20 +82,17 @@ export default function MilestoneList({
                   <div className="mt-3 flex gap-2">
                     <button
                       type="button"
-                      className="btn-primary !min-h-[36px] flex-1 !py-1 text-sm"
+                      className="btn-primary !min-h-[44px] flex-1 !py-1 text-sm"
                       disabled={m.qa?.status === 'FAILED'}
                       title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
                       onClick={() => onReview(m.id, true)}
                     >
-                      Duyệt & giải ngân {m.weightPercent}%
+                      {amountOf ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}
                     </button>
                     <button
                       type="button"
-                      className="btn-secondary !min-h-[36px] flex-1 !py-1 text-sm"
-                      onClick={() => {
-                        const note = window.prompt(`Cần Coder sửa gì ở ${m.id}?`)?.trim();
-                        if (note) onReview(m.id, false, note);
-                      }}
+                      className="btn-secondary !min-h-[44px] flex-1 !py-1 text-sm"
+                      onClick={() => onReview(m.id, false)}
                     >
                       Yêu cầu sửa
                     </button>

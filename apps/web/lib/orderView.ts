@@ -1,30 +1,4 @@
-import type { Order, OrderStatus } from '@grabcode/contracts';
-
-export const STAGES = [
-  { key: 'match', label: 'Đang ghép Coder', icon: 'radar' },
-  { key: 'build', label: 'Coder đang build', icon: 'code' },
-  { key: 'qa', label: 'QA Gate', icon: 'fact_check' },
-  { key: 'ready', label: 'Sẵn sàng nghiệm thu', icon: 'verified' },
-] as const;
-
-/** Index of the active stage (0-3). Returns 4 when the whole flow is done. */
-export function stageIndex(status: OrderStatus): number {
-  switch (status) {
-    case 'DRAFT':
-    case 'DISPATCHING':
-    case 'CANCELLED':
-      return 0;
-    case 'ACCEPTED':
-    case 'BUILDING':
-      return 1;
-    case 'QA_TESTING':
-      return 2;
-    case 'DELIVERED':
-      return 3;
-    case 'COMPLETED':
-      return 4;
-  }
-}
+import type { Order } from '@grabcode/contracts';
 
 export function progressPercent(order: Order): number {
   if (order.status === 'DELIVERED' || order.status === 'COMPLETED') return 100;

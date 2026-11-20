@@ -30,6 +30,9 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     framework: o.framework,
     priceVnd: o.priceVnd,
     payoutVnd: o.payoutVnd,
+    serverStatus: o.status,
+    money: o.money,
+    fundedAt: o.fundedAt ?? undefined,
     // DRAFT = unpaid: the server only leaves DRAFT once the ledger escrow holds the full price.
     escrowStatus: o.status === 'DRAFT' ? 'UNPAID' : o.status === 'ACCEPTED' ? 'RELEASED' : 'ESCROW_LOCKED',
     status: status[o.status],
