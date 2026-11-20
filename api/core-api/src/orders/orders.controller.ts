@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, Post, Put, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import {
   ChatSendSchema,
@@ -7,10 +7,12 @@ import {
   OrderCreateSchema,
   OrderListQuerySchema,
   OrderTransitionSchema,
+  RefundAccountSchema,
   type ChatList,
   type ChatMessage,
   type OrderDto,
   type OrderList,
+  type RefundAccountResponse,
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { readCookie } from '../auth/auth.controller';
@@ -80,6 +82,17 @@ export class OrdersController {
   async rejectMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string, @Body() body: unknown): Promise<OrderDto> {
     const user = await this.user(req);
     return this.orders.reviewMilestone(user, id, mid, false, parse(MilestoneRejectSchema, body).note);
+  }
+
+  @Get(':id/refund-account')
+  async refundAccount(@Req() req: Request, @Param('id') id: string): Promise<RefundAccountResponse> {
+    return { refundAccount: await this.orders.refundAccount(await this.user(req), id) };
+  }
+
+  @Put(':id/refund-account')
+  async setRefundAccount(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<RefundAccountResponse> {
+    const user = await this.user(req);
+    return { refundAccount: await this.orders.setRefundAccount(user, id, parse(RefundAccountSchema, body)) };
   }
 
   @Get(':id/messages')

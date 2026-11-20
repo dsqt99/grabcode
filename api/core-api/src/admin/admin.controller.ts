@@ -9,14 +9,19 @@ import {
   OrderIdSchema,
   PayoutCreateSchema,
   PayoutDecisionSchema,
+  RefundPaidSchema,
+  RefundQuerySchema,
   SuspenseResolveSchema,
   type AdminCoder,
   type AdminCoderList,
   type AdminOrder,
+  type AdminOrderDetail,
   type AdminOrderList,
   type Monitor,
   type Payout,
   type PayoutList,
+  type Refund,
+  type RefundList,
   type SuspenseList,
 } from '@grabcode/contracts/schemas';
 import { readCookie } from '../auth/auth.controller';
@@ -76,6 +81,12 @@ export class AdminController {
     return { orders: await this.svc.orders(undefined, parse(AdminOrderQuerySchema, query).view) };
   }
 
+  @Get('admin/orders/:id')
+  async order(@Req() req: Request, @Param('id') id: string): Promise<AdminOrderDetail> {
+    await this.admin(req);
+    return this.svc.orderDetail(parse(OrderIdSchema, id));
+  }
+
   @Post('admin/orders/:id/confirm-payment')
   @HttpCode(200)
   async confirmPayment(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<AdminOrder> {
@@ -95,6 +106,18 @@ export class AdminController {
   async refund(@Req() req: Request, @Param('id') id: string): Promise<AdminOrder> {
     await this.admin(req);
     return this.svc.refund(parse(OrderIdSchema, id));
+  }
+
+  @Get('admin/refunds')
+  async refunds(@Req() req: Request, @Query() query: unknown): Promise<RefundList> {
+    await this.admin(req);
+    return { refunds: await this.svc.refunds(parse(RefundQuerySchema, query).status) };
+  }
+
+  @Post('admin/refunds/:id/paid')
+  @HttpCode(200)
+  async refundPaid(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string, @Body() body: unknown): Promise<Refund> {
+    return this.svc.markRefundPaid(await this.admin(req), id, parse(RefundPaidSchema, body));
   }
 
   @Get('admin/suspense')
