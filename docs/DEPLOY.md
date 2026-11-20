@@ -21,7 +21,7 @@ docker compose up -d                   # Postgres :5433, NATS :4223 (Centrifugo 
 pnpm --filter @grabcode/core-api db:migrate
 ```
 
-Tạo file `.env.local` cho 3 app, mỗi file một dòng `NEXT_PUBLIC_API_URL=http://localhost:4000`:
+Tạo file `.env.local` cho 3 app, mỗi file một dòng `NEXT_PUBLIC_API_URL=http://localhost:4000` (web thêm `NEXT_PUBLIC_SUPPORT_ZALO` / `NEXT_PUBLIC_SUPPORT_HOTLINE` nếu muốn thấy kênh hỗ trợ). `next build` của web và coder báo lỗi nếu thiếu `NEXT_PUBLIC_API_URL`; web còn cần ít nhất một kênh hỗ trợ:
 
 - `apps/web/.env.local`
 - `apps/coder/.env.local`
