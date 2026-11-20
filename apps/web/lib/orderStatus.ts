@@ -4,6 +4,8 @@ import { formatVnd } from './pricing';
 
 // Customer order page: chip, sentence, money line, stepper step and allowed actions per core-api status
 // (UX spec HON-18 "Màn B"). Reads the raw OrderDto status: DISPUTED / CANCELLED / RESOLVED each get their own state.
+import { BRAND } from '@grabcode/contracts';
+
 
 export type ServerStatus = OrderDto['status'];
 export type Tone = 'warn' | 'info' | 'brand' | 'ok' | 'danger' | 'neutral';
@@ -14,7 +16,7 @@ export interface StatusInput {
   status: ServerStatus;
   money: OrderMoney;
   priceVnd: number;
-  /** false: DRAFT waiting for GrabCode's quote (priceVnd is the menu "giá từ"). */
+  /** false: DRAFT waiting for FastDemo's quote (priceVnd is the menu "giá từ"). */
   priceQuoted: boolean;
   milestones: Order['brief']['milestones'];
   coderName?: string;
@@ -53,7 +55,7 @@ export function statusView(o: StatusInput): StatusView {
           ...base,
           tone: 'warn',
           label: 'Chờ báo giá',
-          description: 'GrabCode đang xem yêu cầu và sẽ báo giá chốt. Bạn chỉ chuyển khoản sau khi có giá chốt.',
+          description: `${BRAND.name} đang xem yêu cầu và sẽ báo giá chốt. Bạn chỉ chuyển khoản sau khi có giá chốt.`,
           money: `Giá từ ${v(o.priceVnd)} · chưa thanh toán`,
           step: 0,
           askRefundAccount: paidVnd > 0,
@@ -74,8 +76,8 @@ export function statusView(o: StatusInput): StatusView {
         ...base,
         tone: 'info',
         label: 'Đang tìm freelancer',
-        description: 'Đã nhận tiền, đang chờ freelancer nhận đơn. Không ai nhận trong 24 giờ thì GrabCode hoàn tiền.',
-        money: `Đã nhận ${v(paidVnd)} · đang giữ tại GrabCode`,
+        description: `Đã nhận tiền, đang chờ freelancer nhận đơn. Không ai nhận trong 24 giờ thì ${BRAND.name} hoàn tiền.`,
+        money: `Đã nhận ${v(paidVnd)} · đang giữ tại ${BRAND.name}`,
         step: 1,
         askRefundAccount: true,
       };
@@ -131,8 +133,8 @@ export function statusView(o: StatusInput): StatusView {
         label: 'Đang tranh chấp',
         description:
           heldVnd > 0
-            ? `GrabCode đang xem xét. ${v(heldVnd)} còn lại được tạm giữ tới khi có kết quả.`
-            : 'GrabCode đang xem xét. Không còn tiền tạm giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer.',
+            ? `${BRAND.name} đang xem xét. ${v(heldVnd)} còn lại được tạm giữ tới khi có kết quả.`
+            : `${BRAND.name} đang xem xét. Không còn tiền tạm giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer.`,
         money: `Tạm giữ ${v(heldVnd)} · ${disbursed(releasedVnd, o.priceVnd).toLowerCase()}`,
         step: null,
         askRefundAccount: heldVnd > 0,
@@ -154,7 +156,7 @@ export function statusView(o: StatusInput): StatusView {
         label: 'Đã huỷ',
         description:
           refundedVnd > 0
-            ? `Đơn đã huỷ. GrabCode hoàn ${v(refundedVnd)} vào tài khoản nhận hoàn bạn khai báo bên dưới.`
+            ? `Đơn đã huỷ. ${BRAND.name} hoàn ${v(refundedVnd)} vào tài khoản nhận hoàn bạn khai báo bên dưới.`
             : 'Đơn đã huỷ. Bạn chưa chuyển khoản nên không có khoản nào cần hoàn.',
         money: refundedVnd > 0 ? `Hoàn ${v(refundedVnd)}` : 'Không thu tiền',
         step: null,
@@ -173,9 +175,9 @@ export const ORDER_TABS: { id: OrderTab; label: string }[] = [
   { id: 'cancelled', label: 'Đã huỷ' },
 ];
 
-/** What the customer has to do on the order now; null = nothing (waiting on the freelancer or GrabCode). */
+/** What the customer has to do on the order now; null = nothing (waiting on the freelancer or FastDemo). */
 export function customerTodo(o: Pick<StatusInput, 'status' | 'priceQuoted' | 'milestones'>): string | null {
-  // Unquoted DRAFT: GrabCode owes the quote, there is no QR to pay yet (P0-7).
+  // Unquoted DRAFT: FastDemo owes the quote, there is no QR to pay yet (P0-7).
   if (o.status === 'DRAFT') return o.priceQuoted ? 'Chờ bạn chuyển khoản' : null;
   if (o.status === 'DELIVERED') return 'Chờ bạn nghiệm thu';
   const submitted = o.status === 'IN_PROGRESS' && o.milestones.find((m) => m.status === 'SUBMITTED');

@@ -2,11 +2,13 @@ import ComparisonTable from '../components/ComparisonTable';
 import InstantDispatch from '../components/InstantDispatch';
 import Navbar from '../components/Navbar';
 import TemplateShowcase from '../components/TemplateShowcase';
+import { BRAND } from '@grabcode/contracts';
+
 
 const STEPS = [
   { icon: 'edit_note', title: 'Mô tả yêu cầu', text: 'Viết vài dòng về app bạn cần, bằng tiếng Việt.' },
   { icon: 'auto_awesome', title: 'AI soạn đặc tả & mốc', text: 'AI chuyển mô tả thành đặc tả và các mốc bàn giao.' },
-  { icon: 'qr_code_2', title: 'Chuyển khoản ký quỹ', text: 'Quét VietQR, tiền được giữ ký quỹ trên GrabCode.' },
+  { icon: 'qr_code_2', title: 'Chuyển khoản ký quỹ', text: `Quét VietQR, tiền được giữ ký quỹ trên ${BRAND.name}.` },
   { icon: 'task_alt', title: 'Bàn giao từng mốc', text: 'Freelancer làm và gửi link từng mốc, bạn duyệt mới giải ngân.' },
 ];
 
@@ -28,7 +30,7 @@ export default function Page() {
               Dành cho chủ shop & SME Việt Nam
             </span>
             <h1 className="font-display text-[30px] font-extrabold leading-9 tracking-tight text-ink md:text-5xl md:leading-[1.1]">
-              Đặt làm app như đặt đồ ăn. <span className="text-emerald-dark">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
+              {BRAND.tagline}. <span className="text-emerald-dark">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-slate-600">
               Mô tả ý tưởng, AI soạn thành đặc tả và các mốc bàn giao, tiền được giữ ký quỹ và freelancer làm app bằng công cụ AI nhận đơn.

@@ -161,7 +161,7 @@ export const INITIAL_DEMO_ORDER: Order = {
     claudeMdContent: `# HƯỚNG DẪN DÀNH CHO CODER (CLAUDE.md)
 ## Dự án: Mini CRM Bất Động Sản Đô Thị Mới (GC-9821)
 - **Công nghệ yêu cầu:** Next.js 15 (App Router), Tailwind CSS v4/v3, Lucide React icons.
-- **Tiêu chuẩn giao diện:** Tuân thủ Emerald Mobility Design System (#00B14F).
+- **Tiêu chuẩn giao diện:** Tuân thủ FastDemo Design System (#4F46E5).
 - **Mốc bàn giao:**
   1. [M1] Khởi tạo dữ liệu và layout cơ bản (20% thù lao)
   2. [M2] Hoàn thành Kanban và bộ lọc (50% thù lao)

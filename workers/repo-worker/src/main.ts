@@ -19,6 +19,7 @@ import {
   type RepoRequestedEvent,
 } from '@grabcode/contracts/schemas';
 import { createGitHubApp, expect, GitHubError } from './github';
+import { BRAND } from '@grabcode/contracts';
 
 const ORG = process.env.GITHUB_ORG ?? 'grabcode-sandbox';
 const APP_ID = process.env.GITHUB_APP_ID ?? '';
@@ -64,7 +65,7 @@ async function provision(d: RepoRequestedEvent['data']): Promise<RepoProvisioned
   const created = await gh('POST', `/orgs/${ORG}/repos`, {
     name: d.repoName,
     private: true,
-    description: `GrabCode ${d.orderId}: ${d.title}`.slice(0, 350),
+    description: `${BRAND.name} ${d.orderId}: ${d.title}`.slice(0, 350),
     auto_init: true,
     has_wiki: false,
   });

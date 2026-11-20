@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@grabcode/auth-ui';
+import { BRAND } from '@grabcode/contracts';
+
 
 const PUBLIC_LINKS = [
   { href: '/#dispatch', label: 'Đặt đơn' },
   { href: '/#templates', label: 'Mẫu có sẵn' },
-  { href: '/#compare', label: 'Vì sao GrabCode' },
+  { href: '/#compare', label: `Vì sao ${BRAND.name}` },
 ];
 /** Separate Next app behind the same origin: plain <a>, not client-side <Link>. */
 const CODER_LINK = { href: '/coder', label: 'Dành cho freelancer' };
@@ -26,7 +28,7 @@ export default function Navbar() {
       {pathname === '/' && (
         <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-slate-100 sm:text-sm">
           <span className="material-symbols-outlined mr-1 !text-[16px] text-amber" aria-hidden>shield</span>
-          Tiền giữ tại GrabCode, chỉ trả cho freelancer khi bạn duyệt từng mốc <span className="mx-1 hidden sm:inline">•</span>
+          Tiền giữ tại {BRAND.name}, chỉ trả cho freelancer khi bạn duyệt từng mốc <span className="mx-1 hidden sm:inline">•</span>
           <span className="hidden sm:inline">Thanh toán bằng chuyển khoản / VietQR</span>
         </div>
       )}
@@ -34,7 +36,7 @@ export default function Navbar() {
         <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:h-16 md:px-8">
             <Link href="/" className="flex shrink-0 items-center">
-              <img src="/logo.png" alt="GrabCode" width={240} height={47} className="h-8 w-auto md:h-9" />
+              <span className="font-display text-xl font-extrabold tracking-tight text-ink md:text-2xl">{BRAND.name}</span>
             </Link>
 
             <ul className="hidden items-center gap-1 md:flex">

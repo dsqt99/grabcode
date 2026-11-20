@@ -9,7 +9,7 @@ name: deploy-staging
 #   STAGING_SSH_HOST    VPS IP or host name
 #   STAGING_SSH_USER    login user (member of the docker group)
 #   STAGING_SSH_KEY     private key (PEM / OpenSSH) allowed to log in as that user
-#   STAGING_DOMAIN      domain of the staging site, e.g. staging.grabcode.vn (no https://)
+#   STAGING_DOMAIN      domain of the staging site, e.g. staging.example.com (no https://)
 # Optional secrets:
 #   STAGING_SSH_PORT         default 22
 #   STAGING_SSH_KNOWN_HOSTS  output of `ssh-keyscan -H <host>` taken from a trusted machine; without it the host key

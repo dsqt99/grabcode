@@ -9,6 +9,8 @@ import { formatVnd } from '../lib/pricing';
 import CopyButton from './CopyButton';
 import StickyActionBar from './StickyActionBar';
 import SupportContact from './SupportContact';
+import { BRAND } from '@grabcode/contracts';
+
 
 const POLL_MS = 3000;
 
@@ -83,15 +85,15 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
     );
   }
 
-  // HON-10 Q3: no QR / bank account before GrabCode quotes the final price (the server sends none either).
+  // HON-10 Q3: no QR / bank account before FastDemo quotes the final price (the server sends none either).
   if (!p.priceQuoted) {
     return (
       <section className="card flex gap-4 border-amber-300 shadow-l3" aria-label="Chờ báo giá" role="status">
         <span className="material-symbols-outlined shrink-0 text-amber-700" aria-hidden>request_quote</span>
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Chờ GrabCode báo giá</h2>
+          <h2 className="font-display text-lg font-bold text-ink">Chờ {BRAND.name} báo giá</h2>
           <p className="text-sm text-slate-600">
-            GrabCode đang đọc yêu cầu và sẽ báo giá chốt cho đơn này (giá từ {formatVnd(p.priceVnd)}). Mã QR chuyển khoản hiện ở đây khi có giá chốt.
+            {BRAND.name} đang đọc yêu cầu và sẽ báo giá chốt cho đơn này (giá từ {formatVnd(p.priceVnd)}). Mã QR chuyển khoản hiện ở đây khi có giá chốt.
             Vui lòng chưa chuyển khoản trước khi có giá chốt. Trang này tự cập nhật.
           </p>
         </div>
@@ -123,7 +125,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
     return (
       <section className="card space-y-2 border-amber-300" role="alert">
         <h2 className="font-display text-lg font-bold text-ink">Tạm thời chưa nhận thanh toán</h2>
-        <p className="text-sm text-slate-700">GrabCode chưa cấu hình tài khoản nhận tiền. Vui lòng quay lại sau hoặc liên hệ hỗ trợ:</p>
+        <p className="text-sm text-slate-700">{BRAND.name} chưa cấu hình tài khoản nhận tiền. Vui lòng quay lại sau hoặc liên hệ hỗ trợ:</p>
         <SupportContact />
       </section>
     );
@@ -203,7 +205,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
           <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
             <p className="font-semibold">Sau khi chuyển</p>
             <p>
-              {p.autoConfirm ? 'Ngân hàng xác nhận tự động, thường trong vài phút.' : 'GrabCode đối soát thủ công và xác nhận sớm nhất có thể.'} Trang này tự cập
+              {p.autoConfirm ? 'Ngân hàng xác nhận tự động, thường trong vài phút.' : `${BRAND.name} đối soát thủ công và xác nhận sớm nhất có thể.`} Trang này tự cập
               nhật, bạn có thể đóng và quay lại từ{' '}
               <Link href="/orders" className="font-semibold underline">Đơn của tôi</Link>.
             </p>
@@ -227,7 +229,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
             )}
             {reportError && (
               <p className="text-center text-sm font-semibold text-red-700" role="alert">
-                Chưa gửi được, hãy thử lại. GrabCode vẫn tự kiểm tra giao dịch.
+                Chưa gửi được, hãy thử lại. {BRAND.name} vẫn tự kiểm tra giao dịch.
               </p>
             )}
           </StickyActionBar>

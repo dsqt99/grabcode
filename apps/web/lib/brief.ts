@@ -60,7 +60,7 @@ export function genBrief(
     `- **Loại việc:** ${cfg.name} (${daysLabel(cfg.days)})`,
     `- **Công nghệ yêu cầu:** ${framework}`,
     `- **Yêu cầu gốc của khách:** ${prompt.trim() || '(trống)'}`,
-    '- **Tiêu chuẩn giao diện:** Emerald Mobility Design System (#00B14F)',
+    '- **Tiêu chuẩn giao diện:** FastDemo Design System (#4F46E5)',
     '',
     '## Mốc bàn giao',
     '1. [M1] Khởi tạo repo & Schema (20% thù lao)',
