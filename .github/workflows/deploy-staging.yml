@@ -111,7 +111,8 @@ jobs:
           args=()
           [ -z "$port" ] || args+=(--port "$port")
           [ "$public" != "true" ] || args+=(--public)
-          ./infra/deploy/staging-up.sh ${args[@]+"${args[@]}"} "$domain"
+          # </dev/null: this script arrives on stdin; docker compose inside staging-up would read the rest of it.
+          ./infra/deploy/staging-up.sh ${args[@]+"${args[@]}"} "$domain" </dev/null
           if [ -n "$port" ]; then
             ok=0
             for _ in $(seq 1 20); do

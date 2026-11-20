@@ -10,7 +10,7 @@ services:
       # Fail loudly if someone points this overlay at a production env file.
       APP_ENV: ${APP_ENV:?APP_ENV=staging is required for the staging overlay}
 
-  # One-off, profile "seed": `docker compose ... run --rm seed`. Demo accounts + orders in every state, through the real API.
+  # One-off, profile "seed": `docker compose ... run --rm --no-deps seed` (core-api must already be up). Demo accounts + orders in every state, through the real API.
   seed:
     profiles: ['seed']
     restart: 'no'

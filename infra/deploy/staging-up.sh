@@ -103,7 +103,7 @@ if [ "$SHARED" = 1 ]; then
       die "volume ${PROJECT}_$v belongs to the production project: refusing."
     fi
   done
-  other="$(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Label "com.docker.compose.project.working_dir"}}' | grep -vxF "$ROOT" | head -1 || true)"
+  other="$(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Label "com.docker.compose.project.working_dir"}}' | grep -vxF -e "$ROOT" -e "$ROOT/infra/deploy" | head -1 || true)"  # compose labels the first -f file's folder
   [ -z "$other" ] || die "a '$PROJECT' stack already exists from another checkout ($other): remove it or run from that folder."
 else
   [ -f "$ROOT/.env.production" ] && die ".env.production exists here: this looks like a production host. Use shared-VPS mode: staging-up.sh --port 18080 <domain>"
@@ -146,7 +146,9 @@ done
 [ "${ready:-}" = "1" ] || { dc logs --tail 40 core-api migrate; die "core-api did not become healthy in 3 minutes."; }
 
 echo "== Loading demo data (skipped when it already exists) =="
-dc run --rm seed
+# --no-deps: core-api is already up and healthy. Without it `run` re-resolves depends_on and may recreate
+# migrate + core-api, so the seed hits a restarting API (ECONNREFUSED).
+dc run --rm --no-deps -T seed
 
 DOM="$(get DOMAIN)"
 if [ "$SHARED" = 1 ]; then
@@ -175,13 +177,16 @@ Phải giữ nguyên Host và X-Forwarded-Proto=https. Nếu proxy của bạn c
 (bind 0.0.0.0, chặn cổng $STAGING_HTTP_PORT từ internet bằng firewall) hoặc trỏ tới IP bridge của docker.
 EOF
 fi
+# Secrets only on an interactive terminal: under GitHub Actions stdout is not a TTY and the log of a public repo is public.
+if [ -t 1 ]; then PW="$(get DEMO_PASSWORD)"; KEY="$(get STAGING_DEV_LOGIN_KEY)"
+else PW="(xem DEMO_PASSWORD trong $ENV_FILE)"; KEY="<STAGING_DEV_LOGIN_KEY trong $ENV_FILE>"; fi
 cat <<EOF
 
 Staging is up.
   Customer site  https://$DOM
   Freelancer app https://$DOM/coder
   Admin          https://$DOM/admin
-  Password of all demo accounts: $(get DEMO_PASSWORD)
-  Smoke / E2E:   API_URL=https://$DOM DEV_LOGIN_KEY=$(get STAGING_DEV_LOGIN_KEY) node api/core-api/scripts/smoke-mvp.mjs
+  Password of all demo accounts: $PW
+  Smoke / E2E:   API_URL=https://$DOM DEV_LOGIN_KEY=$KEY node api/core-api/scripts/smoke-mvp.mjs
 Demo script and troubleshooting: docs/STAGING.md
 EOF
