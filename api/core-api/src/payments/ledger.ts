@@ -1,4 +1,4 @@
-import { milestoneShare, payoutOf } from '@grabcode/contracts/schemas';
+import { milestoneShare } from '@grabcode/contracts/schemas';
 
 // Pure ledger rules (no DB) so they are unit-testable. Account names: see contracts/schemas/payment.ts.
 
@@ -19,10 +19,13 @@ export const depositEntries = (orderId: string | null, amountVnd: number): Entry
   { account: orderId ? escrowOf(orderId) : SUSPENSE, amountVnd },
 ];
 
-/** Milestone `index` approved: its share of the price leaves escrow, the coder gets the same share of the payout, the platform the rest. */
-export function releaseEntries(orderId: string, priceVnd: number, weights: number[], index: number, coderUserId: string): Entry[] {
+/**
+ * Milestone `index` approved: its share of the price leaves escrow, the coder gets the same share of the order's
+ * payout (fixed at creation), the platform the rest.
+ */
+export function releaseEntries(orderId: string, priceVnd: number, payoutVnd: number, weights: number[], index: number, coderUserId: string): Entry[] {
   const amount = milestoneShare(priceVnd, weights, index);
-  const payout = milestoneShare(payoutOf(priceVnd), weights, index);
+  const payout = milestoneShare(payoutVnd, weights, index);
   return [
     { account: escrowOf(orderId), amountVnd: -amount },
     { account: coderOf(coderUserId), amountVnd: payout },
@@ -46,12 +49,12 @@ export const moveEntries = (from: string, to: string, amountVnd: number): Entry[
 
 /**
  * Dispute split (S7): the whole escrow leaves, `refundVnd` back to the customer, the rest released like a milestone
- * (coder payout share, platform fee). Zero legs are dropped. Caller checks 0 <= refundVnd <= escrowVnd.
+ * (coder gets the order's payout ratio of it, platform the fee). Zero legs are dropped. Caller checks 0 <= refundVnd <= escrowVnd.
  */
-export function resolveEntries(orderId: string, escrowVnd: number, refundVnd: number, coderUserId: string): Entry[] {
+export function resolveEntries(orderId: string, escrowVnd: number, refundVnd: number, coderUserId: string, priceVnd: number, payoutVnd: number): Entry[] {
   const rest = escrowVnd - refundVnd;
-  // payoutOf rounds to 1000 VND, which can exceed a tiny remainder.
-  const coder = Math.min(payoutOf(rest), rest);
+  // Rounded to 1000 VND, which can exceed a tiny remainder.
+  const coder = Math.min(Math.round((rest * payoutVnd) / priceVnd / 1000) * 1000, rest);
   const entries: Entry[] = [
     { account: escrowOf(orderId), amountVnd: -escrowVnd },
     { account: BANK, amountVnd: refundVnd },

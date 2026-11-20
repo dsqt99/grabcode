@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { DevDepositSchema, orderIdFromTransfer, SepayWebhookSchema, type PaymentInstructions, type Wallet } from '@grabcode/contracts/schemas';
 import { readCookie } from '../auth/auth.controller';
 import { AuthService, SESSION_COOKIE } from '../auth/auth.service';
-import { DEV_LOGIN_ENABLED, SEPAY_ACCOUNT_NUMBER, SEPAY_WEBHOOK_API_KEY } from '../config';
+import { DEV_LOGIN_ENABLED, PAYMENT_ACCOUNT_NUMBER, SEPAY_WEBHOOK_API_KEY } from '../config';
 import { PaymentsService } from './payments.service';
 
 /** SePay sends `Authorization: Apikey <key>`; constant-time compare, unset key rejects everything. */
@@ -54,7 +54,7 @@ export class PaymentsController {
     const parsed = SepayWebhookSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException({ message: 'Invalid request body', issues: parsed.error.issues });
     const t = parsed.data;
-    const ours = !SEPAY_ACCOUNT_NUMBER || t.accountNumber === SEPAY_ACCOUNT_NUMBER;
+    const ours = !PAYMENT_ACCOUNT_NUMBER || t.accountNumber === PAYMENT_ACCOUNT_NUMBER;
     if (t.transferType === 'in' && ours && t.transferAmount > 0) {
       await this.payments.recordDeposit(`sepay:${t.id}`, orderIdFromTransfer(t.code, t.content), t.transferAmount, t);
     }
