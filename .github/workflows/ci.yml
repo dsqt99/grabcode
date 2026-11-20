@@ -3,13 +3,24 @@ on:
   pull_request:
   push:
     branches: [main]
+
+# One run per ref: a new push to a PR cancels its stale run; pushes to main always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      # pnpm version is read from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -18,4 +29,23 @@ jobs:
       - run: pnpm generate && git diff --exit-code packages/contracts
       - run: pnpm lint
       - run: pnpm typecheck
+      # Runs every package's "test" script (--if-present): new Vitest/Playwright suites plug in there.
       - run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v6
+        with:
+          path: apps/*/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/*/app/**', 'apps/*/components/**', 'apps/*/lib/**', 'packages/*/src/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: pnpm build
