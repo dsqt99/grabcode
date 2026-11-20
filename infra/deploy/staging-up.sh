@@ -177,13 +177,16 @@ Phải giữ nguyên Host và X-Forwarded-Proto=https. Nếu proxy của bạn c
 (bind 0.0.0.0, chặn cổng $STAGING_HTTP_PORT từ internet bằng firewall) hoặc trỏ tới IP bridge của docker.
 EOF
 fi
+# Secrets only on an interactive terminal: under GitHub Actions stdout is not a TTY and the log of a public repo is public.
+if [ -t 1 ]; then PW="$(get DEMO_PASSWORD)"; KEY="$(get STAGING_DEV_LOGIN_KEY)"
+else PW="(xem DEMO_PASSWORD trong $ENV_FILE)"; KEY="<STAGING_DEV_LOGIN_KEY trong $ENV_FILE>"; fi
 cat <<EOF
 
 Staging is up.
   Customer site  https://$DOM
   Freelancer app https://$DOM/coder
   Admin          https://$DOM/admin
-  Password of all demo accounts: $(get DEMO_PASSWORD)
-  Smoke / E2E:   API_URL=https://$DOM DEV_LOGIN_KEY=$(get STAGING_DEV_LOGIN_KEY) node api/core-api/scripts/smoke-mvp.mjs
+  Password of all demo accounts: $PW
+  Smoke / E2E:   API_URL=https://$DOM DEV_LOGIN_KEY=$KEY node api/core-api/scripts/smoke-mvp.mjs
 Demo script and troubleshooting: docs/STAGING.md
 EOF
