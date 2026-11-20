@@ -140,8 +140,12 @@ export const orders = core.table(
     templateId: text('template_id'),
     framework: text('framework').notNull(),
     brief: jsonb('brief').$type<AIBrief>().notNull(),
+    /** Menu item code (contracts pricing MENU); null for orders created before the menu. */
+    menuItem: text('menu_item'),
     priceVnd: integer('price_vnd').notNull(),
-    /** Coder's total share, fixed at creation (CODER_PAYOUT_RATE then), so a rate change only affects new orders. */
+    /** Admin quoted the final price (Q3); until then priceVnd is the menu "giá từ", no QR is shown and the order cannot be funded. */
+    priceQuotedAt: timestamp('price_quoted_at', { withTimezone: true }),
+    /** Coder's total share, fixed with the price (CODER_PAYOUT_RATE then), so a rate change only affects new orders. */
     payoutVnd: integer('payout_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
     disputeReason: text('dispute_reason'),

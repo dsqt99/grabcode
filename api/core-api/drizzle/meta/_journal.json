@@ -134,6 +134,13 @@
       "when": 1795200000000,
       "tag": "0018_refunds_funded_at",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795290000000,
+      "tag": "0019_menu_quote",
+      "breakpoints": true
     }
   ]
 }

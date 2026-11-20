@@ -35,7 +35,7 @@ export const brief = (weights = [20, 50, 30]): AIBrief => ({
 export async function addOrder(db: Db, customerUserId: string, patch: Partial<typeof orders.$inferInsert> = {}) {
   const [o] = await db
     .insert(orders)
-    .values({ customerUserId, tier: 'STANDARD', title: 'Web đặt bàn', prompt: 'web đặt bàn', framework: 'Next.js', brief: brief(), priceVnd: 2_900_000, payoutVnd: 2_030_000, etaHours: 8, ...patch })
+    .values({ customerUserId, tier: 'STANDARD', title: 'Web đặt bàn', prompt: 'web đặt bàn', framework: 'Next.js', brief: brief(), priceVnd: 2_900_000, priceQuotedAt: new Date(), payoutVnd: 2_030_000, etaHours: 8, ...patch })
     .returning();
   return o;
 }

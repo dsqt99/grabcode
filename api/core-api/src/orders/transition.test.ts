@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { AIBrief } from '@grabcode/contracts';
-import { ORDER_TRANSITIONS, OrderStatusSchema, type OrderStatus } from '@grabcode/contracts/schemas';
-import { freshBrief, isDenied, planTransition, reviewMilestone, submitMilestone } from './transition';
+import { ORDER_TRANSITIONS, OrderStatusSchema, OrderTransitionSchema, releasesOnApproval, type OrderStatus } from '@grabcode/contracts/schemas';
+import { freshBrief, isDenied, planTransition, reopenForRevision, reviewMilestone, submitMilestone } from './transition';
 
 const NONE = { commitHash: null, deliveryUrl: null, note: null };
 const CUST = { id: 'c', roles: ['CUSTOMER'] };
@@ -82,4 +82,22 @@ test('new order brief: server-assigned unique milestone ids, progress reset', ()
   const f = freshBrief(dup);
   assert.deepEqual(f.milestones.map((m) => [m.id, m.status, m.weightPercent]), [['M1', 'PENDING', 1], ['M2', 'PENDING', 99]]);
   assert.ok(f.milestones.every((m) => !m.commitHash && !m.deliveryUrl && !m.note && !m.completedAt));
+});
+
+test('Q2: every milestone pays on approval except the last one (held until ACCEPTED)', () => {
+  assert.deepEqual([0, 1, 2].map((i) => releasesOnApproval(i, 3)), [true, true, false]);
+  assert.equal(releasesOnApproval(0, 1), false, 'a single-milestone order pays only on acceptance');
+});
+
+test('B3: revision note is required (10+ chars) and reopens the last milestone for a new hand-in', () => {
+  assert.ok(!OrderTransitionSchema.safeParse({ status: 'IN_PROGRESS' }).success);
+  assert.ok(!OrderTransitionSchema.safeParse({ status: 'IN_PROGRESS', reason: '  ngắn quá  ' }).success);
+  assert.ok(OrderTransitionSchema.safeParse({ status: 'IN_PROGRESS', reason: 'Sửa màu nút đặt bàn' }).success);
+  const done: AIBrief = { ...brief('COMPLETED', 'COMPLETED'), milestones: brief('COMPLETED', 'COMPLETED').milestones.map((m) => ({ ...m, completedAt: 't', deliveryUrl: 'https://v1.vn' })) };
+  const b = reopenForRevision(done, 'Sửa màu nút đặt bàn');
+  assert.deepEqual(b.milestones.map((m) => [m.status, m.note ?? null, m.completedAt ?? null]), [['COMPLETED', null, 't'], ['IN_PROGRESS', 'Sửa màu nút đặt bàn', null]]);
+  const o = { ...order('IN_PROGRESS', 'k', b) };
+  const sub = submitMilestone(o, CODER, 'M2', { commitHash: null, deliveryUrl: 'https://v2.vn', note: 'đã sửa' }, 't2');
+  assert.ok(!isDenied(sub), 'no more 409 "Milestones must be submitted in order"');
+  assert.deepEqual([(sub as AIBrief).milestones[1].status, (sub as AIBrief).milestones[1].deliveryUrl], ['SUBMITTED', 'https://v2.vn']);
 });

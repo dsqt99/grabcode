@@ -5,13 +5,17 @@ import { randomUUID } from 'node:crypto';
 import { connect } from 'nats';
 import {
   STREAM_NAME,
+  SUBJECTS,
   coderTierFor,
+  payoutOf,
   type AdminCoder,
   type AdminCoderPatch,
   type AdminOrder,
   type AdminOrderDetail,
   type ConfirmPayment,
   type DisputeResolve,
+  type OrderQuote,
+  type PayoutRequestedEvent,
   type Monitor,
   type Payout,
   type PayoutCreate,
@@ -139,7 +143,10 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       id: o.id,
       status: o.status,
       title: o.title,
+      menuItem: o.menuItem as AdminOrder['menuItem'],
       priceVnd: o.priceVnd,
+      priceQuotedAt: o.priceQuotedAt ? iso(o.priceQuotedAt) : null,
+      etaHours: o.etaHours,
       payoutVnd: o.payoutVnd,
       paidVnd: Number(paid),
       escrowVnd: Number(escrow),
@@ -263,6 +270,27 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       }
       const [next] = await tx.update(orders).set({ status: 'RESOLVED', updatedAt: sql`now()` }).where(eq(orders.id, id)).returning();
       await emit(tx, next, 'DISPUTED');
+    });
+    return (await this.orders(id))[0];
+  }
+
+  /**
+   * Q3: the admin sets the final price + delivery days of a DRAFT order; the customer sees the payment QR from now on.
+   * The coder payout follows the quoted price. Never below what was already paid (no hidden overpayment in escrow).
+   */
+  async quote(id: string, body: OrderQuote): Promise<AdminOrder> {
+    await this.db.transaction(async (tx) => {
+      const row = await this.lockOrder(tx, id);
+      if (row.status !== 'DRAFT') throw new ConflictException({ message: `Order is ${row.status}, the price can only change before payment` });
+      const paid = await balanceOf(tx, escrowOf(id));
+      if (body.priceVnd < paid) throw new BadRequestException({ message: `Price below the amount already paid (${paid} VND)` });
+      const [next] = await tx
+        .update(orders)
+        .set({ priceVnd: body.priceVnd, payoutVnd: payoutOf(body.priceVnd), etaHours: body.etaDays * 24, priceQuotedAt: sql`now()`, updatedAt: sql`now()` })
+        .where(eq(orders.id, id))
+        .returning();
+      // A transfer that arrived before the quote may already cover it.
+      await fundIfCovered(tx, next);
     });
     return (await this.orders(id))[0];
   }
@@ -400,6 +428,14 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       const free = await freeWallet(tx, user.id);
       if (body.amountVnd > free) throw new ConflictException({ message: `Amount above available balance (${free} VND)` });
       const [r] = await tx.insert(payoutRequests).values({ coderUserId: user.id, amountVnd: body.amountVnd, bankAccount: body.bankAccount }).returning();
+      // Ops hear about it (notifier -> Telegram) instead of polling the payouts tab.
+      const event: PayoutRequestedEvent = {
+        event_id: randomUUID(),
+        type: SUBJECTS.PAYOUT_REQUESTED,
+        occurred_at: new Date().toISOString(),
+        data: { payoutId: r.id, coderUserId: user.id, amountVnd: r.amountVnd },
+      };
+      await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
       return r.id;
     });
     return (await this.payouts(eq(payoutRequests.id, id)))[0];

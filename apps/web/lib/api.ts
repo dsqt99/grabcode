@@ -1,4 +1,4 @@
-import { onRealtimeHint, type AIBrief, type OrderTier } from '@grabcode/contracts';
+import { onRealtimeHint, type AIBrief } from '@grabcode/contracts';
 import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint, RefundAccount, RefundAccountResponse } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -22,7 +22,7 @@ async function call(path: string, signal: AbortSignal, init?: RequestInit): Prom
  * Returns null when no API is configured; throws on FAILED, timeout or network error.
  */
 export async function requestBrief(
-  input: { prompt: string; tier: OrderTier; templateId: string | null; framework: string },
+  input: { prompt: string; templateId: string | null; framework: string },
   signal: AbortSignal,
 ): Promise<AIBrief | null> {
   if (!API_URL || !input.prompt.trim()) return null;

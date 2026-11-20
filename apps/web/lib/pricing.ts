@@ -1,45 +1,25 @@
-import { OrderTier, SEED_TEMPLATES } from '@grabcode/contracts';
-import { TIER_PRICING, estimateOrder } from '@grabcode/contracts/schemas';
+import { SEED_TEMPLATES } from '@grabcode/contracts';
+import { MENU, menuItemOf, type MenuItem, type MenuItemCode } from '@grabcode/contracts/schemas';
+
+export { MENU, daysLabel, etaLabel, menuItemOf } from '@grabcode/contracts/schemas';
+export type { MenuItem, MenuItemCode };
 
 export const USD_RATE = 25000;
 
-export interface TierConfig {
-  id: OrderTier;
-  label: string;
-  hours: number;
-  basePriceVnd: number;
-  blurb: string;
-  icon: string;
-}
-
-export const TIERS: TierConfig[] = [
-  { id: 'EXPRESS', label: 'Express', ...TIER_PRICING.EXPRESS, blurb: 'POC gọn, dự kiến ~3 giờ', icon: 'bolt' },
-  { id: 'STANDARD', label: 'Standard', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, dự kiến ~8 giờ', icon: 'schedule' },
-  { id: 'PRO', label: 'Pro', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp hơn, dự kiến ~24 giờ', icon: 'domain' },
-  { id: 'TEMPLATE', label: 'Mua Template', ...TIER_PRICING.TEMPLATE, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
-];
-
 export const FRAMEWORKS = ['Next.js 15 + Tailwind CSS', 'FastAPI + React', 'Flutter', 'Node.js + Express', 'Laravel'];
 
-export function getTier(id: OrderTier): TierConfig {
-  return TIERS.find((t) => t.id === id) ?? TIERS[0];
+export function isMenuItem(v: string | null | undefined): v is MenuItemCode {
+  return !!menuItemOf(v);
 }
 
-export function isTier(v: string | null | undefined): v is OrderTier {
-  return v === 'EXPRESS' || v === 'STANDARD' || v === 'PRO' || v === 'TEMPLATE';
+/** Menu item from a URL param; the first item (small fix) when missing or unknown. */
+export function getMenuItem(code: string | null | undefined): MenuItem & { code: MenuItemCode } {
+  return (menuItemOf(code) ?? MENU[0]) as MenuItem & { code: MenuItemCode };
 }
 
 export function getTemplate(id?: string | null) {
   return SEED_TEMPLATES.find((t) => t.id === id);
 }
-
-export interface Estimate {
-  priceVnd: number;
-  etaHours: number;
-}
-
-/** Same formula the server charges with. */
-export const estimate: (tier: OrderTier, prompt: string, templateId?: string | null) => Estimate = estimateOrder;
 
 export type Currency = 'VND' | 'USD';
 

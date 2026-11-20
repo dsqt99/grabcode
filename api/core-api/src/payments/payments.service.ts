@@ -39,8 +39,10 @@ export class PaymentsService {
     const paidVnd = await paidFor(this.db, row.id);
     const dueVnd = Math.max(0, row.priceVnd - paidVnd);
     const content = paymentCodeOf(row.id);
+    // No bank details / QR before the admin quotes the price (Q3): the customer must not transfer the "giá từ".
+    const priceQuoted = !!row.priceQuotedAt;
     const bank =
-      PAYMENT_BANK_ID && PAYMENT_ACCOUNT_NUMBER
+      priceQuoted && PAYMENT_BANK_ID && PAYMENT_ACCOUNT_NUMBER
         ? {
             name: PAYMENT_BANK_NAME,
             accountNumber: PAYMENT_ACCOUNT_NUMBER,
@@ -48,14 +50,14 @@ export class PaymentsService {
             qrUrl: vietQrUrl(PAYMENT_BANK_ID, PAYMENT_ACCOUNT_NUMBER, PAYMENT_ACCOUNT_NAME, dueVnd, content),
           }
         : null;
-    return { orderId: row.id, priceVnd: row.priceVnd, paidVnd, dueVnd, content, bank, autoConfirm: !!SEPAY_WEBHOOK_API_KEY, devDeposit: DEV_LOGIN_ENABLED };
+    return { orderId: row.id, priceVnd: row.priceVnd, paidVnd, dueVnd, content, priceQuoted, bank, autoConfirm: !!SEPAY_WEBHOOK_API_KEY, devDeposit: DEV_LOGIN_ENABLED };
   }
 
   /** Dev only: pretend the customer transferred the remaining amount. */
   async devDeposit(user: UserRow, orderId: string): Promise<PaymentInstructions> {
     const row = await this.ownOrder(user, orderId);
     const due = row.priceVnd - (await paidFor(this.db, row.id));
-    if (due > 0) await this.recordDeposit(`dev:${randomUUID()}`, row.id, due, { source: 'dev' });
+    if (due > 0 && row.priceQuotedAt) await this.recordDeposit(`dev:${randomUUID()}`, row.id, due, { source: 'dev' });
     return this.instructions(user, orderId);
   }
 
