@@ -27,17 +27,17 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        specifier: ^11.2.10
+        version: 11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core':
-        specifier: ^11.0.0
-        version: 11.2.8(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        specifier: ^11.2.10
+        version: 11.2.10(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/platform-express':
         specifier: ^11.0.0
-        version: 11.2.11(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.8)
+        version: 11.2.11(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.10)
       drizzle-orm:
-        specifier: ^0.44.0
-        version: 0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9)
+        specifier: ^0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9)
       nats:
         specifier: ^2.29.0
         version: 2.29.3
@@ -55,8 +55,8 @@ importers:
         version: 4.6.7
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.3.16
-        version: 0.3.16
+        specifier: ^0.5.16
+        version: 0.5.16
       '@types/express':
         specifier: ^5.0.0
         version: 5.0.6
@@ -119,8 +119,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       lucide-react:
-        specifier: ^1.73.0
-        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^1.74.0
+        version: 1.74.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: ^15.1.0
         version: 15.5.27(@opentelemetry/api@1.10.0)(@types/node@20.17.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -162,8 +162,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       lucide-react:
-        specifier: ^1.73.0
-        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^1.74.0
+        version: 1.74.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: ^15.1.0
         version: 15.5.27(@opentelemetry/api@1.10.0)(@types/node@20.17.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -390,8 +390,8 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@electric-sql/pglite@0.3.16':
-    resolution: {integrity: sha512-mZkZfOd9OqTMHsK+1cje8OSzfAQcpD7JmILXTl5ahdempjUDdmg4euf1biDex5/LfQIDJ3gvCu6qDgdnDxfJmA==}
+  '@electric-sql/pglite@0.5.16':
+    resolution: {integrity: sha512-Nj8KcIsJL748W408U2N8q4+9IlONdpRIU8MJypIAAINMJ5nqKyqpX7Mgg/5XKkXiAib3AoZGR6hnJFlrlLBrcg==}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -1072,8 +1072,8 @@ packages:
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
     engines: {node: '>=8'}
 
-  '@nestjs/common@11.2.8':
-    resolution: {integrity: sha512-5NobtSscYwgS9r2p+ADCJCu9Fy164wRuGVTUJxoa5I3rLIVjRFWFlV+UA37bKf8Om+4tSGJe4j92zOVnISbdbw==}
+  '@nestjs/common@11.2.10':
+    resolution: {integrity: sha512-QJLY7Bms6lKQbZ3Iq34PTh0EI3JNlMaTWzoJDd3xWqkRhT0d320eUxSL3f8Tb9ywINptnhjPTwUD9NHw71jzYA==}
     peerDependencies:
       class-transformer: '>=0.4.1'
       class-validator: '>=0.13.2'
@@ -1085,8 +1085,8 @@ packages:
       class-validator:
         optional: true
 
-  '@nestjs/core@11.2.8':
-    resolution: {integrity: sha512-XzD1okTrM160+8M9mWWorEUlFPK6ZMjTy6pVxVOOdxSdqu+QWKKx9kI2Y0yVrvEmi/0HPFUErqi9PCKFZYYZfg==}
+  '@nestjs/core@11.2.10':
+    resolution: {integrity: sha512-3tzOVDoo701CNCb+J6JYJvXjZJLpdQnhMjjKg8bM5ePqqteYdyyvCXJzGcRpnTvjTlfDing+H7X9jp57TfWhRQ==}
     engines: {node: '>= 20'}
     peerDependencies:
       '@nestjs/common': ^11.0.0
@@ -1516,8 +1516,8 @@ packages:
     resolution: {integrity: sha512-YCYqxTLIB2OCqf6w9/Vef13baBVbwQIPcbT4Y56AfO6B9ajZhDhD8Jkveg/hJvT/iuMloKD/IYYkyMMNhr7Kqg==}
     hasBin: true
 
-  drizzle-orm@0.44.7:
-    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+  drizzle-orm@0.45.4:
+    resolution: {integrity: sha512-NiM1YZpJ2UxyeE67DpDDZ+Tsw4YLX3trSlkNT7Tm9eKoUNb1LvaAaQzXgYQsWs+AQ9TUmmwMmBOCXuqqxUWKKQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -1525,6 +1525,7 @@ packages:
       '@libsql/client': '>=0.10.0'
       '@libsql/client-wasm': '>=0.10.0'
       '@neondatabase/serverless': '>=0.10.0'
+      '@netlify/db': '>=0.4.0'
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
@@ -1560,6 +1561,8 @@ packages:
       '@libsql/client-wasm':
         optional: true
       '@neondatabase/serverless':
+        optional: true
+      '@netlify/db':
         optional: true
       '@op-engineering/op-sqlite':
         optional: true
@@ -1957,8 +1960,8 @@ packages:
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
-  lucide-react@1.73.0:
-    resolution: {integrity: sha512-fVOzGviL9mTfHenG1PbCfIceavyGlnpYNSYr+aGZHLRymAJ7DTP6KHuqt0uBkCKAoenr1UVkwSbDIYt2xIesEQ==}
+  lucide-react@1.74.0:
+    resolution: {integrity: sha512-A1doIs/1fj1WnPbtIT7WRiM6Kvw5NUg+BtkoOh3Shpr4obwSDVt6WxCEcNH56EWprzuCoKle1OF0RqIkojwL1A==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -2371,8 +2374,8 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
-  strtok3@10.7.0:
-    resolution: {integrity: sha512-iAqrCpp7UXD2FZiHWhLXqdJ6CmNeVzRkkHAyyhhKMVtbVm2KtPX3D/bJNonvtcyLTHS4rwqP2pz9fsjK1K4z0Q==}
+  strtok3@10.8.0:
+    resolution: {integrity: sha512-e6bW3fD6V01DPmcbLfNtn0cjsiHvTKS/hivgbzqYMfHb/nLes4QQ0H5QBxlkPQayF4xv08AvlSgptGwN86Eemw==}
     engines: {node: '>=18'}
 
   styled-jsx@5.1.6:
@@ -2547,7 +2550,7 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@electric-sql/pglite@0.3.16': {}
+  '@electric-sql/pglite@0.5.16': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -2973,7 +2976,7 @@ snapshots:
 
   '@lukeed/csprng@1.1.0': {}
 
-  '@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+  '@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2)':
     dependencies:
       file-type: 21.3.4
       iterare: 1.2.1
@@ -2985,9 +2988,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nestjs/core@11.2.8(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+  '@nestjs/core@11.2.10(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)':
     dependencies:
-      '@nestjs/common': 11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/common': 11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2)
       fast-safe-stringify: 2.1.1
       iterare: 1.2.1
       path-to-regexp: 8.4.2
@@ -2996,12 +2999,12 @@ snapshots:
       tslib: 2.8.1
       uid: 2.0.2
     optionalDependencies:
-      '@nestjs/platform-express': 11.2.11(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.8)
+      '@nestjs/platform-express': 11.2.11(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.10)
 
-  '@nestjs/platform-express@11.2.11(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.8)':
+  '@nestjs/platform-express@11.2.11(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.10)':
     dependencies:
-      '@nestjs/common': 11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core': 11.2.8(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/common': 11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 11.2.10(@nestjs/common@11.2.10(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.2.11)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       cors: 2.8.6
       express: 5.2.1
       multer: 2.5.0
@@ -3422,9 +3425,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9):
+  drizzle-orm@0.45.4(@electric-sql/pglite@0.5.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9):
     optionalDependencies:
-      '@electric-sql/pglite': 0.3.16
+      '@electric-sql/pglite': 0.5.16
       '@opentelemetry/api': 1.10.0
       postgres: 3.4.9
 
@@ -3681,7 +3684,7 @@ snapshots:
   file-type@21.3.4:
     dependencies:
       '@tokenizer/inflate': 0.4.1
-      strtok3: 10.7.0
+      strtok3: 10.8.0
       token-types: 6.2.0
       uint8array-extras: 1.6.0
     transitivePeerDependencies:
@@ -3873,7 +3876,7 @@ snapshots:
 
   lodash.merge@4.6.2: {}
 
-  lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1):
+  lucide-react@1.74.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       react: 19.3.1
     optionalDependencies:
@@ -4271,7 +4274,7 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
-  strtok3@10.7.0:
+  strtok3@10.8.0:
     dependencies:
       '@tokenizer/token': 0.3.0
 
