@@ -148,7 +148,7 @@ done
 echo "== Loading demo data (skipped when it already exists) =="
 # --no-deps: core-api is already up and healthy. Without it `run` re-resolves depends_on and may recreate
 # migrate + core-api, so the seed hits a restarting API (ECONNREFUSED).
-dc run --rm --no-deps seed
+dc run --rm --no-deps -T seed
 
 DOM="$(get DOMAIN)"
 if [ "$SHARED" = 1 ]; then
