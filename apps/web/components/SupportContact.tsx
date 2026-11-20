@@ -8,7 +8,7 @@ export default function SupportContact({ className = '' }: { className?: string 
       {[SUPPORT.zalo, SUPPORT.hotline].map(
         (c) =>
           c && (
-            <a key={c.href} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="font-semibold text-emerald-dark underline">
+            <a key={c.href} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center font-semibold text-brand-800 underline">
               {c.label}
             </a>
           ),

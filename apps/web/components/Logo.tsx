@@ -21,8 +21,8 @@ export default function Logo({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark tone={tone} />
-      <span className={`font-display text-xl font-extrabold tracking-tight md:text-2xl ${tone === 'dark' ? 'text-white' : 'text-ink'}`}>
-        {a}<span className={tone === 'dark' ? 'text-inverse-primary' : 'text-brand-strong'}>{b}</span>
+      <span className={`font-display text-xl font-extrabold tracking-tight md:text-2xl ${tone === 'dark' ? 'text-white' : 'text-stone-900'}`}>
+        {a}<span className={tone === 'dark' ? 'text-brand-300' : 'text-brand-700'}>{b}</span>
       </span>
     </span>
   );

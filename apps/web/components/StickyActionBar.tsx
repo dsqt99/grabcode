@@ -8,7 +8,7 @@ export default function StickyActionBar({ children }: { children: ReactNode }) {
   return (
     <div
       data-sticky-bar
-      className="fixed inset-x-0 bottom-0 z-40 space-y-2 border-t border-slate-200 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-l3 lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+      className="fixed inset-x-0 bottom-0 z-40 space-y-2 border-t border-stone-200 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-sheet backdrop-blur lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none"
     >
       {children}
     </div>
