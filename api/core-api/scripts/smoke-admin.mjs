@@ -25,7 +25,7 @@ async function client(login, role) {
 }
 
 const brief = { title: 'S7 smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '# smoke', milestones: [{ id: 'M1', title: 'm1', description: '', weightPercent: 100, status: 'PENDING' }] };
-const newOrder = async (cust) => (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+const newOrder = async (cust) => (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
 /** Bank transfer as the SePay webhook would book it; orderId null = unmatched (suspense). */
 const deposit = (id, orderId, amount, content) =>
   psql(

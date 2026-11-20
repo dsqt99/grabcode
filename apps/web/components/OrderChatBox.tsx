@@ -21,7 +21,7 @@ export default function OrderChatBox({ messages, onSend, coderName }: { messages
   };
 
   return (
-    <section aria-label="Chat với Coder" className="card flex flex-col !p-0 shadow-l2">
+    <section aria-label="Chat với freelancer" className="card flex flex-col !p-0 shadow-l2">
       <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
         <span className="material-symbols-outlined text-emerald" aria-hidden>chat</span>
         <h2 className="font-display text-base font-bold text-ink">Chat {coderName ? `với ${coderName}` : 'đơn hàng'}</h2>
@@ -29,7 +29,7 @@ export default function OrderChatBox({ messages, onSend, coderName }: { messages
       <div className="h-64 space-y-3 overflow-y-auto p-4" role="log" aria-live="polite">
         {messages.map((m) =>
           m.sender === 'SYSTEM' ? (
-            <p key={m.id} className="mx-auto w-fit max-w-full rounded-full bg-slate-100 px-3 py-1 text-center text-xs text-slate-500">{m.text}</p>
+            <p key={m.id} className="mx-auto w-fit max-w-full rounded-full bg-slate-100 px-3 py-1 text-center text-xs text-slate-700">{m.text}</p>
           ) : (
             <div key={m.id} className={`flex flex-col ${m.sender === 'CUSTOMER' ? 'items-end' : 'items-start'} animate-pop`}>
               <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.sender === 'CUSTOMER' ? 'rounded-br-sm bg-emerald text-white' : 'rounded-bl-sm bg-slate-100 text-ink'}`}>
@@ -43,7 +43,7 @@ export default function OrderChatBox({ messages, onSend, coderName }: { messages
       </div>
       <form onSubmit={submit} className="flex gap-2 border-t border-slate-100 p-3">
         <label htmlFor="chat-input" className="sr-only">Nhập tin nhắn</label>
-        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho Coder..." className="min-w-0 flex-1 rounded-full px-4 py-2" />
+        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho freelancer..." className="min-w-0 flex-1 rounded-full px-4 py-2" />
         <button type="submit" className="btn-primary !px-4 !py-2" aria-label="Gửi tin nhắn" disabled={!text.trim()}>
           <span className="material-symbols-outlined !text-[18px]" aria-hidden>send</span>
         </button>

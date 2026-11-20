@@ -6,6 +6,7 @@ import { payoutOf } from '@grabcode/contracts/schemas';
 import { INITIAL_DEMO_ORDER, eventBus, pollDelay, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
 import ConfirmSheet from '../../../components/ConfirmSheet';
+import DeliveryLinks from '../../../components/DeliveryLinks';
 import LiveStepper from '../../../components/LiveStepper';
 import MilestoneList from '../../../components/MilestoneList';
 import Navbar from '../../../components/Navbar';
@@ -13,12 +14,16 @@ import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
 import RefundAccountCard from '../../../components/RefundAccountCard';
 import SandboxFrame from '../../../components/SandboxFrame';
+import StatusChip from '../../../components/StatusChip';
+import StickyActionBar from '../../../components/StickyActionBar';
+import SupportContact from '../../../components/SupportContact';
 import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
-import { milestoneAmount, statusInput, statusView, type Tone } from '../../../lib/orderStatus';
+import { milestoneAmount, paysOnApproval, statusInput, statusView } from '../../../lib/orderStatus';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
-import { formatVnd } from '../../../lib/pricing';
+import { etaLabel, formatVnd, menuItemOf } from '../../../lib/pricing';
+import { hasSupport } from '../../../lib/support';
 
 const POLL_MS = 3000;
 const LONG_WAIT_MS = 30 * 60_000;
@@ -43,18 +48,9 @@ const fetchView = async (id: string) => {
 };
 /** System chat line when the server moves the order (API mode). */
 const STATUS_MSG: Partial<Record<Order['status'], (o: Order) => string>> = {
-  DISPATCHING: (o) => `Đã nhận đủ ${o.priceVnd.toLocaleString('de-DE')} đ ký quỹ. Đang tìm Coder.`,
-  BUILDING: (o) => `Coder ${o.assignedCoder?.name ?? ''} đang triển khai đơn của bạn.`,
-  DELIVERED: () => 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.',
-};
-
-const CHIP: Record<Tone, string> = {
-  warn: 'chip-warn',
-  info: 'chip bg-blue-50 text-blue-800',
-  brand: 'chip-ok',
-  ok: 'chip-ok',
-  danger: 'chip bg-red-50 text-red-700',
-  neutral: 'chip bg-slate-100 text-slate-700',
+  DISPATCHING: (o) => `Đã nhận đủ ${formatVnd(o.priceVnd)}. Đơn đã lên bảng việc, đang chờ freelancer nhận.`,
+  BUILDING: (o) => `Freelancer ${o.assignedCoder?.name ?? ''} đang làm đơn của bạn.`,
+  DELIVERED: () => 'Freelancer đã bàn giao. Hãy kiểm tra rồi nghiệm thu.',
 };
 
 /** Confirmation sheets (UX spec "Màn C"): every money action and every free-text request goes through one. */
@@ -163,8 +159,8 @@ export default function OrderPage() {
         systemMsg(
           found.id,
           found.escrowStatus === 'UNPAID'
-            ? `Đơn ${found.id} đã tạo. Chuyển khoản ${found.priceVnd.toLocaleString('de-DE')} đ để ký quỹ và dispatch.`
-            : `Đơn ${found.id} đã được ký quỹ ${found.priceVnd.toLocaleString('de-DE')} đ và đang được dispatch.`,
+            ? `Đơn ${found.id} đã tạo. Chuyển khoản ${formatVnd(found.priceVnd)} để đưa đơn lên bảng việc.`
+            : `Đơn ${found.id} đã nhận ${formatVnd(found.priceVnd)} và đã lên bảng việc.`,
         ),
       ];
       if (found.assignedCoder && !ordersApiEnabled) {
@@ -192,7 +188,7 @@ export default function OrderPage() {
         if (e.payload.orderId !== oid) return;
         const coder = e.payload.coder;
         applyOrder((o) => (o.status === 'DISPATCHING' || o.status === 'DRAFT' ? { ...o, status: 'ACCEPTED', assignedCoder: coder } : { ...o, assignedCoder: coder }));
-        pushChat(systemMsg(oid, `Coder ${coder.name} (${coder.tier}) đã nhận đơn của bạn.`));
+        pushChat(systemMsg(oid, `Freelancer ${coder.name} đã nhận đơn của bạn.`));
       }),
       eventBus.subscribeTo('MILESTONE_UPDATED', (e) => {
         const p = e.payload;
@@ -234,13 +230,13 @@ export default function OrderPage() {
           status: 'DELIVERED',
           brief: { ...o.brief, milestones: o.brief.milestones.map((m) => ({ ...m, status: 'COMPLETED' as const })) },
         }));
-        pushChat(systemMsg(oid, 'Coder đã bàn giao. Hãy kiểm tra sandbox rồi nghiệm thu.'));
+        pushChat(systemMsg(oid, 'Freelancer đã bàn giao. Hãy kiểm tra rồi nghiệm thu.'));
       }),
       eventBus.subscribeTo('CHAT_MESSAGE_SENT', (e) => {
         if (e.payload.orderId === oid) pushChat(e.payload);
       }),
       eventBus.subscribeTo('ORDER_REJECTED', (e) => {
-        if (e.payload.orderId === oid) pushChat(systemMsg(oid, 'Một Coder đã từ chối, hệ thống đang gửi offer cho Coder tiếp theo.'));
+        if (e.payload.orderId === oid) pushChat(systemMsg(oid, 'Một freelancer đã từ chối, đơn vẫn trên bảng việc.'));
       }),
     ];
     // Keep in sync when another tab writes to the orders store.
@@ -275,8 +271,16 @@ export default function OrderPage() {
   const percent = progressPercent(order);
   const delivered = input.status === 'DELIVERED' || input.status === 'ACCEPTED';
   const amountOf = (milestoneId: string) => milestoneAmount(order, milestoneId);
-  /** What accepting the whole order pays now: the shares of milestones not approved yet (same as the server sweep). */
-  const acceptVnd = order.brief.milestones.reduce((s, m) => s + (m.status === 'COMPLETED' ? 0 : amountOf(m.id)), 0);
+  /**
+   * What accepting the whole order pays now: the shares not released yet, incl. the last milestone (same as the server sweep).
+   * Capped by what escrow holds (an order delivered before Q2 already paid its last share; an overpayment is not released).
+   */
+  const acceptVnd = Math.min(
+    heldVnd,
+    order.brief.milestones.reduce((s, m) => s + (m.status === 'COMPLETED' && paysOnApproval(order, m.id) ? 0 : amountOf(m.id)), 0),
+  );
+  const toReview = sv.canReview ? order.brief.milestones.find((m) => m.status === 'SUBMITTED') : undefined;
+  const item = menuItemOf(order.menuItem);
 
   const openSheet = (next: Sheet) => {
     setSheet(next);
@@ -330,13 +334,14 @@ export default function OrderPage() {
       pushChat(systemMsg(order.id, 'Đã nghiệm thu đơn. Cảm ơn bạn!'));
     });
 
-  // Order-level revision (DELIVERED -> IN_PROGRESS): the note goes to the coder as a real chat message first.
+  // Order-level revision (DELIVERED -> IN_PROGRESS): the server reopens the last milestone with the note (the coder sees it
+  // there and hands in again); the same note also goes into the chat.
   const requestRevision = () =>
     run(async () => {
       const text = `Yêu cầu sửa: ${note.trim()}`;
       if (ordersApiEnabled) {
-        pushChat(await sendMessage(order.id, text));
-        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS'), await getOrderRepo(order.id)));
+        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS', note.trim()), await getOrderRepo(order.id)));
+        await sendMessage(order.id, text).then(pushChat, console.warn);
       } else {
         sendChat(text);
       }
@@ -407,22 +412,22 @@ export default function OrderPage() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="chip-dark">{order.id}</span>
-              <span className={CHIP[sv.tone]}>{sv.label}</span>
-              <span className="chip bg-slate-100 text-slate-600">{order.tier}</span>
+              <StatusChip tone={sv.tone} label={sv.label} />
+              {item && <span className="chip bg-slate-100 text-slate-700">{item.name}</span>}
             </div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
             <p className="mt-1 text-sm text-slate-600">{sv.description}</p>
           </div>
           <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             <div>
-              <dt className="text-slate-500">Giá đơn</dt>
+              <dt className="text-slate-500">{input.priceQuoted ? 'Giá đơn' : 'Giá từ (chờ báo giá)'}</dt>
               <dd className="font-display font-extrabold text-emerald-dark">
                 {formatVnd(order.priceVnd)}
                 {usd(order.priceVnd) && <span className="ml-2 text-xs font-normal text-slate-500">{usd(order.priceVnd)}</span>}
               </dd>
             </div>
             <div><dt className="text-slate-500">Tiền của đơn</dt><dd className="font-semibold">{sv.money}</dd></div>
-            <div><dt className="text-slate-500">Dự kiến xong</dt><dd className="font-semibold">~{order.etaHours} giờ</dd></div>
+            <div><dt className="text-slate-500">Thời gian</dt><dd className="font-semibold">{etaLabel(order.etaHours)}</dd></div>
           </dl>
         </header>
 
@@ -444,13 +449,19 @@ export default function OrderPage() {
               <p className="font-display font-bold text-ink">{sv.label}</p>
               <p className="text-sm text-slate-600">{sv.description}</p>
               <LongWaitNote since={order.fundedAt ?? order.createdAt} />
+              {hasSupport && (
+                <p className="mt-2 text-sm text-slate-700">
+                  Huỷ đơn? Liên hệ hỗ trợ: <SupportContact />
+                </p>
+              )}
             </div>
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div className="min-w-0 space-y-6">
-            <SandboxFrame order={order} delivered={delivered} />
+            {/* Real orders: a live preview when one is READY, otherwise the freelancer's links (never a generated demo). */}
+            {ordersApiEnabled && !order.demoUrl ? order.assignedCoder && <DeliveryLinks order={order} /> : <SandboxFrame order={order} delivered={delivered} />}
             <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />
           </div>
           <div className="min-w-0 space-y-6">
@@ -469,16 +480,25 @@ export default function OrderPage() {
                 </div>
               )}
               <p className="text-sm text-slate-600">{sv.money}</p>
-              {sv.canAccept && (
-                <>
-                  <button type="button" className="btn-primary w-full" onClick={() => openSheet({ kind: 'accept' })}>
-                    <span className="material-symbols-outlined !text-[20px]" aria-hidden>verified</span>
-                    Nghiệm thu đơn
-                  </button>
-                  <button type="button" className="btn-secondary w-full" onClick={() => openSheet({ kind: 'revise' })}>
-                    Yêu cầu sửa
-                  </button>
-                </>
+              {(sv.canAccept || (ordersApiEnabled && toReview)) && (
+                <StickyActionBar>
+                  {sv.canAccept ? (
+                    <div className="flex gap-2 lg:flex-col">
+                      <button type="button" className="btn-primary flex-1 lg:w-full" onClick={() => openSheet({ kind: 'accept' })}>
+                        Nghiệm thu đơn
+                      </button>
+                      <button type="button" className="btn-secondary flex-1 lg:w-full" onClick={() => openSheet({ kind: 'revise' })}>
+                        Yêu cầu sửa
+                      </button>
+                    </div>
+                  ) : (
+                    toReview && (
+                      <button type="button" className="btn-primary w-full" onClick={() => openSheet({ kind: 'approve', milestoneId: toReview.id })}>
+                        Xem & duyệt {toReview.id}
+                      </button>
+                    )
+                  )}
+                </StickyActionBar>
               )}
               {ordersApiEnabled && sv.canDispute && (
                 <button type="button" className="min-h-[44px] w-full text-center text-sm font-semibold text-red-700 hover:underline" onClick={() => openSheet({ kind: 'dispute' })}>
@@ -495,12 +515,18 @@ export default function OrderPage() {
                   Nhận repo về tài khoản GitHub của bạn
                 </button>
               )}
+              {hasSupport && (
+                <p className="border-t border-slate-100 pt-3 text-sm text-slate-700">
+                  Cần hỗ trợ? <SupportContact />
+                </p>
+              )}
             </div>
             {ordersApiEnabled && sv.askRefundAccount && <RefundAccountCard orderId={order.id} />}
             <MilestoneList
               milestones={order.brief.milestones}
               onReview={ordersApiEnabled && sv.canReview ? (id, approve) => openSheet({ kind: approve ? 'approve' : 'reject', milestoneId: id }) : undefined}
               amountOf={amountOf}
+              paysOnApproval={(id) => paysOnApproval(order, id)}
             />
             <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
           </div>
@@ -511,7 +537,7 @@ export default function OrderPage() {
         <ConfirmSheet
           {...sheetProps}
           title={`Duyệt mốc ${sheetMilestone.id} · ${sheetMilestone.title}`}
-          confirmLabel={`Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}`}
+          confirmLabel={paysOnApproval(order, sheetMilestone.id) ? `Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}` : 'Duyệt mốc cuối'}
           canConfirm={ticked && sheetMilestone.qa?.status !== 'FAILED'}
           onConfirm={() => review(sheetMilestone.id, true)}
         >
@@ -527,13 +553,23 @@ export default function OrderPage() {
           )}
           {sheetMilestone.note && <p>Ghi chú của freelancer: “{sheetMilestone.note}”</p>}
           {sheetMilestone.qa && <p>Kiểm tra tự động: {sheetMilestone.qa.status === 'PASSED' ? 'Đạt ✓' : sheetMilestone.qa.status === 'FAILED' ? 'Không đạt ✗ — hãy yêu cầu sửa' : 'Chưa có kết quả'}</p>}
-          <div className="rounded-md bg-amber-50 p-3">
-            <p className="flex justify-between gap-3 font-semibold text-ink">
-              <span>Bạn sẽ trả cho mốc này</span>
-              <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
-            </p>
-            <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
-          </div>
+          {paysOnApproval(order, sheetMilestone.id) ? (
+            <div className="rounded-md bg-amber-50 p-3">
+              <p className="flex justify-between gap-3 font-semibold text-ink">
+                <span>Bạn sẽ trả cho mốc này</span>
+                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
+              </p>
+              <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
+            </div>
+          ) : (
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="flex justify-between gap-3 font-semibold text-ink">
+                <span>Tiền mốc cuối</span>
+                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
+              </p>
+              <p className="mt-1 text-slate-700">Duyệt mốc cuối chưa trả tiền: khoản này được GrabCode giữ tới khi bạn nghiệm thu cả đơn.</p>
+            </div>
+          )}
           {tick('Tôi đã mở link và kiểm tra mốc này')}
         </ConfirmSheet>
       )}
@@ -562,13 +598,14 @@ export default function OrderPage() {
           <ul className="space-y-1">
             {order.brief.milestones.map((m) => (
               <li key={m.id}>
-                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title} {m.status === 'COMPLETED' ? '(đã duyệt)' : '(chưa duyệt, sẽ được trả cùng lúc)'}
+                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title}{' '}
+                {m.status !== 'COMPLETED' ? '(chưa duyệt, sẽ được trả cùng lúc)' : paysOnApproval(order, m.id) ? '(đã duyệt, đã trả)' : '(đã duyệt, trả khi nghiệm thu)'}
               </li>
             ))}
           </ul>
           <div className="rounded-md bg-amber-50 p-3">
             <p className="flex justify-between gap-3 font-semibold text-ink">
-              <span>Số tiền sẽ trả freelancer ngay</span>
+              <span>Số tiền sẽ giải ngân ngay</span>
               <span className="font-display tabular-nums">{formatVnd(acceptVnd)}</span>
             </p>
             <p className="mt-1 text-amber-900">Sau khi nghiệm thu: đơn hoàn tất, không mở tranh chấp được nữa, tiền đã trả không hoàn lại được.</p>
@@ -586,7 +623,7 @@ export default function OrderPage() {
           onConfirm={requestRevision}
         >
           {noteField('Cần freelancer sửa gì?', REVISION_HINTS)}
-          <p className="text-slate-600">Nội dung này được gửi vào chat của đơn và đơn quay lại trạng thái đang làm.</p>
+          <p className="text-slate-600">Freelancer thấy nội dung này ở mốc cuối và nộp lại bản sửa để bạn duyệt. Nội dung cũng được gửi vào chat của đơn.</p>
         </ConfirmSheet>
       )}
 

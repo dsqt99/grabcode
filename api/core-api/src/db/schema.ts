@@ -52,6 +52,8 @@ export const users = core.table('users', {
   // S7 admin: tier override (null = computed from accepted orders); suspended coders get no offers.
   tierOverride: text('tier_override', { enum: ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'] }),
   suspended: boolean('suspended').notNull().default(false),
+  // P0-8: set to PENDING when the CODER role is added; only APPROVED coders get jobs / offers. null = not a coder.
+  coderApproval: text('coder_approval', { enum: ['PENDING', 'APPROVED', 'REJECTED'] }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -140,8 +142,12 @@ export const orders = core.table(
     templateId: text('template_id'),
     framework: text('framework').notNull(),
     brief: jsonb('brief').$type<AIBrief>().notNull(),
+    /** Menu item code (contracts pricing MENU); null for orders created before the menu. */
+    menuItem: text('menu_item'),
     priceVnd: integer('price_vnd').notNull(),
-    /** Coder's total share, fixed at creation (CODER_PAYOUT_RATE then), so a rate change only affects new orders. */
+    /** Admin quoted the final price (Q3); until then priceVnd is the menu "giá từ", no QR is shown and the order cannot be funded. */
+    priceQuotedAt: timestamp('price_quoted_at', { withTimezone: true }),
+    /** Coder's total share, fixed with the price (CODER_PAYOUT_RATE then), so a rate change only affects new orders. */
     payoutVnd: integer('payout_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
     disputeReason: text('dispute_reason'),
@@ -149,6 +155,8 @@ export const orders = core.table(
     fundedAt: timestamp('funded_at', { withTimezone: true }),
     /** Customer's bank account for refunds of this order (shown to admins on pending refunds, never to the coder). */
     refundAccount: jsonb('refund_account').$type<RefundAccount>(),
+    /** Customer pressed "Tôi đã chuyển khoản" (first time only); an admin still confirms the transfer. */
+    paymentReportedAt: timestamp('payment_reported_at', { withTimezone: true }),
     // Cloud Run preview (S5), written from deploy-worker results.
     sandbox: jsonb('sandbox').$type<Sandbox>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

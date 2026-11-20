@@ -28,7 +28,7 @@ export default function Page() {
               Dành cho chủ shop & SME Việt Nam
             </span>
             <h1 className="font-display text-[30px] font-extrabold leading-9 tracking-tight text-ink md:text-5xl md:leading-[1.1]">
-              Đặt làm app như đặt đồ ăn. <span className="text-emerald">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
+              Đặt làm app như đặt đồ ăn. <span className="text-emerald-dark">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
             </h1>
             <p className="mt-4 max-w-xl text-lg text-slate-600">
               Mô tả ý tưởng, AI soạn thành đặc tả và các mốc bàn giao, tiền được giữ ký quỹ và freelancer làm app bằng công cụ AI nhận đơn.
@@ -63,9 +63,6 @@ export default function Page() {
         <TemplateShowcase />
         <ComparisonTable />
       </main>
-      <footer className="border-t border-slate-200 bg-white py-8 text-center text-sm text-slate-500">
-        © 2026 GrabCode · Hoàng Hải Tech. Sàn kết nối chủ shop với freelancer vibe code.
-      </footer>
     </>
   );
 }

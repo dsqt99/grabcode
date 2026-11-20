@@ -86,6 +86,7 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
             sql`'CODER' = any(${users.roles})`,
             eq(users.online, true),
             eq(users.suspended, false),
+            eq(users.coderApproval, 'APPROVED'),
             gt(users.lastSeenAt, sql`now() - make_interval(secs => ${PRESENCE_TTL_SECONDS})`),
             ne(users.id, row.customerUserId),
             // one open offer per coder; never re-ask a coder who declined this order; busy coders are skipped.
@@ -108,8 +109,10 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /** P0-8: a coder an admin has not approved (yet) gets no jobs, offers or presence. */
   private requireCoder(user: UserRow) {
     if (!user.roles.includes('CODER')) throw new ForbiddenException({ message: 'Missing CODER role' });
+    if (user.coderApproval !== 'APPROVED') throw new ForbiddenException({ message: 'Coder not approved yet' });
   }
 
   /** Open offers for the caller; polling this is the presence heartbeat. */
@@ -136,6 +139,7 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
 
   /** First accept wins: the order row lock serializes concurrent accepts; losers get 409. */
   async accept(user: UserRow, offerId: string) {
+    this.requireCoder(user);
     const orderId = await this.db.transaction(async (tx) => {
       const [mine] = await tx.select().from(dispatchOffers).where(and(eq(dispatchOffers.id, offerId), eq(dispatchOffers.coderUserId, user.id)));
       if (!mine) throw new NotFoundException({ message: 'Offer not found' });

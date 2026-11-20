@@ -154,6 +154,9 @@ export default function ActiveJobWorkspace({
                         <pre key={c.name} className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-600">{c.detail}</pre>
                       ))}
                     {m.status === 'IN_PROGRESS' && m.note && <p className="mt-1 text-xs font-semibold text-red-600">Khách yêu cầu sửa: {m.note}</p>}
+                    {i === milestones.length - 1 && !state.completed && (
+                      <p className="mt-1 text-xs text-slate-500">Tiền mốc cuối được trả khi khách nghiệm thu cả đơn.</p>
+                    )}
                   </div>
                   <span className="chip-warn shrink-0">{m.weightPercent}%</span>
                 </div>
@@ -216,7 +219,7 @@ export default function ActiveJobWorkspace({
         ) : state.delivered || allDone ? (
           <button type="button" disabled={state.delivered} onClick={onDeliver} className="btn-primary min-h-[52px] w-full">
             <span className="material-symbols-outlined" aria-hidden>rocket_launch</span>
-            {state.delivered ? 'Đã nộp — chờ khách nghiệm thu' : 'Nộp bài & Bàn giao POC'}
+            {state.delivered ? 'Đã nộp — chờ khách nghiệm thu' : 'Nộp bài & bàn giao'}
           </button>
         ) : (
           <div className="flex items-center gap-3">

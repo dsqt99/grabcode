@@ -61,7 +61,8 @@ export const AIBriefSchema = z.object({
 
 export const BriefJobCreateSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
-  tier: OrderTierSchema,
+  /** Legacy package field (pricing is the menu + admin quote now); kept for the brief job row. */
+  tier: OrderTierSchema.default('STANDARD'),
   templateId: z.string().max(100).nullish(),
   framework: z.string().max(200).default('Next.js 15 + Tailwind CSS'),
 });

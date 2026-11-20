@@ -55,7 +55,7 @@ const coder = await client(`s5k-${run}`, 'CODER');
 const coderId = (await coder('GET', '/v1/me')).body.id;
 await coder('PUT', '/v1/me/presence', { online: true });
 const brief = { title: 'S5 smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones: [{ id: 'M1', title: 'm1', description: '', weightPercent: 100, status: 'PENDING' }] };
-const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
 await cust('POST', '/v1/payments/dev-deposit', { orderId: o.id });
 for (let i = 0, done = false; !done; i++) {
   if (i > 40) throw new Error(`no offer for ${o.id}`);

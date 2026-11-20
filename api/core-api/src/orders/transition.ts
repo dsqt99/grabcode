@@ -92,4 +92,13 @@ export function reviewMilestone(o: OrderState, user: Actor, milestoneId: string,
   return { brief: idx + 1 < done.milestones.length ? setAt(done, idx + 1, (m) => ({ ...m, status: 'IN_PROGRESS' })) : done, index: idx };
 }
 
+/**
+ * Customer asks for changes after delivery (DELIVERED -> IN_PROGRESS): the last milestone reopens with the note, so the coder
+ * hands in a new link + note for it (submitMilestone) and the customer reviews it again before the next delivery.
+ * Its share is still in escrow (held until ACCEPTED), so no money moves back.
+ */
+export function reopenForRevision(b: AIBrief, note: string): AIBrief {
+  return setAt(b, b.milestones.length - 1, ({ completedAt: _a, qa: _q, ...m }) => ({ ...m, status: 'IN_PROGRESS', note }));
+}
+
 export const isDenied = (r: object): r is Denied => 'denied' in r;

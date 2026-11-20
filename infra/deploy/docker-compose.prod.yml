@@ -24,6 +24,9 @@ x-next-build: &next-build
   dockerfile: infra/next-app.Dockerfile
   args: &next-args
     NEXT_PUBLIC_API_URL: https://${DOMAIN:?set DOMAIN in .env.production}
+    # Shown on the payment page, order page and footer; the web build fails when both are empty.
+    NEXT_PUBLIC_SUPPORT_ZALO: ${SUPPORT_ZALO:-}
+    NEXT_PUBLIC_SUPPORT_HOTLINE: ${SUPPORT_HOTLINE:-}
     CODER_ORIGIN: http://coder:3001
     ADMIN_ORIGIN: http://admin:3002
 
@@ -73,10 +76,9 @@ services:
     <<: *node-service
     build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/brief-worker' } }
 
-  # Optional WebPush (needs VAPID_* in .env.production): docker compose ... --profile push up -d
+  # Ops notices to Telegram (TELEGRAM_* in .env.production; logged only when unset) and WebPush (VAPID_*; off when unset).
   notifier:
     <<: *node-service
-    profiles: ['push']
     build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/notifier' } }
 
   web:

@@ -48,4 +48,8 @@ jobs:
           path: apps/*/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/*/app/**', 'apps/*/components/**', 'apps/*/lib/**', 'packages/*/src/**') }}
           restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      # Production builds refuse to run without these (mock mode must never ship); placeholders for CI only.
       - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.ci.invalid
+          NEXT_PUBLIC_SUPPORT_HOTLINE: '0000000000'

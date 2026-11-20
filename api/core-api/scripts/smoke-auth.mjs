@@ -80,7 +80,7 @@ await cust('POST', '/v1/auth/dev-login', { login: 'smoke-repo-cust', role: 'CUST
 const stranger = client();
 await stranger('POST', '/v1/auth/dev-login', { login: 'smoke-repo-other', role: 'CODER' });
 const brief = { title: 'repo smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones: [{ id: 'M1', title: 'm', description: '', weightPercent: 100, status: 'PENDING' }] };
-const order = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+const order = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
 ok((await stranger('POST', '/v1/repos', { orderId: order.id })).status >= 400, 'repo request by non-coder of order rejected');
 ok((await stranger('GET', `/v1/repos/${order.id}`)).status === 404 && (await cust('GET', "/v1/repos/GC-1'")).status === 404, 'repo GET by non-party / bad id 404');
 

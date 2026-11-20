@@ -10,25 +10,28 @@ const META = {
 } as const;
 
 const QA = {
-  RUNNING: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA đang chạy' },
-  PASSED: { cls: 'chip-ok', label: 'QA đạt' },
-  FAILED: { cls: 'chip bg-red-50 text-red-600', label: 'QA trượt' },
-  SKIPPED: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA bỏ qua' },
-  ERROR: { cls: 'chip bg-slate-100 text-slate-500', label: 'QA lỗi hệ thống' },
+  RUNNING: { cls: 'chip bg-slate-100 text-slate-700', label: 'Đang kiểm tra tự động' },
+  PASSED: { cls: 'chip-ok', label: 'Kiểm tra tự động: đạt' },
+  FAILED: { cls: 'chip bg-red-50 text-red-700', label: 'Kiểm tra tự động: không đạt' },
+  SKIPPED: { cls: 'chip bg-slate-100 text-slate-700', label: 'Chưa kiểm tra tự động' },
+  ERROR: { cls: 'chip bg-slate-100 text-slate-700', label: 'Kiểm tra tự động bị lỗi' },
 } as const;
 
 /**
  * `onReview` (API mode, order IN_PROGRESS) shows approve / request-changes on the SUBMITTED milestone; the page opens
- * a confirmation sheet for both. `amountOf`: escrow share the milestone releases (VND).
+ * a confirmation sheet for both. `amountOf`: escrow share of the milestone (VND). `paysOnApproval`: false for the last
+ * milestone, whose share is only paid when the whole order is accepted.
  */
 export default function MilestoneList({
   milestones,
   onReview,
   amountOf,
+  paysOnApproval = () => true,
 }: {
   milestones: Milestone[];
   onReview?: (milestoneId: string, approve: boolean) => void;
   amountOf?: (milestoneId: string) => number;
+  paysOnApproval?: (milestoneId: string) => boolean;
 }) {
   return (
     <section aria-label="Các mốc bàn giao" className="space-y-3">
@@ -49,7 +52,7 @@ export default function MilestoneList({
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{m.description}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-500'}>{meta.label}</span>
+                  <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-700'}>{meta.label}</span>
                   {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
                   {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
@@ -87,7 +90,7 @@ export default function MilestoneList({
                       title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
                       onClick={() => onReview(m.id, true)}
                     >
-                      {amountOf ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}
+                      {amountOf && paysOnApproval(m.id) ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}
                     </button>
                     <button
                       type="button"

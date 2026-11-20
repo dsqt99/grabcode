@@ -7,7 +7,11 @@ import {
   SUBJECTS,
   coderTierFor,
   estimateOrder,
+  milestoneShare,
+  normalizeVnPhone,
   payoutOf,
+  releasesOnApproval,
+  REVISION_NOTE_MIN,
   type DeployRequestedEvent,
   type MilestoneEvent,
   type QaRequestedEvent,
@@ -28,7 +32,7 @@ import { ledgerTxs, orderMessages, orderRepos, orders, outbox, repoCommits, user
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
 import { dispatchEvent } from '../dispatch/events';
-import { freshBrief, isDenied, planTransition, reviewMilestone, submitMilestone, type Denied, type HandIn } from './transition';
+import { freshBrief, isDenied, planTransition, reopenForRevision, reviewMilestone, submitMilestone, type Denied, type HandIn } from './transition';
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orders.$inferSelect;
@@ -56,11 +60,11 @@ export async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
 }
 
 /**
- * SYSTEM edge DRAFT -> FUNDED once the escrow holds the full price; dispatch then sends the first wave.
- * `row` must be locked FOR UPDATE by the caller (same tx as the deposit).
+ * SYSTEM edge DRAFT -> FUNDED once an admin quoted the price and the escrow holds it in full; dispatch then sends the first wave.
+ * A transfer before the quote stays in escrow until the quote. `row` must be locked FOR UPDATE by the caller (same tx as the deposit).
  */
 export async function fundIfCovered(tx: Tx, row: Row) {
-  if (row.status !== 'DRAFT' || (await balanceOf(tx, escrowOf(row.id))) < row.priceVnd) return;
+  if (row.status !== 'DRAFT' || !row.priceQuotedAt || (await balanceOf(tx, escrowOf(row.id))) < row.priceVnd) return;
   const [next] = await tx.update(orders).set({ status: 'FUNDED', fundedAt: sql`now()`, updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
   await emit(tx, next, 'DRAFT');
   await dispatchEvent(tx, SUBJECTS.DISPATCH_REQUESTED, { orderId: row.id, wave: 0, coderUserIds: [] });
@@ -82,6 +86,9 @@ async function releaseMilestone(tx: Tx, row: Row, index: number): Promise<number
   await postTx(tx, txId, 'RELEASE', row.id, entries);
   return amount;
 }
+
+/** Milestone actions need an assigned coder (transition.ts denies them otherwise). */
+const partiesOf = (row: Row) => ({ customerUserId: row.customerUserId, coderUserId: row.coderUserId! });
 
 async function emitMilestone(tx: Tx, type: MilestoneEvent['type'], data: MilestoneEvent['data']) {
   const event: MilestoneEvent = { event_id: randomUUID(), type, occurred_at: new Date().toISOString(), data };
@@ -145,15 +152,21 @@ export class OrdersService {
 
   async create(user: UserRow, input: z.output<typeof OrderCreateSchema>): Promise<OrderDto> {
     if (!user.roles.includes('CUSTOMER')) throw new ForbiddenException({ message: 'Missing CUSTOMER role' });
-    const est = estimateOrder(input.tier, input.prompt, input.templateId);
+    // P0-5: ops must be able to call / Zalo the customer, so the first order asks for a Vietnamese mobile number.
+    const phone = input.phone ?? (user.phone && normalizeVnPhone(user.phone));
+    if (!phone) throw new BadRequestException({ message: 'A Vietnamese mobile number is required', issues: [{ path: ['phone'], message: 'Required' }] });
+    // "Giá từ" of the menu item; an admin quotes the real price before the customer can pay (Q3).
+    const est = estimateOrder(input.menuItem);
     // The customer only reviewed the plan: progress always starts from scratch, milestone ids come from the server.
     const brief = freshBrief(input.brief);
     const id = await this.db.transaction(async (tx) => {
+      if (phone !== user.phone) await tx.update(users).set({ phone, updatedAt: sql`now()` }).where(eq(users.id, user.id));
       const [row] = await tx
         .insert(orders)
         .values({
           customerUserId: user.id,
           tier: input.tier,
+          menuItem: input.menuItem,
           title: input.brief.title.replace(/^Đặc tả kỹ thuật:\s*/, ''),
           prompt: input.prompt,
           templateId: input.templateId ?? null,
@@ -246,6 +259,8 @@ export class OrdersService {
   }
 
   async transition(user: UserRow, id: string, to: OrderStatus, reason?: string): Promise<OrderDto> {
+    // Same rule as OrderTransitionSchema: a revision request must say what to change (the coder reads it).
+    if (to === 'IN_PROGRESS' && (reason ?? '').trim().length < REVISION_NOTE_MIN) throw new BadRequestException({ message: `Describe the changes (at least ${REVISION_NOTE_MIN} characters)` });
     await this.db.transaction(async (tx) => {
       // Row lock: concurrent transitions (and offer accepts) on one order serialize here.
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
@@ -253,8 +268,10 @@ export class OrdersService {
       const plan = planTransition(row, user, to);
       if (isDenied(plan)) fail(plan);
       const { coderUserId } = plan as { coderUserId: string | null };
+      // Revision after delivery: the coder resubmits the last milestone with the customer's note.
+      const brief = row.status === 'DELIVERED' && to === 'IN_PROGRESS' ? reopenForRevision(row.brief, reason!.trim()) : null;
       if (to === 'ACCEPTED') {
-        // Pays whatever milestone shares are still held (all of them for orders delivered before S4).
+        // Pays every milestone share still held: the last one always (Q2), all of them for orders delivered before S4.
         for (let i = 0; i < row.brief.milestones.length; i++) await releaseMilestone(tx, row, i);
         await requestHandover(tx, row);
       }
@@ -262,7 +279,14 @@ export class OrdersService {
       const sandbox = to === 'DELIVERED' ? await requestSandbox(tx, row) : null;
       const [next] = await tx
         .update(orders)
-        .set({ status: to, coderUserId, ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}), ...(sandbox ? { sandbox } : {}), updatedAt: sql`now()` })
+        .set({
+          status: to,
+          coderUserId,
+          ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}),
+          ...(brief ? { brief } : {}),
+          ...(sandbox ? { sandbox } : {}),
+          updatedAt: sql`now()`,
+        })
         .where(eq(orders.id, id))
         .returning();
       await emit(tx, next, row.status);
@@ -302,12 +326,12 @@ export class OrdersService {
         });
       }
       await tx.update(orders).set({ brief: brief as Row['brief'], updatedAt: sql`now()` }).where(eq(orders.id, id));
-      await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0 });
+      await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { ...partiesOf(row), orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0, payoutVnd: 0 });
     });
     return (await this.load(eq(orders.id, id)))[0];
   }
 
-  /** approve: COMPLETED + release that milestone's escrow share; reject: back to IN_PROGRESS with the note. */
+  /** approve: COMPLETED + release that milestone's escrow share (not the last one: held until ACCEPTED); reject: back to IN_PROGRESS with the note. */
   async reviewMilestone(user: UserRow, id: string, milestoneId: string, approve: boolean, note: string | null): Promise<OrderDto> {
     await this.db.transaction(async (tx) => {
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
@@ -315,14 +339,18 @@ export class OrdersService {
       const r = reviewMilestone(row, user, milestoneId, approve, note, new Date().toISOString());
       if (isDenied(r)) fail(r);
       const { brief, index } = r as { brief: Row['brief']; index: number };
-      const releasedVnd = approve ? await releaseMilestone(tx, row, index) : 0;
+      const releasedVnd = approve && releasesOnApproval(index, row.brief.milestones.length) ? await releaseMilestone(tx, row, index) : 0;
+      // Same split releaseEntries books: the coder's share of what left escrow.
+      const payoutVnd = releasedVnd ? milestoneShare(row.payoutVnd, row.brief.milestones.map((m) => m.weightPercent), index) : 0;
       await tx.update(orders).set({ brief, updatedAt: sql`now()` }).where(eq(orders.id, id));
       await emitMilestone(tx, approve ? SUBJECTS.MILESTONE_APPROVED : SUBJECTS.MILESTONE_REJECTED, {
+        ...partiesOf(row),
         orderId: id,
         milestoneId,
         commitHash: row.brief.milestones[index].commitHash ?? null,
         note,
         releasedVnd,
+        payoutVnd,
       });
     });
     return (await this.load(eq(orders.id, id)))[0];
@@ -365,12 +393,14 @@ export class OrdersService {
       id: o.id,
       status: o.status,
       tier: o.tier,
+      menuItem: o.menuItem as OrderDto['menuItem'],
       title: o.title,
       prompt: o.prompt,
       templateId: o.templateId,
       framework: o.framework,
       brief: o.brief,
       priceVnd: o.priceVnd,
+      priceQuotedAt: o.priceQuotedAt?.toISOString() ?? null,
       disputeReason: o.disputeReason,
       sandbox: o.sandbox,
       payoutVnd: o.payoutVnd,

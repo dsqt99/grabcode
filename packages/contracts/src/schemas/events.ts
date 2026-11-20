@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>', 'chat.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>', 'chat.>', 'payment.>', 'payout.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -36,6 +36,8 @@ export const SUBJECTS = {
   DEPLOY_FAILED: 'deploy.failed',
   DEPLOY_EXPIRED: 'deploy.expired',
   CHAT_POSTED: 'chat.posted',
+  PAYMENT_REPORTED: 'payment.reported',
+  PAYOUT_REQUESTED: 'payout.requested',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -199,7 +201,27 @@ export const ChatPostedEventSchema = envelope(
 );
 export type ChatPostedEvent = z.infer<typeof ChatPostedEventSchema>;
 
-/** submitted: coder handed in a milestone. approved: customer accepted it, releasedVnd left escrow. rejected: revision asked (note). */
+/**
+ * The customer pressed "Tôi đã chuyển khoản" on a DRAFT order (once per order). Nothing is booked: an admin still checks the
+ * bank and confirms the payment. Consumed by the admin alert channel (P0-4).
+ */
+export const PaymentReportedEventSchema = envelope(
+  SUBJECTS.PAYMENT_REPORTED,
+  z.object({
+    orderId: z.string(),
+    customerUserId: z.string().uuid(),
+    /** Still to transfer when reported. */
+    dueVnd: z.number().int().nonnegative(),
+    /** Transfer content the admin looks for in the bank app (GC1006). */
+    content: z.string(),
+  }),
+);
+export type PaymentReportedEvent = z.infer<typeof PaymentReportedEventSchema>;
+
+/**
+ * submitted: coder handed in a milestone (notifier tells the customer to review it). approved: customer accepted it, releasedVnd
+ * left escrow and payoutVnd of it went to the coder's wallet. rejected: revision asked (note). notifier tells the coder about both.
+ */
 export const MilestoneEventSchema = z.object({
   event_id: z.string(),
   type: z.enum([SUBJECTS.MILESTONE_SUBMITTED, SUBJECTS.MILESTONE_APPROVED, SUBJECTS.MILESTONE_REJECTED]),
@@ -207,10 +229,14 @@ export const MilestoneEventSchema = z.object({
   data: z.object({
     orderId: z.string(),
     milestoneId: z.string(),
+    customerUserId: z.string().uuid(),
+    coderUserId: z.string().uuid(),
     commitHash: z.string().nullable(),
     note: z.string().nullable(),
     /** 0 unless approved. */
     releasedVnd: z.number().int().nonnegative(),
+    /** Coder's share of releasedVnd credited to the wallet; 0 unless approved. */
+    payoutVnd: z.number().int().nonnegative(),
   }),
 });
 export type MilestoneEvent = z.infer<typeof MilestoneEventSchema>;
@@ -255,3 +281,10 @@ export type DeployRequestedEvent = z.infer<typeof DeployRequestedEventSchema>;
 export type DeployReadyEvent = z.infer<typeof DeployReadyEventSchema>;
 export type DeployFailedEvent = z.infer<typeof DeployFailedEventSchema>;
 export type DeployExpiredEvent = z.infer<typeof DeployExpiredEventSchema>;
+
+/** A coder asked to withdraw their wallet (POST /v1/me/payouts): an admin transfers the money and decides the request. */
+export const PayoutRequestedEventSchema = envelope(
+  SUBJECTS.PAYOUT_REQUESTED,
+  z.object({ payoutId: z.string().uuid(), coderUserId: z.string().uuid(), amountVnd: z.number().int().positive() }),
+);
+export type PayoutRequestedEvent = z.infer<typeof PayoutRequestedEventSchema>;

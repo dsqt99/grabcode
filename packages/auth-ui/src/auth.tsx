@@ -18,7 +18,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type AuthStatus = 'disabled' | 'loading' | 'anon' | 'authed';
 interface Ctx {
-  /** 'disabled' = no API configured: POC mock mode, no login required. */
+  /** 'disabled' = no API configured: local mock mode (dev only), no login required. */
   status: AuthStatus;
   me: Me | null;
   providers: AuthProviders;

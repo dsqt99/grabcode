@@ -1,27 +1,26 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { SAMPLE_PROMPTS, SEED_TEMPLATES, type OrderTier } from '@grabcode/contracts';
+import { useState } from 'react';
+import { SAMPLE_PROMPTS, SEED_TEMPLATES } from '@grabcode/contracts';
 import { useCurrency } from '../lib/currency';
-import { FRAMEWORKS, TIERS, estimate, getTier } from '../lib/pricing';
+import { FRAMEWORKS, MENU, daysLabel, getMenuItem, type MenuItemCode } from '../lib/pricing';
 
+/** Home order box: pick a menu item (giá từ + days), describe the job; GrabCode quotes the final price before payment. */
 export default function InstantDispatch() {
   const router = useRouter();
   const { money } = useCurrency();
-  const [tier, setTier] = useState<OrderTier>('EXPRESS');
+  const [code, setCode] = useState<MenuItemCode>(MENU[0].code);
   const [prompt, setPrompt] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [framework, setFramework] = useState(FRAMEWORKS[0]);
 
-  const cfg = getTier(tier);
-  const effectiveTemplate = tier === 'TEMPLATE' && !templateId ? SEED_TEMPLATES[0].id : templateId;
-  const est = useMemo(() => estimate(tier, prompt, effectiveTemplate), [tier, prompt, effectiveTemplate]);
-  const canSubmit = prompt.trim().length >= 10 || tier === 'TEMPLATE';
+  const item = getMenuItem(code);
+  const canSubmit = prompt.trim().length >= 10;
 
   const submit = () => {
-    const q = new URLSearchParams({ prompt: prompt.trim(), tier, framework });
-    if (effectiveTemplate) q.set('template', effectiveTemplate);
+    const q = new URLSearchParams({ prompt: prompt.trim(), item: code, framework });
+    if (templateId) q.set('template', templateId);
     router.push(`/order/new?${q.toString()}`);
   };
 
@@ -29,42 +28,27 @@ export default function InstantDispatch() {
     <section id="dispatch" aria-labelledby="dispatch-title" className="rounded-xl border border-slate-200 bg-white p-4 shadow-l3 sm:p-6">
       <h2 id="dispatch-title" className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
         <span className="material-symbols-outlined text-emerald" aria-hidden>rocket_launch</span>
-        Instant Dispatch
+        Bạn cần làm gì?
       </h2>
 
-      <div role="tablist" aria-label="Chọn tốc độ" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {TIERS.map((t) => {
-          const active = t.id === tier;
-          return (
-            <button
-              key={t.id}
-              role="tab"
-              type="button"
-              aria-selected={active}
-              onClick={() => setTier(t.id)}
-              className={`rounded-lg border px-3 py-2.5 text-left transition active:scale-[0.97] ${
-                active ? 'border-emerald bg-emerald-mint shadow-l2' : 'border-slate-200 bg-white hover:border-emerald/40'
-              }`}
-            >
-              <span className="flex items-center gap-1 font-display text-sm font-bold text-ink">
-                <span className={`material-symbols-outlined !text-[18px] ${active ? 'text-emerald' : 'text-slate-400'}`} aria-hidden>{t.icon}</span>
-                {t.label}
-              </span>
-              <span className="text-xs text-slate-500">{t.id === 'TEMPLATE' ? 'Từ ~2 giờ' : `~${t.hours} giờ`}</span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="mb-3 text-sm text-slate-500">{cfg.blurb}</p>
+      <label htmlFor="item" className="mb-1 block font-display text-sm font-semibold text-ink">Loại việc</label>
+      <select id="item" value={code} onChange={(e) => setCode(e.target.value as MenuItemCode)} className="w-full p-2.5 !text-base">
+        {MENU.map((m) => (
+          <option key={m.code} value={m.code}>
+            {m.name} · từ {money(m.fromPriceVnd)}
+          </option>
+        ))}
+      </select>
+      <p className="mb-4 mt-2 text-sm text-slate-500">{item.scope}</p>
 
-      <label htmlFor="idea" className="mb-1 block font-display text-sm font-semibold text-ink">Ý tưởng của bạn</label>
+      <label htmlFor="idea" className="mb-1 block font-display text-sm font-semibold text-ink">Mô tả việc cần làm</label>
       <textarea
         id="idea"
         rows={4}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Mô tả POC bạn cần, ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
-        className="w-full resize-none p-3"
+        placeholder="Ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
+        className="w-full resize-none p-3 !text-base"
       />
       <div className="mt-2 flex flex-wrap gap-2" aria-label="Gợi ý nhanh">
         {SAMPLE_PROMPTS.map((p) => (
@@ -79,7 +63,7 @@ export default function InstantDispatch() {
         <div>
           <label htmlFor="tpl" className="mb-1 block font-display text-sm font-semibold text-ink">Template xuất phát</label>
           <select id="tpl" value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-full p-2.5">
-            <option value="">{tier === 'TEMPLATE' ? 'Chọn template...' : 'Không dùng template'}</option>
+            <option value="">Không dùng template</option>
             {SEED_TEMPLATES.map((t) => (
               <option key={t.id} value={t.id}>{t.title}</option>
             ))}
@@ -98,20 +82,22 @@ export default function InstantDispatch() {
       <div className="mt-5 flex flex-col gap-4 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between" aria-live="polite">
         <dl className="flex gap-8">
           <div>
-            <dt className="text-xs font-medium text-slate-500">Báo giá tạm tính</dt>
-            <dd className="font-display text-2xl font-extrabold text-emerald-dark">{money(est.priceVnd)}</dd>
+            <dt className="text-xs font-medium text-slate-500">Giá từ</dt>
+            <dd className="font-display text-2xl font-extrabold text-emerald-dark">{money(item.fromPriceVnd)}</dd>
           </div>
           <div>
-            <dt className="text-xs font-medium text-slate-500">Dự kiến giao</dt>
-            <dd className="font-display text-2xl font-extrabold text-ink">~{est.etaHours}h</dd>
+            <dt className="text-xs font-medium text-slate-500">Thời gian</dt>
+            <dd className="font-display text-lg font-extrabold text-ink">{daysLabel(item.days)}</dd>
           </div>
         </dl>
         <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full sm:w-auto">
-          Chuẩn hóa yêu cầu bằng AI
+          Xem đặc tả & báo giá
           <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
         </button>
       </div>
-      {!canSubmit && <p className="mt-2 text-xs text-slate-500">Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.</p>}
+      <p className="mt-2 text-xs text-slate-500">
+        {canSubmit ? 'GrabCode báo giá chốt cho đơn của bạn trước khi bạn chuyển khoản.' : 'Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.'}
+      </p>
     </section>
   );
 }

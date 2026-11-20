@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { AIBriefSchema } from './brief';
+import { CoderApprovalSchema, CoderProfileDetailsSchema } from './auth';
 import { CoderTierSchema, OrderStatusSchema, RefundAccountSchema } from './order';
 import { LedgerKindSchema } from './payment';
+import { MenuItemCodeSchema } from './pricing';
 import { ChatMessageSchema } from './realtime';
 
 // Admin portal (S7). Every /v1/admin/* route needs the ADMIN role (granted in the DB, never self-service).
@@ -17,6 +19,11 @@ export const AdminCoderSchema = z.object({
   /** Effective tier: tierOverride ?? computed from accepted orders. */
   tier: CoderTierSchema,
   tierOverride: CoderTierSchema.nullable(),
+  /** New coders start PENDING (P0-8): no job board, offers, claim or accept until an admin approves them. */
+  approval: CoderApprovalSchema,
+  /** What the admin judges the application on; null until the coder saves a profile. */
+  profile: CoderProfileDetailsSchema.pick({ headline: true, bio: true, skills: true, experienceLevel: true, githubUrl: true, portfolioUrls: true }).nullable(),
+  phone: z.string().nullable(),
   /** Suspended coders get no offers. */
   suspended: z.boolean(),
   online: z.boolean(),
@@ -29,10 +36,14 @@ export type AdminCoder = z.infer<typeof AdminCoderSchema>;
 export const AdminCoderListSchema = z.object({ coders: z.array(AdminCoderSchema) });
 export type AdminCoderList = z.infer<typeof AdminCoderListSchema>;
 
-/** PATCH /v1/admin/coders/{id}. tierOverride null = back to the computed tier. */
+/** PATCH /v1/admin/coders/{id}. tierOverride null = back to the computed tier. approval: approve / reject the application. */
 export const AdminCoderPatchSchema = z
-  .object({ tierOverride: CoderTierSchema.nullable().optional(), suspended: z.boolean().optional() })
-  .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined, { message: 'Nothing to change' });
+  .object({
+    tierOverride: CoderTierSchema.nullable().optional(),
+    suspended: z.boolean().optional(),
+    approval: CoderApprovalSchema.exclude(['PENDING']).optional(),
+  })
+  .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined || b.approval !== undefined, { message: 'Nothing to change' });
 export type AdminCoderPatch = z.infer<typeof AdminCoderPatchSchema>;
 
 // ---- Orders. view=attention (default): unpaid drafts waiting for a transfer, disputes, money left in escrow,
@@ -44,7 +55,11 @@ export const AdminOrderSchema = z.object({
   id: z.string(),
   status: OrderStatusSchema,
   title: z.string(),
+  menuItem: MenuItemCodeSchema.nullable(),
   priceVnd: z.number().int(),
+  /** null: DRAFT waiting for the admin's quote (POST /v1/admin/orders/{id}/quote); the customer sees no payment QR yet. */
+  priceQuotedAt: z.string().nullable(),
+  etaHours: z.number().int(),
   /** Coder's total share fixed on the order; with priceVnd it gives the dispute split (disputeCoderShare). */
   payoutVnd: z.number().int(),
   /** Everything deposited for the order. */
@@ -55,6 +70,10 @@ export const AdminOrderSchema = z.object({
   customerName: z.string(),
   /** So the admin can reach the customer about a transfer. */
   customerEmail: z.string().nullable(),
+  /** Vietnamese mobile from the customer's profile (asked on the first order). */
+  customerPhone: z.string().nullable(),
+  /** The customer pressed "Tôi đã chuyển khoản" (DRAFT orders): check the bank app. */
+  paymentReportedAt: z.string().nullable(),
   coderName: z.string().nullable(),
   /** DRAFT -> FUNDED time; "waiting for a coder" (30 min) and auto refund (AUTO_REFUND_HOURS) count from here. */
   fundedAt: z.string().nullable(),
@@ -104,6 +123,17 @@ export const ConfirmPaymentSchema = z.object({
   reference: z.string().trim().min(3).max(100),
 });
 export type ConfirmPayment = z.infer<typeof ConfirmPaymentSchema>;
+
+/**
+ * POST /v1/admin/orders/{id}/quote (DRAFT only): the admin sets the final price and delivery days (founder decision Q3).
+ * Re-quoting is allowed while DRAFT, never below what the customer already transferred. payoutVnd follows the new price.
+ * The order is funded right away if the escrow already holds the quoted price.
+ */
+export const OrderQuoteSchema = z.object({
+  priceVnd: z.number().int().min(100_000).max(1_000_000_000).refine((v) => v % 1000 === 0, 'Round to 1,000 VND'),
+  etaDays: z.number().int().min(1).max(120),
+});
+export type OrderQuote = z.infer<typeof OrderQuoteSchema>;
 
 // POST /v1/admin/orders/{id}/refund (no body): refunds what escrow still holds. DRAFT -> CANCELLED; on a closed
 // order (ACCEPTED / RESOLVED / CANCELLED) it refunds the overpayment.

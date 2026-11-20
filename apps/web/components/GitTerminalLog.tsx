@@ -17,11 +17,11 @@ export default function GitTerminalLog({ commits, repoUrl }: { commits: CommitLo
         <span className="ml-2 font-mono text-xs text-slate-400">git log --oneline {repoUrl ? `# ${repoUrl.replace('https://', '')}` : ''}</span>
       </div>
       <div ref={ref} className="max-h-56 overflow-y-auto p-4 font-mono text-xs leading-6" role="log" aria-live="polite">
-        {commits.length === 0 && <p className="text-slate-500">$ chờ commit đầu tiên của Coder...</p>}
+        {commits.length === 0 && <p className="text-slate-400">$ chờ commit đầu tiên của freelancer...</p>}
         {commits.map((c) => (
           <p key={c.hash} className="animate-pop break-words">
             <span className="text-amber">{c.hash}</span> <span className="text-slate-100">{c.message}</span>{' '}
-            <span className="text-slate-500">
+            <span className="text-slate-400">
               ({c.milestoneId ? `${c.milestoneId}, ` : ''}{c.author}, {formatTime(c.timestamp)})
             </span>
           </p>

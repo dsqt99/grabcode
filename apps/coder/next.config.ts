@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 
 // No framing (clickjacking on approve / pay buttons), no MIME sniffing, no full URLs leaked as Referer.
 const SECURITY_HEADERS = [
@@ -18,4 +19,8 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@grabcode/contracts', '@grabcode/auth-ui'],
 };
 
-export default nextConfig;
+/** A production build without the API would ship the local mock mode (seed wallet, simulated offers): fail it. */
+export default function config(phase: string): NextConfig {
+  if (phase === PHASE_PRODUCTION_BUILD && !process.env.NEXT_PUBLIC_API_URL) throw new Error('Production build needs NEXT_PUBLIC_API_URL (see docs/DEPLOY.md).');
+  return nextConfig;
+}

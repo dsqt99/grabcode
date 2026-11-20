@@ -5,8 +5,8 @@ import type { UserRole } from '@grabcode/contracts/schemas';
 import { useAuth } from './auth';
 
 const ROLE_COPY: Record<UserRole, { title: string; text: string; icon: string }> = {
-  CUSTOMER: { title: 'Bật vai trò Khách hàng', text: 'Để đặt POC, ký quỹ và theo dõi đơn hàng.', icon: 'business_center' },
-  CODER: { title: 'Bật vai trò Coder', text: 'Để nhận cuốc đơn POC và nhận thanh toán sau mỗi mốc.', icon: 'code' },
+  CUSTOMER: { title: 'Bật vai trò Khách hàng', text: 'Để đặt làm app, thanh toán và theo dõi đơn hàng.', icon: 'business_center' },
+  CODER: { title: 'Bật vai trò Coder', text: 'Để nhận việc làm app và nhận tiền sau mỗi mốc được duyệt.', icon: 'code' },
 };
 
 /** Full-page navigation: the Coder PWA lives under /coder (another Next app behind the same origin). */

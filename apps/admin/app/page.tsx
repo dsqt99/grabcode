@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   disputeCoderShare,
+  menuItemOf,
+  payoutOf,
   type AdminCoder,
   type AdminCoderList,
   type AdminOrder,
@@ -22,6 +24,11 @@ import { ApiError, api, vnd, when } from '../lib/api';
 const TABS = { coders: 'Coder', orders: 'Đơn hàng & thanh toán', refunds: 'Chờ chuyển trả', suspense: 'Đối soát suspense', payouts: 'Rút tiền', monitor: 'Worker / Queue' } as const;
 type Tab = keyof typeof TABS;
 const TIERS: NonNullable<AdminCoder['tierOverride']>[] = ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'];
+const APPROVAL: Record<AdminCoder['approval'], ReactNode> = {
+  PENDING: <b className="text-amber-700">Chờ duyệt</b>,
+  APPROVED: 'Đã duyệt',
+  REJECTED: <b className="text-red-700">Đã từ chối</b>,
+};
 
 export default function AdminPage() {
   const [me, setMe] = useState<Me | null | 'denied'>(null);
@@ -100,16 +107,49 @@ function Table({ head, children, empty, error }: { head: string[]; children: Rea
   );
 }
 
+/** P0-8: new coders wait here (listed first) until approved; only approved coders get jobs and offers. */
 function Coders() {
   const { data, error, busy, act } = useList<AdminCoderList>('/v1/admin/coders');
   const patch = (c: AdminCoder, body: object) => act(() => api(`/v1/admin/coders/${c.id}`, 'PATCH', body));
+  const decide = (c: AdminCoder, approval: 'APPROVED' | 'REJECTED') => {
+    if (confirm(approval === 'APPROVED' ? `Duyệt ${c.name}? Freelancer này sẽ thấy bảng việc và nhận được đơn đã thanh toán.` : `Từ chối ${c.name}?`))
+      void patch(c, { approval });
+  };
   return (
-    <Table head={['Coder', 'Tier', 'Đơn xong', 'Ví', 'Trạng thái', '']} empty="Chưa có coder." error={error}>
+    <Table head={['Coder', 'Hồ sơ', 'Duyệt', 'Tier', 'Đơn xong', 'Ví', 'Trạng thái', '']} empty="Chưa có coder." error={error}>
       {(data?.coders ?? []).map((c) => (
         <tr key={c.id}>
           <td>
             {c.name}
             <div className="text-xs text-slate-500">{c.githubLogin ?? c.email}</div>
+            {c.phone && <div className="text-xs text-slate-500">{c.phone}</div>}
+          </td>
+          <td className="max-w-xs text-xs">
+            {c.profile ? (
+              <details>
+                <summary className="cursor-pointer font-semibold">{c.profile.headline || '(chưa có tiêu đề)'}</summary>
+                <p className="mt-1">{c.profile.experienceLevel} · {c.profile.skills.join(', ') || 'chưa ghi kỹ năng'}</p>
+                {c.profile.bio && <p className="mt-1 whitespace-pre-wrap">{c.profile.bio}</p>}
+                {[c.profile.githubUrl, ...c.profile.portfolioUrls].filter(Boolean).map((u) => (
+                  <a key={u} className="block break-all text-blue-700 underline" href={u!} target="_blank" rel="noopener noreferrer nofollow">
+                    {u}
+                  </a>
+                ))}
+              </details>
+            ) : (
+              <i>Chưa điền hồ sơ</i>
+            )}
+          </td>
+          <td>
+            {APPROVAL[c.approval]}
+            <div className="mt-1 flex gap-1">
+              {c.approval !== 'APPROVED' && (
+                <button className="btn" disabled={busy} onClick={() => decide(c, 'APPROVED')}>Duyệt</button>
+              )}
+              {c.approval !== 'REJECTED' && (
+                <button className="btn-alt" disabled={busy} onClick={() => decide(c, 'REJECTED')}>Từ chối</button>
+              )}
+            </div>
           </td>
           <td>
             <select
@@ -144,6 +184,7 @@ function Orders() {
   const { data, error, busy, act } = useList<AdminOrderList>(`/v1/admin/orders?view=${view}`);
   const [refund, setRefund] = useState<Record<string, string>>({});
   const [paid, setPaid] = useState<Record<string, { amount: string; ref: string }>>({});
+  const [quote, setQuote] = useState<Record<string, { price: string; days: string }>>({});
   const due = (o: AdminOrder) => Math.max(0, o.priceVnd - o.paidVnd);
   const confirmPaid = (o: AdminOrder) => {
     const p = paid[o.id] ?? { amount: '', ref: '' };
@@ -153,6 +194,17 @@ function Orders() {
     if (!p.ref.trim()) return alert('Nhập mã giao dịch ngân hàng (để tránh ghi nhận trùng).');
     if (confirm(`Xác nhận đã NHẬN ${vnd(amountVnd)} cho ${o.id} (mã GD ${p.ref})? Kiểm tra app ngân hàng trước khi bấm.`))
       void act(() => api(`/v1/admin/orders/${o.id}/confirm-payment`, 'POST', { amountVnd, reference: p.ref }));
+  };
+  // Q3: the final price + days of a DRAFT; the customer only sees the transfer QR after this.
+  const sendQuote = (o: AdminOrder) => {
+    const q = quote[o.id] ?? { price: '', days: '' };
+    const priceVnd = Number(q.price);
+    const etaDays = Number(q.days || Math.ceil(o.etaHours / 24));
+    if (!Number.isInteger(priceVnd) || priceVnd < 100_000 || priceVnd % 1000 !== 0) return alert('Nhập giá chốt (VND, tròn nghìn, từ 100.000).');
+    if (priceVnd < o.paidVnd) return alert(`Khách đã chuyển ${vnd(o.paidVnd)}: giá chốt không được thấp hơn.`);
+    if (!Number.isInteger(etaDays) || etaDays < 1 || etaDays > 120) return alert('Nhập số ngày giao (1–120).');
+    if (confirm(`Báo giá ${o.id}: ${vnd(priceVnd)}, giao trong ${etaDays} ngày (freelancer nhận ${vnd(payoutOf(priceVnd))}). Khách sẽ thấy giá này và mã QR.`))
+      void act(() => api(`/v1/admin/orders/${o.id}/quote`, 'POST', { priceVnd, etaDays }));
   };
   const [detail, setDetail] = useState<string | null>(null);
   // Refund amount is required (empty used to mean 0 = the whole escrow to the coder); the confirm states both sides.
@@ -175,7 +227,7 @@ function Orders() {
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         <button className={view === 'attention' ? 'btn' : 'btn-alt'} onClick={() => setView('attention')}>Cần xử lý</button>
         <button className={view === 'all' ? 'btn' : 'btn-alt'} onClick={() => setView('all')}>Tất cả đơn</button>
-        <span className="text-slate-500">Đơn DRAFT = chờ khách chuyển khoản. Nội dung CK đúng là mã đơn bỏ gạch (VD GC1006).</span>
+        <span className="text-slate-500">Đơn DRAFT: báo giá trước, rồi chờ khách chuyển khoản. Nội dung CK đúng là mã đơn bỏ gạch (VD GC1006).</span>
       </div>
       <Table head={['Đơn', 'Trạng thái', 'Giá / đã nạp', 'Escrow', 'Xử lý']} empty="Không có đơn cần xử lý." error={error}>
         {(data?.orders ?? []).map((o) => (
@@ -186,17 +238,22 @@ function Orders() {
               </button>{' '}
               {o.title}
               <div className="text-xs text-slate-500">
+                {menuItemOf(o.menuItem)?.name && `${menuItemOf(o.menuItem)?.name} · `}
                 {o.customerName}
                 {o.customerEmail && ` (${o.customerEmail})`}
+                {o.customerPhone && ` · ${o.customerPhone}`}
                 {o.coderName && ` → ${o.coderName}`} · tạo {when(o.createdAt)}
                 {o.fundedAt && ` · đủ tiền ${when(o.fundedAt)}`}
               </div>
               {o.disputeReason && <div className="mt-1 text-xs text-red-700">Lý do: {o.disputeReason}</div>}
+              {o.status === 'DRAFT' && o.paymentReportedAt && (
+                <div className="mt-1 text-xs font-bold text-amber-700">Khách báo đã chuyển khoản lúc {when(o.paymentReportedAt)}: kiểm tra app ngân hàng</div>
+              )}
             </td>
             <td>{o.status}</td>
             <td>
-              {vnd(o.priceVnd)}
-              <div className="text-xs text-slate-500">{vnd(o.paidVnd)}</div>
+              {o.priceQuotedAt ? vnd(o.priceVnd) : <b className="text-amber-700">Chưa báo giá</b>}
+              <div className="text-xs text-slate-500">{o.priceQuotedAt ? vnd(o.paidVnd) : `giá từ ${vnd(o.priceVnd)} · đã nạp ${vnd(o.paidVnd)}`}</div>
             </td>
             <td>{vnd(o.escrowVnd)}</td>
             <td>
@@ -220,6 +277,33 @@ function Orders() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
+                  {o.status === 'DRAFT' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="number"
+                        min={100_000}
+                        step={1000}
+                        className="w-32"
+                        aria-label={`Giá chốt cho đơn ${o.id}`}
+                        placeholder={o.priceQuotedAt ? `Giá mới (${o.priceVnd})` : `Giá chốt (từ ${o.priceVnd})`}
+                        value={quote[o.id]?.price ?? ''}
+                        onChange={(e) => setQuote({ ...quote, [o.id]: { days: quote[o.id]?.days ?? '', price: e.target.value } })}
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        max={120}
+                        className="w-24"
+                        aria-label={`Số ngày giao của đơn ${o.id}`}
+                        placeholder={`${Math.ceil(o.etaHours / 24)} ngày`}
+                        value={quote[o.id]?.days ?? ''}
+                        onChange={(e) => setQuote({ ...quote, [o.id]: { price: quote[o.id]?.price ?? '', days: e.target.value } })}
+                      />
+                      <button className={o.priceQuotedAt ? 'btn-alt' : 'btn'} disabled={busy} onClick={() => sendQuote(o)}>
+                        {o.priceQuotedAt ? 'Báo giá lại' : 'Báo giá'}
+                      </button>
+                    </div>
+                  )}
                   {o.status === 'DRAFT' && (
                     <div className="flex flex-wrap items-center gap-2">
                       <input
@@ -279,6 +363,7 @@ function OrderDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <p>
             <b>{d.order.status}</b> · giá {vnd(d.order.priceVnd)} · đã nạp {vnd(d.order.paidVnd)} · escrow {vnd(d.order.escrowVnd)} · khách {d.order.customerName}
             {d.order.customerEmail && ` (${d.order.customerEmail})`}
+            {d.order.customerPhone && ` · ${d.order.customerPhone}`}
             {d.order.coderName && ` · coder ${d.order.coderName}`}
           </p>
           {d.order.disputeReason && <p className="text-red-700">Lý do tranh chấp: {d.order.disputeReason}</p>}
