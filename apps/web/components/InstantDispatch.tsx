@@ -50,7 +50,7 @@ export default function InstantDispatch() {
                 <span className={`material-symbols-outlined !text-[18px] ${active ? 'text-emerald' : 'text-slate-400'}`} aria-hidden>{t.icon}</span>
                 {t.label}
               </span>
-              <span className="text-xs text-slate-500">{t.id === 'TEMPLATE' ? 'Từ 2 giờ' : `${t.hours} giờ`}</span>
+              <span className="text-xs text-slate-500">{t.id === 'TEMPLATE' ? 'Từ ~2 giờ' : `~${t.hours} giờ`}</span>
             </button>
           );
         })}
