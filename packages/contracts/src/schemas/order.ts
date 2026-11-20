@@ -102,6 +102,15 @@ export function milestoneShare(total: number, weights: number[], index: number) 
   return upTo(index + 1) - upTo(index);
 }
 
+/**
+ * Dispute split (S7): of what escrow still holds after `refundVnd` goes back to the customer, the coder gets the order's
+ * payout ratio (rounded to 1,000 VND, never above the rest); the platform keeps the remainder.
+ */
+export function disputeCoderShare(escrowVnd: number, refundVnd: number, priceVnd: number, payoutVnd: number) {
+  const rest = escrowVnd - refundVnd;
+  return Math.min(Math.round((rest * payoutVnd) / priceVnd / 1000) * 1000, rest);
+}
+
 export const OrderListQuerySchema = z.object({
   /** mine: customer's own + coder's assigned orders. Coders find new orders in offers (GET /v1/me/offers) or the job board (GET /v1/jobs). */
   scope: z.enum(['mine']).default('mine'),
@@ -119,6 +128,33 @@ export const SandboxSchema = z.object({
 });
 export type Sandbox = z.infer<typeof SandboxSchema>;
 
+/**
+ * Where the customer's money is, from the escrow ledger (VND). paid = everything deposited; held = still in escrow:<id>;
+ * released = left escrow for approved milestones / dispute split (coder share + platform fee); refunded = booked back
+ * to the customer (each refund is then transferred by hand, see admin refunds). paid = held + released + refunded.
+ */
+export const OrderMoneySchema = z.object({
+  paidVnd: z.number().int(),
+  heldVnd: z.number().int(),
+  releasedVnd: z.number().int(),
+  refundedVnd: z.number().int(),
+});
+export type OrderMoney = z.infer<typeof OrderMoneySchema>;
+
+/**
+ * GET / PUT /v1/orders/{id}/refund-account (customer only): the bank account a refund of this order is transferred to.
+ * Shown to admins on the pending refund; never to the coder.
+ */
+export const RefundAccountSchema = z.object({
+  bankName: z.string().trim().min(2).max(100),
+  accountNumber: z.string().trim().regex(/^[0-9 ]{6,25}$/, 'Account number: digits only'),
+  /** Holder name as printed by the bank (usually upper case, no accents). */
+  accountName: z.string().trim().min(2).max(100),
+});
+export type RefundAccount = z.infer<typeof RefundAccountSchema>;
+export const RefundAccountResponseSchema = z.object({ refundAccount: RefundAccountSchema.nullable() });
+export type RefundAccountResponse = z.infer<typeof RefundAccountResponseSchema>;
+
 export const OrderSchema = z.object({
   id: z.string(),
   status: OrderStatusSchema,
@@ -131,6 +167,9 @@ export const OrderSchema = z.object({
   priceVnd: z.number().int(),
   /** What the coder receives in total, fixed when the order is created (CODER_PAYOUT_RATE at that time). */
   payoutVnd: z.number().int(),
+  money: OrderMoneySchema,
+  /** When the escrow first held the full price (DRAFT -> FUNDED); the 30 min / AUTO_REFUND_HOURS clocks start here. */
+  fundedAt: z.string().nullable(),
   etaHours: z.number().int(),
   /** Set when the customer disputes; read by admins (S7). */
   disputeReason: z.string().nullable(),
