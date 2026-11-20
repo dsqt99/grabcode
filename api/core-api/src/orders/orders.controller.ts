@@ -65,8 +65,8 @@ export class OrdersController {
   @HttpCode(200)
   async submitMilestone(@Req() req: Request, @Param('id') id: string, @Param('milestoneId') mid: string, @Body() body: unknown): Promise<OrderDto> {
     const user = await this.user(req);
-    const { commitHash, note } = parse(MilestoneSubmitSchema, body ?? {});
-    return this.orders.submitMilestone(user, id, mid, commitHash ?? null, note || null);
+    const { commitHash, deliveryUrl, note } = parse(MilestoneSubmitSchema, body ?? {});
+    return this.orders.submitMilestone(user, id, mid, { commitHash: commitHash ?? null, deliveryUrl: deliveryUrl ?? null, note: note || null });
   }
 
   @Post(':id/milestones/:milestoneId/approve')
