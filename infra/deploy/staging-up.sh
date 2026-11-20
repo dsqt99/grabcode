@@ -146,7 +146,9 @@ done
 [ "${ready:-}" = "1" ] || { dc logs --tail 40 core-api migrate; die "core-api did not become healthy in 3 minutes."; }
 
 echo "== Loading demo data (skipped when it already exists) =="
-dc run --rm seed
+# --no-deps: core-api is already up and healthy. Without it `run` re-resolves depends_on and may recreate
+# migrate + core-api, so the seed hits a restarting API (ECONNREFUSED).
+dc run --rm --no-deps seed
 
 DOM="$(get DOMAIN)"
 if [ "$SHARED" = 1 ]; then
