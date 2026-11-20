@@ -134,7 +134,7 @@ export const getMilestones = (order: Order): Milestone[] =>
   order.brief.milestones && order.brief.milestones.length > 0 ? order.brief.milestones : GENERIC_MILESTONES;
 
 export const repoUrlOf = (order: Order): string =>
-  order.repoUrl || `https://github.com/grabcode-sandbox/gc-${order.id.toLowerCase().replace(/^gc-/, '')}-poc`;
+  order.repoUrl || `https://github.com/fastdemo-sandbox/gc-${order.id.toLowerCase().replace(/^gc-/, '')}-poc`;
 
 const randomHex7 = () =>
   Array.from({ length: 7 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
@@ -347,11 +347,11 @@ export function useCoder() {
         const s = stateRef.current;
         if (s.seenOrderIds.includes(order.id) || offerRef.current?.order.id === order.id) return; // duplicate
         if (!s.isOnline) {
-          toast(`Bạn đang Offline — bỏ lỡ cuốc ${order.id}. Bật Online để nhận đơn.`, 'warn');
+          toast(`Bạn đang tắt nhận đơn — đã bỏ lỡ đơn ${order.id}. Bật nhận đơn để không bỏ lỡ.`, 'warn');
           return;
         }
         if ((s.activeOrder && !s.completed) || offerRef.current) {
-          toast(`Đang có cuốc đơn — bỏ qua ${order.id}.`, 'info');
+          toast(`Bạn đang làm một đơn khác — bỏ qua ${order.id}.`, 'info');
           return;
         }
         setPending({
@@ -524,7 +524,7 @@ export function useCoder() {
       type: 'ORDER_DELIVERED',
       payload: {
         orderId: order.id,
-        demoUrl: `https://grabcode-${order.id.toLowerCase()}.vercel.app`,
+        demoUrl: `https://fastdemo-${order.id.toLowerCase()}.vercel.app`,
         repoUrl: repoUrlOf(order),
       },
       timestamp: nowIso(),

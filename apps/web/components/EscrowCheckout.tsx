@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { useCurrency } from '../lib/currency';
 import { daysLabel, formatVnd } from '../lib/pricing';
 import StickyActionBar from './StickyActionBar';
+import { BRAND } from '@grabcode/contracts';
+
 
 interface Props {
   itemName: string;
@@ -18,7 +20,7 @@ interface Props {
   children?: ReactNode;
 }
 
-/** Order summary before creating the DRAFT: menu "giá từ"; the final price comes from GrabCode's quote (HON-10 Q3). */
+/** Order summary before creating the DRAFT: menu "giá từ"; the final price comes from FastDemo's quote (HON-10 Q3). */
 export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled, hint, submitting, onConfirm, children }: Props) {
   // Paid in VND (bank transfer); USD is only a reference.
   const { usd } = useCurrency();
@@ -41,12 +43,12 @@ export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled,
 
       <div className="flex gap-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
         <span className="material-symbols-outlined text-slate-500" aria-hidden>request_quote</span>
-        <p>GrabCode đọc yêu cầu và báo giá chốt cho đơn. Bạn chỉ chuyển khoản sau khi thấy giá chốt.</p>
+        <p>{BRAND.name} đọc yêu cầu và báo giá chốt cho đơn. Bạn chỉ chuyển khoản sau khi thấy giá chốt.</p>
       </div>
 
       <div className="flex gap-3 rounded-lg bg-emerald-mint p-3 text-sm text-emerald-dark">
         <span className="material-symbols-outlined" aria-hidden>shield</span>
-        <p>Tiền được GrabCode giữ. Freelancer nhận tiền khi bạn duyệt từng mốc; mốc cuối chỉ được trả khi bạn nghiệm thu cả đơn.</p>
+        <p>Tiền được {BRAND.name} giữ. Freelancer nhận tiền khi bạn duyệt từng mốc; mốc cuối chỉ được trả khi bạn nghiệm thu cả đơn.</p>
       </div>
 
       {children}

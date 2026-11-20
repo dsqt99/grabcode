@@ -4,8 +4,8 @@ import { formatVnd } from '../lib/pricing';
 
 const META = {
   COMPLETED: { icon: 'check_circle', cls: 'text-emerald', label: 'Hoàn thành' },
-  SUBMITTED: { icon: 'rate_review', cls: 'text-amber', label: 'Chờ bạn duyệt' },
-  IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber', label: 'Đang làm' },
+  SUBMITTED: { icon: 'rate_review', cls: 'text-amber-text', label: 'Chờ bạn duyệt' },
+  IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber-text', label: 'Đang làm' },
   PENDING: { icon: 'radio_button_unchecked', cls: 'text-slate-300', label: 'Chờ' },
 } as const;
 
@@ -55,7 +55,7 @@ export default function MilestoneList({
                 <p className="mt-1 text-xs text-slate-500">{m.description}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-700'}>{meta.label}</span>
-                  {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
+                  {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-inverse-primary">{m.commitHash}</code>}
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
                   {m.completedAt && <span className="text-xs text-slate-600">{formatTime(m.completedAt)}</span>}
                 </div>
@@ -67,7 +67,7 @@ export default function MilestoneList({
                 )}
                 {m.qa && m.qa.checks.length > 0 && (
                   <details className="mt-2 text-xs text-slate-600">
-                    <summary className="min-h-[44px] cursor-pointer py-3">Chi tiết kiểm tra tự động</summary>
+                    <summary className="inline-flex min-h-[44px] cursor-pointer items-center">Chi tiết kiểm tra tự động</summary>
                     <ul className="mt-1 space-y-1">
                       {m.qa.checks.map((c) => (
                         <li key={c.name}>
@@ -84,7 +84,7 @@ export default function MilestoneList({
                   <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Freelancer ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
                 )}
                 {m.status === 'SUBMITTED' && onReview && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
                       className="btn-primary !min-h-[44px] flex-1 !py-1 text-sm"

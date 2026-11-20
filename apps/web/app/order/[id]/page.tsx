@@ -25,6 +25,8 @@ import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../l
 import { progressPercent } from '../../../lib/orderView';
 import { etaLabel, formatVnd, menuItemOf } from '../../../lib/pricing';
 import { hasSupport } from '../../../lib/support';
+import { BRAND } from '@grabcode/contracts';
+
 
 const POLL_MS = 3000;
 const LONG_WAIT_MS = 30 * 60_000;
@@ -39,7 +41,7 @@ function LongWaitNote({ since }: { since: string }) {
   if (now - new Date(since).getTime() < LONG_WAIT_MS) return null;
   return (
     <p className="mt-2 text-sm font-semibold text-amber-700">
-      Đã hơn 30 phút chưa có freelancer nhận. Vận hành đã được báo; không ai nhận trong 24 giờ thì đơn tự huỷ và GrabCode hoàn tiền.
+      Đã hơn 30 phút chưa có freelancer nhận. Vận hành đã được báo; không ai nhận trong 24 giờ thì đơn tự huỷ và {BRAND.name} hoàn tiền.
     </p>
   );
 }
@@ -522,7 +524,7 @@ export default function OrderPage() {
                 </button>
               )}
               {order.repoUrl && delivered && (
-                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
+                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center justify-center text-sm font-semibold text-emerald-dark hover:underline">
                   Xem repo bàn giao
                 </a>
               )}
@@ -583,7 +585,7 @@ export default function OrderPage() {
                 <span>Tiền mốc cuối</span>
                 <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
               </p>
-              <p className="mt-1 text-slate-700">Duyệt mốc cuối chưa trả tiền: khoản này được GrabCode giữ tới khi bạn nghiệm thu cả đơn.</p>
+              <p className="mt-1 text-slate-700">Duyệt mốc cuối chưa trả tiền: khoản này được {BRAND.name} giữ tới khi bạn nghiệm thu cả đơn.</p>
             </div>
           )}
           {tick('Tôi đã mở link và kiểm tra mốc này')}
@@ -655,8 +657,8 @@ export default function OrderPage() {
           {noteField('Lý do mở tranh chấp')}
           <p className="rounded-md bg-red-50 p-3 text-red-800">
             {heldVnd > 0
-              ? `Tiền còn giữ (${formatVnd(heldVnd)}) sẽ bị tạm khoá cho tới khi GrabCode xử lý.`
-              : 'Hiện không còn tiền giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer. GrabCode vẫn xem xét tranh chấp.'}
+              ? `Tiền còn giữ (${formatVnd(heldVnd)}) sẽ bị tạm khoá cho tới khi ${BRAND.name} xử lý.`
+              : `Hiện không còn tiền giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer. ${BRAND.name} vẫn xem xét tranh chấp.`}
           </p>
         </ConfirmSheet>
       )}

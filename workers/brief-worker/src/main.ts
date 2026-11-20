@@ -14,6 +14,7 @@ import {
   type BriefRequestedEvent,
 } from '@grabcode/contracts/schemas';
 import { assembleBrief, BriefDraftSchema } from './draft';
+import { BRAND } from '@grabcode/contracts';
 
 const BASE_URL = (process.env.LLM_BASE_URL ?? 'https://vllm.anm05.com/v1').replace(/\/$/, '');
 const MODEL = process.env.LLM_MODEL ?? 'qwen-3.6-35b-a3b';
@@ -21,7 +22,7 @@ const API_KEY = process.env.LLM_API_KEY ?? '';
 const DURABLE = 'brief-worker';
 const MAX_DELIVER = 5;
 
-const SYSTEM = `Bạn là Tech Lead của GrabCode, sàn đặt code bản POC (proof of concept) giao trong vài giờ đến vài ngày.
+const SYSTEM = `Bạn là Tech Lead của ${BRAND.name}, sàn đặt code bản POC (proof of concept) giao trong vài giờ đến vài ngày.
 Đọc yêu cầu của khách và viết đặc tả kỹ thuật ngắn gọn bằng tiếng Việt cho coder.
 Phạm vi phải vừa sức một bản demo chạy được: ưu tiên luồng nghiệp vụ chính, mock dữ liệu và tích hợp bên ngoài,
 đẩy thanh toán thật, hạ tầng production, app native vào "ngoài phạm vi".

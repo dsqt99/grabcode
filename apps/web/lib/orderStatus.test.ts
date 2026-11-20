@@ -25,10 +25,10 @@ test('Màn B status table: chip, money line, step and actions per server status'
   const unpaid = { paidVnd: 0, heldVnd: 0, releasedVnd: 0, refundedVnd: 0 };
   const half = { paidVnd: 2_900_000, heldVnd: 2_320_000, releasedVnd: 580_000, refundedVnd: 0 };
   assert.deepEqual(row(input('DRAFT', { money: unpaid })), ['Chờ thanh toán', 'warn', 0, 'Chưa thanh toán', '']);
-  assert.deepEqual(row(input('FUNDED')), ['Đang tìm freelancer', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại GrabCode', '']);
+  assert.deepEqual(row(input('FUNDED')), ['Đang tìm coder', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại FastDemo', '']);
   assert.deepEqual(row(input('DISPATCHED')), row(input('FUNDED')));
   assert.deepEqual(row(input('IN_PROGRESS', { money: half, milestones: ms('COMPLETED', 'IN_PROGRESS', 'PENDING') })), [
-    'Đang làm',
+    'Đang nấu demo',
     'brand',
     2,
     'Đã giải ngân 580.000 đ / tổng 2.900.000 đ · đang giữ 2.320.000 đ',
@@ -37,7 +37,7 @@ test('Màn B status table: chip, money line, step and actions per server status'
   assert.deepEqual(row(input('IN_PROGRESS', { money: half, milestones: ms('COMPLETED', 'SUBMITTED', 'PENDING') })).slice(0, 2), ['Chờ bạn duyệt mốc', 'warn']);
   // Q2: the last milestone (30%) is still held when delivered.
   assert.deepEqual(row(input('DELIVERED', { money: { ...half, heldVnd: 870_000, releasedVnd: 2_030_000 } })), [
-    'Chờ bạn nghiệm thu',
+    'Demo đã giao, chờ bạn nhận',
     'warn',
     3,
     'Đã giải ngân 2.030.000 đ / tổng 2.900.000 đ · đang giữ 870.000 đ',
@@ -99,7 +99,7 @@ test('Màn D: what the customer must do and which tab each order lands in', () =
   assert.deepEqual(todo('DRAFT'), ['Chờ bạn chuyển khoản', 'action']);
   assert.deepEqual(todo('DRAFT', undefined, false), [null, 'active'], 'waiting for the quote is not on the customer');
   assert.deepEqual(todo('IN_PROGRESS', ms('COMPLETED', 'SUBMITTED', 'PENDING')), ['Chờ bạn duyệt M2', 'action']);
-  assert.deepEqual(todo('DELIVERED', ms('COMPLETED', 'COMPLETED', 'COMPLETED')), ['Chờ bạn nghiệm thu', 'action']);
+  assert.deepEqual(todo('DELIVERED', ms('COMPLETED', 'COMPLETED', 'COMPLETED')), ['Demo đã giao, chờ bạn nhận', 'action']);
   assert.deepEqual(todo('FUNDED'), [null, 'active']);
   assert.deepEqual(todo('DISPATCHED'), [null, 'active']);
   assert.deepEqual(todo('IN_PROGRESS', ms('COMPLETED', 'IN_PROGRESS', 'PENDING')), [null, 'active']);
@@ -110,7 +110,7 @@ test('Màn D: what the customer must do and which tab each order lands in', () =
 });
 
 test('P0-11: waiting for a freelancer says the money arrived and the 24h refund', () => {
-  assert.match(statusView(input('FUNDED')).description, /^Đã nhận tiền, đang chờ freelancer nhận đơn\. Không ai nhận trong 24 giờ thì GrabCode hoàn tiền\.$/);
+  assert.match(statusView(input('FUNDED')).description, /^Đã nhận tiền, đang chờ freelancer nhận đơn\. Không ai nhận trong 24 giờ thì FastDemo hoàn tiền\.$/);
 });
 
 test('P0-7: an unquoted DRAFT waits for the quote (no payment step text), a quoted one asks for the transfer', () => {

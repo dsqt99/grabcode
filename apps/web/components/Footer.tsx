@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { hasSupport } from '../lib/support';
 import SupportContact from './SupportContact';
+import { BRAND } from '@grabcode/contracts';
+
 
 export default function Footer() {
   return (
@@ -14,7 +16,8 @@ export default function Footer() {
           Hỗ trợ: <SupportContact />
         </p>
       )}
-      <p className="mt-3">© 2026 GrabCode · Hoàng Hải Tech. Sàn kết nối chủ shop với freelancer vibe code.</p>
+      <p className="mt-3">© 2026 {BRAND.name} · Hoàng Hải Tech. Sàn kết nối chủ shop với freelancer vibe code.</p>
+      <p className="mt-1 text-balance">{BRAND.tagline}</p>
     </footer>
   );
 }

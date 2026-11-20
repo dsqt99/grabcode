@@ -4,13 +4,15 @@ import './globals.css';
 import { RequireAuth } from '@grabcode/auth-ui';
 import { AuthProvider } from '@grabcode/auth-ui';
 import ApprovalGate from '../components/ApprovalGate';
+import { BRAND } from '@grabcode/contracts';
+
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'GrabCode Coder — Nhận cuốc đơn',
-  description: 'Ứng dụng cho freelancer GrabCode: nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng.',
+  title: `${BRAND.name} Coder — Nhận đơn`,
+  description: `Ứng dụng cho freelancer ${BRAND.name}: nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng.`,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

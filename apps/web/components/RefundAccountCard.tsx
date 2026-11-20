@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { RefundAccountSchema, type RefundAccount } from '@grabcode/contracts/schemas';
 import { getRefundAccount, putRefundAccount } from '../lib/api';
+import { BRAND } from '@grabcode/contracts';
+
 
 const EMPTY: RefundAccount = { bankName: '', accountNumber: '', accountName: '' };
 
-/** Where GrabCode transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund. */
+/** Where FastDemo transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund. */
 export default function RefundAccountCard({ orderId }: { orderId: string }) {
   const [saved, setSaved] = useState<RefundAccount | null | undefined>(undefined);
   const [form, setForm] = useState<RefundAccount>(EMPTY);
@@ -46,7 +48,7 @@ export default function RefundAccountCard({ orderId }: { orderId: string }) {
     <label className="block text-sm">
       <span className="font-semibold text-slate-700">{label}</span>
       <input
-        className="mt-1 w-full px-3 py-2 !text-base"
+        className="mt-1 min-h-[44px] w-full px-3 py-2 !text-base"
         value={form[key]}
         disabled={busy}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
@@ -58,7 +60,7 @@ export default function RefundAccountCard({ orderId }: { orderId: string }) {
   return (
     <section className="card space-y-3" aria-labelledby="refund-account-title">
       <h2 id="refund-account-title" className="font-display text-base font-bold text-ink">Tài khoản nhận hoàn tiền</h2>
-      <p className="text-sm text-slate-600">Nếu đơn bị huỷ hoặc được hoàn một phần, GrabCode chuyển trả vào tài khoản này.</p>
+      <p className="text-sm text-slate-600">Nếu đơn bị huỷ hoặc được hoàn một phần, {BRAND.name} chuyển trả vào tài khoản này.</p>
       {saved === undefined && !error && <p className="text-sm text-slate-500">Đang tải…</p>}
       {saved && !editing && (
         <div className="flex items-start justify-between gap-3 text-sm">

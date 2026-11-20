@@ -1,3 +1,4 @@
+export * from './brand';
 // Export all Types
 export * from './types/order';
 export * from './types/brief';

@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { SAMPLE_PROMPTS, SEED_TEMPLATES } from '@grabcode/contracts';
 import { useCurrency } from '../lib/currency';
 import { FRAMEWORKS, MENU, daysLabel, getMenuItem, type MenuItemCode } from '../lib/pricing';
+import { BRAND } from '@grabcode/contracts';
 
-/** Home order box: pick a menu item (giá từ + days), describe the job; GrabCode quotes the final price before payment. */
+
+/** Home order box: pick a menu item (giá từ + days), describe the job; FastDemo quotes the final price before payment. */
 export default function InstantDispatch() {
   const router = useRouter();
   const { money } = useCurrency();
@@ -96,7 +98,7 @@ export default function InstantDispatch() {
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        {canSubmit ? 'GrabCode báo giá chốt cho đơn của bạn trước khi bạn chuyển khoản.' : 'Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.'}
+        {canSubmit ? `${BRAND.name} báo giá chốt cho đơn của bạn trước khi bạn chuyển khoản.` : 'Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.'}
       </p>
     </section>
   );
