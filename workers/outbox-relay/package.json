@@ -11,7 +11,7 @@
   "dependencies": {
     "@grabcode/contracts": "workspace:*",
     "nats": "^2.29.0",
-    "postgres": "^3.4.5"
+    "postgres": "^4.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
