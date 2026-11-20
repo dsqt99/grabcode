@@ -1,14 +1,14 @@
 import { Order } from '../types/order';
 import { CoderProfile } from '../types/coder';
-import { TEMPLATE_PRICING } from '../schemas/pricing';
+import type { MenuItemCode } from '../schemas/pricing';
 
 export interface POCTemplate {
   id: string;
   title: string;
   tagline: string;
   category: string;
-  basePriceVnd: number;
-  etaHours: number;
+  /** Menu item the template is priced as ("giá từ" of that item; the admin quotes the order). */
+  menuItem: MenuItemCode;
   techStack: string[];
   features: string[];
   popular: boolean;
@@ -22,7 +22,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "Mini CRM Bất Động Sản",
     tagline: "Quản lý khách nét F0, giỏ hàng căn hộ & thông báo Telegram bot tự động",
     category: "CRM & B2B",
-    ...TEMPLATE_PRICING["tpl-realestate-crm"],
+    menuItem: "INTERNAL_TOOL",
     techStack: ["Next.js 15", "Tailwind CSS", "Supabase", "Telegram Bot"],
     features: ["Kanban quản lý lead", "Bản đồ mặt bằng SVG", "Bắn tin Telegram khi có cọc", "Phân quyền Sale/Admin"],
     popular: true,
@@ -34,7 +34,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "SaaS Billing & Subscription",
     tagline: "Dashboard quản trị thành viên, gói thuê bao & đối soát thanh toán VietQR",
     category: "Fintech & SaaS",
-    ...TEMPLATE_PRICING["tpl-saas-billing"],
+    menuItem: "MVP",
     techStack: ["Next.js 15", "Recharts", "Prisma", "VietQR Hook"],
     features: ["Biểu đồ MRR/ARR thời gian thực", "Webhook tự động kích hoạt tài khoản", "Xuất báo cáo PDF", "Bảng so sánh gói dịch vụ"],
     popular: true,
@@ -46,7 +46,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "E-Commerce Checkout Siêu Tốc",
     tagline: "Luồng đặt hàng 1 trang (One-page Checkout) kèm VietQR động chuẩn hóa",
     category: "E-Commerce",
-    ...TEMPLATE_PRICING["tpl-ecommerce-fast"],
+    menuItem: "SHOP",
     techStack: ["React 19", "Zustand", "Tailwind CSS", "Web Audio API"],
     features: ["Giỏ hàng kéo thả mượt mà", "Tự sinh QR theo số tiền", "Âm thanh chốt đơn", "Tối ưu chuyển đổi di động"],
     popular: false,
@@ -58,7 +58,7 @@ export const SEED_TEMPLATES: POCTemplate[] = [
     title: "AI Voice Agent Booking",
     tagline: "Giao diện trợ lý đàm thoại AI giọng nói đặt lịch hẹn nha khoa / spa tự động",
     category: "AI & Automation",
-    ...TEMPLATE_PRICING["tpl-voice-agent"],
+    menuItem: "CHATBOT",
     techStack: ["Next.js 15", "ElevenLabs API", "FastAPI", "WebRTC"],
     features: ["Microphone visualizer thời gian thực", "Speech-to-Text độ trễ thấp", "Đồng bộ lịch Google Calendar", "Lưu biên bản cuộc gọi"],
     popular: true,

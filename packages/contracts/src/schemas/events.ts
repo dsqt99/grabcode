@@ -7,7 +7,7 @@ import { OrderIdSchema } from './repo';
 // JetStream Nats-Msg-Id (publish dedupe) and the processed_events key (consumer dedupe).
 
 export const STREAM_NAME = 'GRABCODE';
-export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>', 'chat.>'];
+export const STREAM_SUBJECTS = ['brief.>', 'repo.>', 'order.>', 'escrow.>', 'dispatch.>', 'milestone.>', 'qa.>', 'deploy.>', 'chat.>', 'payment.>', 'payout.>'];
 
 export const SUBJECTS = {
   BRIEF_REQUESTED: 'brief.requested',
@@ -36,6 +36,8 @@ export const SUBJECTS = {
   DEPLOY_FAILED: 'deploy.failed',
   DEPLOY_EXPIRED: 'deploy.expired',
   CHAT_POSTED: 'chat.posted',
+  PAYMENT_REPORTED: 'payment.reported',
+  PAYOUT_REQUESTED: 'payout.requested',
 } as const;
 
 const envelope = <T extends string, D extends z.ZodTypeAny>(type: T, data: D) =>
@@ -255,3 +257,17 @@ export type DeployRequestedEvent = z.infer<typeof DeployRequestedEventSchema>;
 export type DeployReadyEvent = z.infer<typeof DeployReadyEventSchema>;
 export type DeployFailedEvent = z.infer<typeof DeployFailedEventSchema>;
 export type DeployExpiredEvent = z.infer<typeof DeployExpiredEventSchema>;
+
+/** The customer pressed "Tôi đã chuyển khoản" on a DRAFT order (once per order): ops check the bank and confirm the payment. */
+export const PaymentReportedEventSchema = envelope(
+  SUBJECTS.PAYMENT_REPORTED,
+  z.object({ orderId: OrderIdSchema, customerUserId: z.string().uuid(), dueVnd: z.number().int().nonnegative() }),
+);
+export type PaymentReportedEvent = z.infer<typeof PaymentReportedEventSchema>;
+
+/** A coder asked to withdraw their wallet (POST /v1/me/payouts): an admin transfers the money and decides the request. */
+export const PayoutRequestedEventSchema = envelope(
+  SUBJECTS.PAYOUT_REQUESTED,
+  z.object({ payoutId: z.string().uuid(), coderUserId: z.string().uuid(), amountVnd: z.number().int().positive() }),
+);
+export type PayoutRequestedEvent = z.infer<typeof PayoutRequestedEventSchema>;

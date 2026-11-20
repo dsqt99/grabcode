@@ -29,6 +29,8 @@ import {
   DeployFailedEventSchema,
   DeployExpiredEventSchema,
   ChatPostedEventSchema,
+  PaymentReportedEventSchema,
+  PayoutRequestedEventSchema,
   RepoHandoverRequestedEventSchema,
   RepoHandedOverEventSchema,
   SUBJECTS,
@@ -41,6 +43,7 @@ import {
   AdminOrderDetailSchema,
   AdminOrderListSchema,
   ConfirmPaymentSchema,
+  OrderQuoteSchema,
   DisputeResolveSchema,
   MonitorSchema,
   PayoutSchema,
@@ -323,7 +326,7 @@ write('openapi/core-api.openapi.json', {
       post: {
         operationId: 'transitionOrder',
         summary:
-          'Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED hands the repo over), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.',
+          'Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED pays every share still held, incl. the last milestone, and hands the repo over; IN_PROGRESS = revision, reason of 10+ chars required, reopens the last milestone with it), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (price quoted and escrow holds it), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.',
         parameters: [orderId],
         requestBody: { required: true, content: json('OrderTransition') },
         responses: {
@@ -513,6 +516,15 @@ write('openapi/core-api.openapi.json', {
         parameters: [orderId],
         requestBody: { required: true, content: json('ConfirmPayment') },
         responses: { '200': { description: 'OK', content: json('AdminOrder') }, '400': { description: 'Invalid body', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order not DRAFT, or reference already booked', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/admin/orders/{id}/quote': {
+      post: {
+        operationId: 'adminQuoteOrder',
+        summary: 'Admin: set the final price and delivery days of a DRAFT order (never below what was already paid). The customer sees the payment QR only after this. Funds the order if escrow already holds the price.',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('OrderQuote') },
+        responses: { '200': { description: 'OK', content: json('AdminOrder') }, '400': { description: 'Invalid body or price below the amount paid', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order not DRAFT', content: json('ErrorResponse') } },
       },
     },
     '/v1/admin/orders/{id}/resolve': {
@@ -712,6 +724,7 @@ write('openapi/core-api.openapi.json', {
       RefundPaid: schema(RefundPaidSchema, 'input'),
       DisputeResolve: schema(DisputeResolveSchema, 'input'),
       ConfirmPayment: schema(ConfirmPaymentSchema, 'input'),
+      OrderQuote: schema(OrderQuoteSchema, 'input'),
       SuspenseList: schema(SuspenseListSchema),
       SuspenseResolve: schema(SuspenseResolveSchema, 'input'),
       Payout: schema(PayoutSchema),
@@ -742,3 +755,5 @@ write('events/deploy.ready.schema.json', schema(DeployReadyEventSchema));
 write('events/deploy.failed.schema.json', schema(DeployFailedEventSchema));
 write('events/deploy.expired.schema.json', schema(DeployExpiredEventSchema));
 write('events/chat.posted.schema.json', schema(ChatPostedEventSchema));
+write('events/payment.reported.schema.json', schema(PaymentReportedEventSchema));
+write('events/payout.requested.schema.json', schema(PayoutRequestedEventSchema));
