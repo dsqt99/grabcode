@@ -47,7 +47,7 @@ ok((await cust('PUT', '/v1/me/presence', { online: true })).status === 403, 'cus
 
 const brief = { title: 'S3 smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones: [{ id: 'M1', title: 'm', description: '', weightPercent: 100, status: 'PENDING' }] };
 const newOrder = async () => {
-  const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+  const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
   await cust('POST', '/v1/payments/dev-deposit', { orderId: o.id });
   return o;
 };

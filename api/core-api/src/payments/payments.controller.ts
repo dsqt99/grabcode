@@ -31,6 +31,12 @@ export class PaymentsController {
     return this.payments.instructions(await this.user(req), id);
   }
 
+  @Post('orders/:id/payment/reported')
+  @HttpCode(200)
+  async reportTransfer(@Req() req: Request, @Param('id') id: string): Promise<PaymentInstructions> {
+    return this.payments.reportTransfer(await this.user(req), id);
+  }
+
   @Get('me/wallet')
   async wallet(@Req() req: Request): Promise<Wallet> {
     return this.payments.wallet(await this.user(req));

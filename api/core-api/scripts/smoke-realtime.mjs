@@ -55,7 +55,7 @@ const rt = await listen(cust);
 ok(true, 'customer connected to Centrifugo');
 
 const brief = { title: 'S6 smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones: [{ id: 'M1', title: 'm1', description: '', weightPercent: 100, status: 'PENDING' }] };
-const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
 ok(await waitFor(rt.hints, (h) => h.type === 'order' && h.orderId === o.id), 'order created -> order hint');
 
 const sent = await cust('POST', `/v1/orders/${o.id}/messages`, { text: '  hello coder  ' });

@@ -22,6 +22,13 @@ export interface Identity {
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 const addRoleSql = (role: AccountRole) =>
   sql`case when ${role}::text = any(${users.roles}) then ${users.roles} else array_append(${users.roles}, ${role}::text) end`;
+/**
+ * P0-8: a new coder waits for an admin; adding the role again keeps an earlier decision. Dev logins (AUTH_DEV_LOGIN, never in
+ * production) are approved so local runs and smoke scripts can claim jobs.
+ */
+const isDev = (providerKey: string) => providerKey.startsWith('dev:');
+const approvalFor = (role: AccountRole | undefined, providerKey: string) =>
+  role !== 'CODER' ? {} : { coderApproval: isDev(providerKey) ? sql`'APPROVED'` : sql`coalesce(${users.coderApproval}, 'PENDING')` };
 
 const toMe = (
   u: UserRow,
@@ -50,6 +57,7 @@ const toMe = (
   customerProfile: customer ? { companyName: customer.companyName, companySize: customer.companySize, website: customer.website } : null,
   // rating stays null until customer reviews (S4).
   coderStats: u.roles.includes('CODER') ? { tier: u.tierOverride ?? coderTierFor(accepted), completedOrders: accepted, rating: null } : null,
+  coderApproval: u.roles.includes('CODER') ? (u.coderApproval ?? 'PENDING') : null,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -83,20 +91,21 @@ export class AuthService {
     if (linked) {
       const [user] = await this.db
         .update(users)
-        .set({ ...(id.githubLogin ? { githubLogin: id.githubLogin } : {}), roles: role ? addRoleSql(role) : users.roles, updatedAt: sql`now()` })
+        .set({ ...(id.githubLogin ? { githubLogin: id.githubLogin } : {}), roles: role ? addRoleSql(role) : users.roles, ...approvalFor(role, id.providerKey), updatedAt: sql`now()` })
         .where(eq(users.id, linked.userId))
         .returning();
       return { token: await this.createSession(user.id), user };
     }
     const [user] = await this.db
       .insert(users)
-      .values({ ...id, roles: role ? [role] : [] })
+      .values({ ...id, roles: role ? [role] : [], coderApproval: role !== 'CODER' ? null : isDev(id.providerKey) ? 'APPROVED' : 'PENDING' })
       .onConflictDoUpdate({
         target: users.providerKey,
         set: {
           githubLogin: id.githubLogin,
           email: id.email,
           roles: role ? addRoleSql(role) : users.roles,
+          ...approvalFor(role, id.providerKey),
           updatedAt: sql`now()`,
         },
       })
@@ -123,7 +132,11 @@ export class AuthService {
   }
 
   async addRole(userId: string, role: AccountRole): Promise<UserRow> {
-    const [user] = await this.db.update(users).set({ roles: addRoleSql(role), updatedAt: sql`now()` }).where(eq(users.id, userId)).returning();
+    const [user] = await this.db
+      .update(users)
+      .set({ roles: addRoleSql(role), ...approvalFor(role, ''), updatedAt: sql`now()` })
+      .where(eq(users.id, userId))
+      .returning();
     return user;
   }
 
@@ -173,6 +186,7 @@ export class AuthService {
         passwordHash: await hashPassword(input.password),
         name: input.name,
         roles: [input.role],
+        ...(input.role === 'CODER' ? { coderApproval: 'PENDING' as const } : {}),
       })
       .onConflictDoNothing({ target: users.providerKey })
       .returning();
