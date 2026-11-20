@@ -9,17 +9,20 @@ import {
   type AdminCoder,
   type AdminCoderPatch,
   type AdminOrder,
+  type AdminOrderDetail,
   type ConfirmPayment,
   type DisputeResolve,
   type Monitor,
   type Payout,
   type PayoutCreate,
   type PayoutDecision,
+  type Refund,
+  type RefundPaid,
   type SuspenseItem,
 } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, sessions, users } from '../db/schema';
-import { emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
+import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderMessages, orderRepos, orders, outbox, payoutRequests, refunds, sessions, users } from '../db/schema';
+import { chatOf, emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { SUSPENSE, coderOf, depositEntries, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
 import { ReposService } from '../repos/repos.service';
@@ -126,8 +129,8 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
                 and(eq(orders.status, 'DRAFT'), sql`${orders.createdAt} > now() - interval '7 days'`),
                 eq(orders.status, 'DISPUTED'),
                 and(inArray(orders.status, [...REFUNDABLE]), sql`${escrowSql} > 0`),
-                // createdAt, not updatedAt: every dispatch wave bumps updatedAt.
-                and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - interval '30 minutes'`),
+                // Since funding (B1): not createdAt (time spent unpaid), not updatedAt (every dispatch wave bumps it).
+                and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.fundedAt} < now() - interval '30 minutes'`),
               ),
       )
       .orderBy(desc(orders.updatedAt))
@@ -137,15 +140,106 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       status: o.status,
       title: o.title,
       priceVnd: o.priceVnd,
+      payoutVnd: o.payoutVnd,
       paidVnd: Number(paid),
       escrowVnd: Number(escrow),
       disputeReason: o.disputeReason,
       customerName,
       customerEmail,
       coderName,
+      fundedAt: o.fundedAt ? iso(o.fundedAt) : null,
       createdAt: iso(o.createdAt),
       updatedAt: iso(o.updatedAt),
     }));
+  }
+
+  /** Read only (P0-10): what an admin needs to judge a dispute or a payment question. */
+  async orderDetail(id: string): Promise<AdminOrderDetail> {
+    const [order] = await this.orders(id);
+    if (!order) throw new NotFoundException({ message: 'Order not found' });
+    const [row] = await this.db.select().from(orders).where(eq(orders.id, id));
+    const [messages, txs] = await Promise.all([
+      this.db
+        .select({ m: orderMessages, name: users.name })
+        .from(orderMessages)
+        .innerJoin(users, eq(users.id, orderMessages.senderUserId))
+        .where(eq(orderMessages.orderId, id))
+        .orderBy(asc(orderMessages.createdAt)),
+      this.db
+        .select({ t: ledgerTxs, account: ledgerEntries.account, amount: ledgerEntries.amountVnd })
+        .from(ledgerTxs)
+        .innerJoin(ledgerEntries, eq(ledgerEntries.txId, ledgerTxs.id))
+        .where(eq(ledgerTxs.orderId, id))
+        .orderBy(asc(ledgerTxs.createdAt), asc(ledgerEntries.id)),
+    ]);
+    const ledger = new Map<string, AdminOrderDetail['ledger'][number]>();
+    for (const { t, account, amount } of txs) {
+      const meta = (t.meta ?? {}) as { reference?: unknown; note?: unknown; referenceCode?: unknown };
+      const reference = meta.reference ?? meta.referenceCode ?? meta.note;
+      const tx = ledger.get(t.id) ?? { txId: t.id, kind: t.kind, entries: [], reference: reference ? String(reference) : null, createdAt: iso(t.createdAt) };
+      tx.entries.push({ account, amountVnd: amount });
+      ledger.set(t.id, tx);
+    }
+    return {
+      order,
+      prompt: row.prompt,
+      brief: row.brief,
+      refundAccount: row.refundAccount,
+      messages: messages.map(({ m, name }) => chatOf(row, m, name)),
+      ledger: [...ledger.values()],
+    };
+  }
+
+  // ---- Refunds to transfer by hand (B2) ----
+
+  async refunds(status: 'PENDING' | 'all' = 'PENDING', id?: string): Promise<Refund[]> {
+    const rows = await this.db
+      .select({ r: refunds, o: orders, customerName: customer.name, customerEmail: customer.email, meta: ledgerTxs.meta })
+      .from(refunds)
+      .innerJoin(ledgerTxs, eq(ledgerTxs.id, refunds.txId))
+      .leftJoin(orders, eq(orders.id, refunds.orderId))
+      .leftJoin(customer, eq(customer.id, orders.customerUserId))
+      .where(id ? eq(refunds.id, id) : status === 'PENDING' ? eq(refunds.status, 'PENDING') : undefined)
+      .orderBy(sql`${refunds.status} = 'PENDING' desc`, asc(refunds.createdAt))
+      .limit(200);
+    // Suspense refunds: the transfer content lives on the original deposit (meta.from).
+    const deposits = rows.map((x) => (x.meta as { from?: string } | null)?.from).filter((v): v is string => !!v);
+    const content = new Map(
+      deposits.length
+        ? (await this.db.select({ id: ledgerTxs.id, meta: ledgerTxs.meta }).from(ledgerTxs).where(inArray(ledgerTxs.id, deposits))).map((d) => [
+            d.id,
+            String((d.meta as { content?: unknown } | null)?.content ?? ''),
+          ])
+        : [],
+    );
+    return rows.map(({ r, o, customerName, customerEmail, meta }) => ({
+      id: r.id,
+      txId: r.txId,
+      orderId: r.orderId,
+      amountVnd: r.amountVnd,
+      status: r.status,
+      customerName,
+      customerEmail,
+      refundAccount: o?.refundAccount ?? null,
+      transferContent: content.get((meta as { from?: string } | null)?.from ?? '') ?? null,
+      reference: r.reference,
+      createdAt: iso(r.createdAt),
+      paidAt: r.paidAt ? iso(r.paidAt) : null,
+    }));
+  }
+
+  /** The admin transferred the refund. The bank reference is unique across refunds, so one transfer closes one refund. */
+  async markRefundPaid(admin: UserRow, id: string, body: RefundPaid): Promise<Refund> {
+    const reference = body.reference.replace(/\s+/g, '').toUpperCase();
+    await this.db.transaction(async (tx) => {
+      const [r] = await tx.select().from(refunds).where(eq(refunds.id, id)).for('update');
+      if (!r) throw new NotFoundException({ message: 'Refund not found' });
+      if (r.status !== 'PENDING') throw new ConflictException({ message: `Refund already ${r.status} (${r.reference})` });
+      const [used] = await tx.select({ id: refunds.id }).from(refunds).where(eq(refunds.reference, reference));
+      if (used) throw new ConflictException({ message: 'This bank reference already closed another refund' });
+      await tx.update(refunds).set({ status: 'PAID', reference, paidBy: admin.id, paidAt: sql`now()` }).where(eq(refunds.id, id));
+    });
+    return (await this.refunds('all', id))[0];
   }
 
   private async lockOrder(tx: Tx, id: string): Promise<OrderRow> {
@@ -204,7 +298,8 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     const rows = await this.db
       .select({ id: orders.id })
       .from(orders)
-      .where(and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - make_interval(hours => ${hours})`));
+      // Counted from funding (B1): an order paid late in its life still gets the full AUTO_REFUND_HOURS on the board.
+      .where(and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.fundedAt} < now() - make_interval(hours => ${hours})`));
     const done: string[] = [];
     for (const { id } of rows) {
       // Another replica or a coder accept may win the row lock first; refund() then throws 409 and we skip.

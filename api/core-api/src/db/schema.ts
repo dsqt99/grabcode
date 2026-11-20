@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, bigserial, boolean, index, integer, jsonb, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import type { AIBrief } from '@grabcode/contracts';
-import type { CoderProfileDetails, NotificationPrefs, Sandbox } from '@grabcode/contracts/schemas';
+import type { CoderProfileDetails, NotificationPrefs, RefundAccount, Sandbox } from '@grabcode/contracts/schemas';
 
 export const core = pgSchema('core');
 
@@ -145,6 +145,10 @@ export const orders = core.table(
     payoutVnd: integer('payout_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
     disputeReason: text('dispute_reason'),
+    /** DRAFT -> FUNDED time: the 30 min "no coder yet" and AUTO_REFUND_HOURS clocks start here (not createdAt). */
+    fundedAt: timestamp('funded_at', { withTimezone: true }),
+    /** Customer's bank account for refunds of this order (shown to admins on pending refunds, never to the coder). */
+    refundAccount: jsonb('refund_account').$type<RefundAccount>(),
     // Cloud Run preview (S5), written from deploy-worker results.
     sandbox: jsonb('sandbox').$type<Sandbox>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -244,6 +248,27 @@ export const orderMessages = core.table(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('order_messages_order_idx').on(t.orderId, t.createdAt)],
+);
+
+// Refunds to transfer by hand: one row per ledger tx that books money back to a customer (postTx opens it).
+// The admin transfers the money and closes it with the bank reference (unique: one transfer closes one refund).
+export const refunds = core.table(
+  'refunds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    txId: text('tx_id')
+      .notNull()
+      .unique()
+      .references(() => ledgerTxs.id),
+    orderId: text('order_id').references(() => orders.id),
+    amountVnd: bigint('amount_vnd', { mode: 'number' }).notNull(),
+    status: text('status', { enum: ['PENDING', 'PAID'] }).notNull().default('PENDING'),
+    reference: text('reference').unique(),
+    paidBy: uuid('paid_by').references(() => users.id),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('refunds_status_idx').on(t.status, t.createdAt)],
 );
 
 // Coder withdrawals (S7). PENDING requests reserve wallet money; approval writes ledger tx 'payout:<id>'.
