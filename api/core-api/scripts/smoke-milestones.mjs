@@ -53,7 +53,7 @@ await coder('PUT', '/v1/me/presence', { online: true });
 const o = await startOrder(cust, coder, [20, 50, 30]);
 ok(o.status === 'IN_PROGRESS', `${o.id} IN_PROGRESS (${o.priceVnd} VND)`);
 const ms = (id) => `/v1/orders/${o.id}/milestones/${id}`;
-ok((await coder('POST', `${ms('M2')}/submit`, {})).status === 409, 'out-of-order submit 409');
+ok((await coder('POST', `${ms('M2')}/submit`, { note: 'x' })).status === 409, 'out-of-order submit 409');
 ok((await coder('POST', `${ms('M1')}/submit`, { commitHash: 'deadbeef' })).status === 400, 'unknown commit 400');
 psql(`insert into core.order_repos (order_id, coder_user_id, status, repo_full_name, collaborator) values ('${o.id}', '${coderId}', 'READY', 'grabcode-sandbox/smoke-${run}', 's4k') on conflict do nothing`);
 psql(`insert into core.repo_commits values ('abc1234${run}', '${o.id}', 'feat', 'k', 'https://x', now()) on conflict do nothing`);
@@ -70,7 +70,7 @@ let paid = 0;
 const shares = [];
 for (const [i, w] of [20, 50, 30].entries()) {
   const id = `M${i + 1}`;
-  await coder('POST', `${ms(id)}/submit`, {});
+  await coder('POST', `${ms(id)}/submit`, { note: 'x' });
   const before = balance(`escrow:${o.id}`);
   const a = await cust('POST', `${ms(id)}/approve`);
   const share = before - balance(`escrow:${o.id}`);
@@ -91,9 +91,9 @@ ok(psql(`select count(*) from core.outbox where subject like 'milestone.%' and p
 // Dispute mid-way: M1 paid, then dispute freezes the rest of the escrow.
 const d = await startOrder(cust, coder, [50, 50]);
 const dm = (id) => `/v1/orders/${d.id}/milestones/${id}`;
-await coder('POST', `${dm('M1')}/submit`, {});
+await coder('POST', `${dm('M1')}/submit`, { note: 'x' });
 await cust('POST', `${dm('M1')}/approve`);
-await coder('POST', `${dm('M2')}/submit`, {});
+await coder('POST', `${dm('M2')}/submit`, { note: 'x' });
 ok((await cust('POST', `/v1/orders/${d.id}/transitions`, { status: 'DISPUTED' })).status === 400, 'dispute without reason 400');
 const dis = await cust('POST', `/v1/orders/${d.id}/transitions`, { status: 'DISPUTED', reason: 'M2 thiếu tính năng' });
 ok(dis.body.status === 'DISPUTED' && dis.body.disputeReason === 'M2 thiếu tính năng', 'IN_PROGRESS -> DISPUTED with reason');
