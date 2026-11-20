@@ -72,6 +72,21 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Diagnose SSH (temporary)
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          HOST: ${{ secrets.STAGING_SSH_HOST }}
+          USER_NAME: ${{ secrets.STAGING_SSH_USER }}
+          KEY: ${{ secrets.STAGING_SSH_KEY }}
+          PORT: ${{ secrets.STAGING_SSH_PORT }}
+        run: |
+          umask 077; mkdir -p ~/.ssh; printf '%s\n' "$KEY" > ~/.ssh/diag_key
+          ssh-keygen -y -f ~/.ssh/diag_key > ~/.ssh/diag_key.pub 2>&1 && ssh-keygen -lf ~/.ssh/diag_key.pub || cat ~/.ssh/diag_key.pub
+          echo "user length: ${#USER_NAME}; port length: ${#PORT}"
+          ssh-keyscan -p "${PORT:-22}" "$HOST" 2>/dev/null | ssh-keygen -lf - || true
+          ssh -v -i ~/.ssh/diag_key -p "${PORT:-22}" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$USER_NAME@$HOST" true 2>&1 | grep -E "Server host key|Authentications that can continue|Offering public key|Permission denied|Authenticated|identity|invalid format" || true
+          rm -f ~/.ssh/diag_key ~/.ssh/diag_key.pub
+
       - name: Deploy over SSH
         if: steps.cfg.outputs.configured == 'true'
         env:
