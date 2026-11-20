@@ -210,7 +210,7 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
             {BRAND.tagline}
           </h2>
           <p className="relative mt-2 font-display text-xl font-bold text-primary-fixed">Duyệt từng mốc rồi mới trả tiền.</p>
-          <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và Coder nhận đơn.</p>
+          <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và freelancer nhận đơn.</p>
           <ul className="relative mt-8 space-y-4">
             {PERKS.map((p) => (
               <li key={p.icon} className="flex items-center gap-3">

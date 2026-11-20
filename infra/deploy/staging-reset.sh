@@ -8,12 +8,15 @@ cd "$ROOT"
 ENV_FILE="$ROOT/.env.staging"
 die() { echo "staging-reset: $*" >&2; exit 1; }
 
-[ -f "$ROOT/.env.production" ] && die ".env.production exists here: refusing to delete data on a production host."
 [ -f "$ENV_FILE" ] || die ".env.staging not found: run staging-up.sh first."
+# Shared VPS (STAGING_HTTP_PORT in .env.staging): only the "grabcode-staging" project is touched, never production's volumes.
+FILES=(-f infra/deploy/docker-compose.prod.yml -f infra/deploy/docker-compose.staging.yml)
+if grep -qE '^STAGING_HTTP_PORT=.+' "$ENV_FILE"; then FILES+=(-f infra/deploy/docker-compose.staging-shared.yml)
+else [ -f "$ROOT/.env.production" ] && die ".env.production exists here and .env.staging has no STAGING_HTTP_PORT: refusing to delete data on a production host."; fi
 grep -qE '^APP_ENV=staging$' "$ENV_FILE" || die ".env.staging does not say APP_ENV=staging: refusing."
 [ "${1:-}" = "--yes" ] || die "this deletes ALL staging data (orders, users, wallets). Re-run with --yes."
 
 export GC_ENV_FILE="$ENV_FILE"
-docker compose -p grabcode-staging --env-file "$ENV_FILE" -f infra/deploy/docker-compose.prod.yml -f infra/deploy/docker-compose.staging.yml down -v
+docker compose -p grabcode-staging --env-file "$ENV_FILE" "${FILES[@]}" down -v
 # Same command as a first start: migrations, seed, logins.
 exec "$ROOT/infra/deploy/staging-up.sh"

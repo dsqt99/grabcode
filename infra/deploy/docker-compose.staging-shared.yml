@@ -1,0 +1,14 @@
+# SHARED-VPS overlay for staging (docs/STAGING.md, "Chạy trên VPS đang có production"). Added by staging-up.sh in shared mode:
+#   docker compose -p grabcode-staging -f docker-compose.prod.yml -f docker-compose.staging.yml -f docker-compose.staging-shared.yml ...
+# Caddy: plain HTTP, no 80/443, published only on STAGING_BIND (default 127.0.0.1) : STAGING_HTTP_PORT (default 18080).
+# TLS and the domain are handled by the operator's own reverse proxy. Needs Docker Compose >= 2.24 (`!override`).
+services:
+  caddy:
+    ports: !override
+      - '${STAGING_BIND:-127.0.0.1}:${STAGING_HTTP_PORT:-18080}:80'
+    environment:
+      STAGING_TRUSTED_PROXIES: ${STAGING_TRUSTED_PROXIES:-private_ranges}
+    volumes: !override
+      - ./Caddyfile.shared:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config

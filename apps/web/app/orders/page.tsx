@@ -7,7 +7,7 @@ import { useAuth } from '@grabcode/auth-ui';
 import Navbar from '../../components/Navbar';
 import StatusChip from '../../components/StatusChip';
 import { listOrders, ordersApiEnabled } from '../../lib/api';
-import { ORDER_TABS, customerTodo, orderTab, statusInput, statusView, type OrderTab } from '../../lib/orderStatus';
+import { ORDER_TABS, customerTodo, dayMonth, orderTab, statusInput, statusView, type OrderTab } from '../../lib/orderStatus';
 import { loadOrders } from '../../lib/orderStore';
 import { formatVnd } from '../../lib/pricing';
 
@@ -16,8 +16,6 @@ interface Row {
   /** Newest activity first (server updatedAt; createdAt for local demo orders). */
   sortKey: string;
 }
-
-const day = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
 
 /** "Đơn của tôi" (UX spec HON-18 Màn D, BA P0-6): the customer finds every order again, with what they must do next. */
 export default function MyOrdersPage() {
@@ -64,7 +62,7 @@ export default function MyOrdersPage() {
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 md:px-8">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-extrabold text-ink">Đơn của tôi</h1>
-          <Link href="/#dispatch" className="btn-primary min-h-[44px] !px-4 text-sm">+ Đặt đơn mới</Link>
+          <Link href="/#dispatch" className="btn-primary min-h-[44px] !px-4 !py-2 text-sm">+ Đặt đơn mới</Link>
         </div>
 
         {failed ? (
@@ -113,7 +111,7 @@ export default function MyOrdersPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="text-xs font-semibold text-slate-600">
-                              {order.id} · {day(order.createdAt)}
+                              {order.id} · {dayMonth(order.createdAt)}
                             </span>
                             <StatusChip tone={sv.tone} label={sv.label} />
                           </div>

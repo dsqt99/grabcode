@@ -17,6 +17,8 @@ const QA = {
   ERROR: { cls: 'chip bg-slate-100 text-slate-700', label: 'Kiểm tra tự động bị lỗi' },
 } as const;
 
+const CHECK: Record<string, string> = { PASSED: 'đạt', FAILED: 'không đạt', SKIPPED: 'bỏ qua', RUNNING: 'đang chạy', ERROR: 'lỗi' };
+
 /**
  * `onReview` (API mode, order IN_PROGRESS) shows approve / request-changes on the SUBMITTED milestone; the page opens
  * a confirmation sheet for both. `amountOf`: escrow share of the milestone (VND). `paysOnApproval`: false for the last
@@ -55,7 +57,7 @@ export default function MilestoneList({
                   <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-700'}>{meta.label}</span>
                   {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-inverse-primary">{m.commitHash}</code>}
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
-                  {m.completedAt && <span className="text-xs text-slate-500">{formatTime(m.completedAt)}</span>}
+                  {m.completedAt && <span className="text-xs text-slate-600">{formatTime(m.completedAt)}</span>}
                 </div>
                 {m.deliveryUrl && (
                   <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-1 inline-flex min-h-[44px] max-w-full items-center gap-1 text-sm font-semibold text-emerald-dark underline">
@@ -65,12 +67,12 @@ export default function MilestoneList({
                 )}
                 {m.qa && m.qa.checks.length > 0 && (
                   <details className="mt-2 text-xs text-slate-600">
-                    <summary className="inline-flex min-h-[44px] cursor-pointer items-center">Chi tiết QA Gate</summary>
+                    <summary className="inline-flex min-h-[44px] cursor-pointer items-center">Chi tiết kiểm tra tự động</summary>
                     <ul className="mt-1 space-y-1">
                       {m.qa.checks.map((c) => (
                         <li key={c.name}>
-                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-500'}>
-                            {c.name}: {c.status}
+                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-600'}>
+                            {c.name}: {CHECK[c.status] ?? c.status}
                           </span>
                           {c.status === 'FAILED' && c.detail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px]">{c.detail}</pre>}
                         </li>
@@ -79,7 +81,7 @@ export default function MilestoneList({
                   </details>
                 )}
                 {m.note && m.status !== 'COMPLETED' && (
-                  <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Coder ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
+                  <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Freelancer ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
                 )}
                 {m.status === 'SUBMITTED' && onReview && (
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -87,7 +89,7 @@ export default function MilestoneList({
                       type="button"
                       className="btn-primary !min-h-[44px] flex-1 !py-1 text-sm"
                       disabled={m.qa?.status === 'FAILED'}
-                      title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
+                      title={m.qa?.status === 'FAILED' ? 'Kiểm tra tự động chưa đạt — hãy yêu cầu freelancer sửa trước' : undefined}
                       onClick={() => onReview(m.id, true)}
                     >
                       {amountOf && paysOnApproval(m.id) ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}

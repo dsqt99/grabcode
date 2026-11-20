@@ -596,7 +596,7 @@ function Settings() {
         <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao cuốc cho bạn.">
           {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text={`Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần ${BRAND.name} duyệt trước khi nhận việc.`} />}
         </Section>
-        <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho Coder khi nhận đơn của bạn và trên hóa đơn.">
+        <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho freelancer khi nhận đơn của bạn và trên hóa đơn.">
           {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần thuê freelancer làm app? Bật vai trò Khách hàng trên chính tài khoản này." />}
         </Section>
         <Section id="prefs" title="Thông báo & hiển thị" text={`Chọn kênh ${BRAND.name} được phép liên hệ bạn.`}>
