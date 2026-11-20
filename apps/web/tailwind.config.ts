@@ -1,50 +1,29 @@
 import type { Config } from 'tailwindcss';
 
-// Emerald Mobility Design System tokens (see /DESIGN.md)
+// FastDemo redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', '../../packages/auth-ui/src/**/*.tsx'],
   theme: {
     extend: {
       colors: {
-        surface: '#f8f9ff',
-        'surface-dim': '#cbdbf5',
-        'surface-container-lowest': '#ffffff',
-        'surface-container-low': '#eff4ff',
-        'surface-container': '#e5eeff',
-        'surface-container-high': '#dce9ff',
-        'surface-container-highest': '#d3e4fe',
-        'on-surface': '#0b1c30',
-        'on-surface-variant': '#3d4a3d',
-        'inverse-surface': '#213145',
-        outline: '#6d7b6c',
-        'outline-variant': '#bccbb9',
-        primary: '#006e2e',
-        'on-primary': '#ffffff',
-        'primary-container': '#00b14f',
-        'on-primary-container': '#003a15',
-        'inverse-primary': '#52e078',
-        'primary-fixed': '#71fe91',
-        secondary: '#565e74',
-        'secondary-container': '#dae2fd',
-        tertiary: '#855300',
-        'tertiary-container': '#d68900',
-        error: '#ba1a1a',
-        'error-container': '#ffdad6',
-        // brand-strong: primary button background (white text ~4.6:1). emerald.dark is for text, also on mint / slate-50 backgrounds (AA).
-        'brand-strong': '#00873D',
-        emerald: { DEFAULT: '#00B14F', dark: '#007C38', mint: '#E8F8EE', mintHover: '#D4F2DE' },
-        ink: { DEFAULT: '#0F172A', soft: '#1E293B' },
-        amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#B45309' },
+        brand: { 50: '#FFF7ED', 100: '#FFEDD5', 200: '#FED7AA', 300: '#FDBA74', 400: '#FB923C', 500: '#F97316', 600: '#EA580C', 700: '#C2410C', 800: '#9A3412', 900: '#7C2D12' },
+        ink: { DEFAULT: '#1C1917', soft: '#292524' },
+        'line-strong': '#8A817C',
+        // --- legacy aliases: keep until every screen of the app is redesigned, then delete (P1 cleanup) ---
+        'brand-strong': '#C2410C', primary: '#9A3412', 'primary-fixed': '#FED7AA', 'inverse-primary': '#FDBA74',
+        emerald: { DEFAULT: '#EA580C', dark: '#9A3412', mint: '#FFF7ED', mintHover: '#FFEDD5' },
+        amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#92400E' }, // extend merges with Tailwind's amber scale
       },
       fontFamily: {
         display: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'sans-serif'],
         sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
       },
-      borderRadius: { DEFAULT: '0.5rem', md: '0.75rem', lg: '1rem', xl: '1.5rem' },
       boxShadow: {
-        l2: '0px 4px 16px -2px rgba(15,23,42,0.06), 0px 2px 6px -1px rgba(0,177,79,0.04)',
-        l3: '0px 12px 32px -4px rgba(15,23,42,0.12), 0px 4px 12px -2px rgba(15,23,42,0.04)',
-        l4: '0px 20px 40px -8px rgba(15,23,42,0.16)',
+        raised: '0 1px 2px rgba(28,25,23,0.06), 0 4px 12px -2px rgba(28,25,23,0.08)',
+        overlay: '0 20px 48px -12px rgba(28,25,23,0.28)',
+        sheet: '0 -8px 32px -8px rgba(28,25,23,0.20)',
+        // legacy
+        l2: '0 1px 2px rgba(28,25,23,0.06), 0 4px 12px -2px rgba(28,25,23,0.08)', l3: '0 20px 48px -12px rgba(28,25,23,0.28)', l4: '0 20px 48px -12px rgba(28,25,23,0.28)',
       },
       keyframes: {
         sonar: { '0%': { transform: 'scale(0.4)', opacity: '0.7' }, '100%': { transform: 'scale(1.6)', opacity: '0' } },

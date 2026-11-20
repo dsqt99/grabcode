@@ -9,6 +9,8 @@ import { formatVnd } from '../lib/pricing';
 import CopyButton from './CopyButton';
 import StickyActionBar from './StickyActionBar';
 import SupportContact from './SupportContact';
+import { BRAND } from '@grabcode/contracts';
+
 
 const POLL_MS = 3000;
 
@@ -16,7 +18,7 @@ const POLL_MS = 3000;
 async function saveQr(url: string, orderId: string) {
   try {
     const blob = await (await fetch(url)).blob();
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `grabcode-${orderId}-qr.png` });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${BRAND.name.toLowerCase()}-${orderId}-qr.png` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   } catch {
@@ -26,10 +28,10 @@ async function saveQr(url: string, orderId: string) {
 
 function Row({ label, children, copy }: { label: string; children: React.ReactNode; copy?: { value: string; label: string } }) {
   return (
-    <div className="flex min-h-[44px] items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
+    <div className="flex min-h-[48px] items-center justify-between gap-3 border-b border-stone-100 py-2 last:border-0">
       <div className="min-w-0">
-        <p className="text-xs text-slate-600">{label}</p>
-        <div className="break-words font-semibold text-ink">{children}</div>
+        <p className="text-xs text-stone-600">{label}</p>
+        <div className="break-words text-stone-900">{children}</div>
       </div>
       {copy && <CopyButton {...copy} />}
     </div>
@@ -37,8 +39,9 @@ function Row({ label, children, copy }: { label: string; children: React.ReactNo
 }
 
 /**
- * Bank transfer / VietQR for an unpaid (DRAFT) order (UX spec HON-18 "Màn A"). Always VND, whatever currency the user picked.
- * The order page's own poll moves on once the order is funded.
+ * Bank transfer / VietQR for an unpaid (DRAFT) order (UX spec HON-18 "Màn A", redesign-web-order §3.1). Always VND,
+ * whatever currency the user picked. Mobile first: a phone cannot scan the QR it is showing, so copy buttons and the
+ * transfer content come before the QR. The order page's own poll moves on once the order is funded.
  */
 export default function PaymentPanel({ orderId }: { orderId: string }) {
   const [p, setP] = useState<PaymentInstructions | null>(null);
@@ -70,31 +73,46 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
 
   if (!p) {
     return loadError ? (
-      <section className="card space-y-3 border-red-200" role="alert">
-        <p className="font-semibold text-red-800">Không tải được thông tin thanh toán.</p>
-        <button type="button" className="btn-secondary" onClick={() => void load()}>Thử lại</button>
+      <section className="banner-danger" role="alert">
+        <span className="material-symbols-outlined" aria-hidden>error</span>
+        <div className="space-y-2">
+          <p className="font-semibold">Không tải được thông tin thanh toán. Kiểm tra kết nối rồi thử lại.</p>
+          <button type="button" className="btn-outline btn-sm" onClick={() => void load()}>Thử lại</button>
+        </div>
       </section>
     ) : (
       <section className="card space-y-3" aria-busy="true" aria-label="Đang tải thông tin thanh toán">
-        <div className="h-16 animate-pulse rounded-md bg-slate-100" />
-        <div className="mx-auto h-60 w-60 animate-pulse rounded-md bg-slate-100" />
-        <div className="h-24 animate-pulse rounded-md bg-slate-100" />
+        <div className="skeleton h-16" />
+        <div className="skeleton h-24" />
+        <div className="skeleton mx-auto h-60 w-60" />
       </section>
     );
   }
 
-  // HON-10 Q3: no QR / bank account before GrabCode quotes the final price (the server sends none either).
+  // HON-10 Q3: no QR / bank account before FastDemo quotes the final price (the server sends none either).
   if (!p.priceQuoted) {
     return (
-      <section className="card flex gap-4 border-amber-300 shadow-l3" aria-label="Chờ báo giá" role="status">
-        <span className="material-symbols-outlined shrink-0 text-amber-700" aria-hidden>request_quote</span>
+      <section className="card space-y-3 border-l-4 border-l-blue-600" aria-labelledby="quote-title" role="status">
+        <h2 id="quote-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900">
+          <span className="material-symbols-outlined text-blue-700" aria-hidden>request_quote</span>
+          Chờ {BRAND.name} báo giá
+        </h2>
+        <p className="text-stone-700">
+          {BRAND.name} đang đọc yêu cầu và sẽ báo giá chốt cho đơn này (giá từ {formatVnd(p.priceVnd)}). Mã QR chuyển khoản hiện ở đây khi có giá chốt.
+          Trang này tự cập nhật.
+        </p>
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Chờ GrabCode báo giá</h2>
-          <p className="text-sm text-slate-600">
-            GrabCode đang đọc yêu cầu và sẽ báo giá chốt cho đơn này (giá từ {formatVnd(p.priceVnd)}). Mã QR chuyển khoản hiện ở đây khi có giá chốt.
-            Vui lòng chưa chuyển khoản trước khi có giá chốt. Trang này tự cập nhật.
-          </p>
+          <p className="font-display text-sm font-bold text-stone-900">Tiếp theo</p>
+          <ol className="mt-1 list-inside list-decimal space-y-1 text-sm text-stone-700">
+            <li>{BRAND.name} báo giá chốt (trang này tự cập nhật)</li>
+            <li>Bạn chuyển khoản theo mã QR</li>
+            <li>Đơn lên bảng việc</li>
+          </ol>
         </div>
+        <p className="banner-warn">
+          <span className="material-symbols-outlined !text-[20px]" aria-hidden>warning</span>
+          Vui lòng chưa chuyển khoản trước khi có giá chốt.
+        </p>
       </section>
     );
   }
@@ -119,120 +137,141 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
 
   const paidFull = p.dueVnd === 0;
 
-  if (!p.bank && !paidFull) {
+  if (paidFull) {
     return (
-      <section className="card space-y-2 border-amber-300" role="alert">
-        <h2 className="font-display text-lg font-bold text-ink">Tạm thời chưa nhận thanh toán</h2>
-        <p className="text-sm text-slate-700">GrabCode chưa cấu hình tài khoản nhận tiền. Vui lòng quay lại sau hoặc liên hệ hỗ trợ:</p>
-        <SupportContact />
-      </section>
+      <p className="banner-success font-semibold" role="status">
+        <span className="material-symbols-outlined !text-[20px]" aria-hidden>check_circle</span>
+        Đã nhận đủ {formatVnd(p.priceVnd)}. Đơn đang được đưa lên bảng việc.
+      </p>
     );
   }
 
+  if (!p.bank) {
+    return (
+      <section className="banner-warn" role="alert">
+        <span className="material-symbols-outlined" aria-hidden>warning</span>
+        <div className="space-y-1">
+          <h2 className="font-display text-base font-bold">Tạm thời chưa nhận thanh toán</h2>
+          <p>{BRAND.name} chưa cấu hình tài khoản nhận tiền. Vui lòng quay lại sau hoặc liên hệ hỗ trợ:</p>
+          <SupportContact />
+        </div>
+      </section>
+    );
+  }
+  const bank = p.bank;
+
   return (
-    <section className="card space-y-4 border-amber-300 shadow-l3" aria-label="Thanh toán chuyển khoản">
+    <section className="card-action space-y-4" aria-labelledby="pay-title">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Bước 1/2</p>
-        <h2 className="font-display text-lg font-bold text-ink">Chuyển khoản để bắt đầu</h2>
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-600">Bước 1/2 · Chuyển khoản</p>
+        <h2 id="pay-title" className="font-display text-lg font-bold text-stone-900 md:text-xl">Chuyển khoản để bắt đầu</h2>
       </div>
 
-      {paidFull ? (
-        <p className="rounded-md bg-emerald-mint p-3 font-semibold text-emerald-dark" role="status">
-          Đã nhận đủ {formatVnd(p.priceVnd)}. Đơn đang được đưa lên bảng việc.
+      {p.paidVnd > 0 && (
+        <p className="banner-warn font-semibold" role="status">
+          Đã nhận {formatVnd(p.paidVnd)}. Còn thiếu {formatVnd(p.dueVnd)} — chuyển tiếp với cùng nội dung {p.content}.
         </p>
-      ) : (
-        <>
-          {p.paidVnd > 0 && (
-            <p className="rounded-md bg-amber-tint p-3 text-sm font-semibold text-amber-text" role="status">
-              Đã nhận {formatVnd(p.paidVnd)}. Còn thiếu {formatVnd(p.dueVnd)} — chuyển tiếp với cùng nội dung {p.content}.
-            </p>
-          )}
-
-          <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
-            <div>
-              <p className="text-xs text-slate-600">Số tiền cần chuyển</p>
-              <p className="font-display text-2xl font-extrabold tabular-nums text-emerald-dark">{formatVnd(p.dueVnd)}</p>
-            </div>
-            <CopyButton value={String(p.dueVnd)} label="số tiền" />
-          </div>
-
-          <div className="md:grid md:grid-cols-[240px_1fr] md:gap-6">
-            <div className="flex flex-col items-center gap-2">
-              {qrBroken ? (
-                <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">Không tải được mã QR — hãy chuyển khoản tay theo thông tin bên cạnh.</p>
-              ) : (
-                <>
-                  <img
-                    src={p.bank!.qrUrl}
-                    alt={`Mã VietQR chuyển ${formatVnd(p.dueVnd)}, nội dung ${p.content}`}
-                    width={240}
-                    height={240}
-                    onError={() => setQrBroken(true)}
-                    className="h-60 w-60 rounded-md border border-slate-200 bg-white"
-                  />
-                  <button type="button" className="btn-ghost min-h-[44px] text-sm" onClick={() => void saveQr(p.bank!.qrUrl, orderId)}>
-                    Lưu ảnh QR
-                  </button>
-                  <p className="text-center text-xs text-slate-600">Mở app ngân hàng → Quét QR. Số tiền và nội dung đã điền sẵn.</p>
-                </>
-              )}
-            </div>
-
-            <div className="mt-4 min-w-0 md:mt-0">
-              <h3 className="font-display text-sm font-bold text-ink">Hoặc chuyển khoản tay</h3>
-              <Row label="Ngân hàng">{p.bank!.name}</Row>
-              <Row label="Số tài khoản" copy={{ value: p.bank!.accountNumber.replace(/\s+/g, ''), label: 'số tài khoản' }}>
-                <span className="font-mono">{p.bank!.accountNumber}</span>
-              </Row>
-              <Row label="Chủ tài khoản">{p.bank!.accountName}</Row>
-              <div className="mt-2 rounded-md bg-amber-tint p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-amber-text">Nội dung chuyển khoản</p>
-                    <p className="font-mono text-lg font-bold text-ink">{p.content}</p>
-                  </div>
-                  <CopyButton value={p.content} label="nội dung chuyển khoản" />
-                </div>
-                <p className="mt-2 text-sm text-amber-text">
-                  Ghi đúng nội dung {p.content}, không thêm chữ khác. Sai nội dung sẽ phải chờ đối soát thủ công.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-900">
-            <p className="font-semibold">Sau khi chuyển</p>
-            <p>
-              {p.autoConfirm ? 'Ngân hàng xác nhận tự động, thường trong vài phút.' : 'GrabCode đối soát thủ công và xác nhận sớm nhất có thể.'} Trang này tự cập
-              nhật, bạn có thể đóng và quay lại từ{' '}
-              <Link href="/orders" className="font-semibold underline">Đơn của tôi</Link>.
-            </p>
-          </div>
-
-          {p.devDeposit && (
-            <button type="button" className="w-full rounded-full border-2 border-dashed border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700" disabled={busy} onClick={simulate}>
-              Giả lập đã chuyển khoản (dev)
-            </button>
-          )}
-
-          <StickyActionBar>
-            {p.reportedAt ? (
-              <p className="flex min-h-[48px] items-center justify-center rounded-full bg-blue-50 px-4 text-center text-sm font-semibold text-blue-900" role="status">
-                Đã báo, chờ đối soát
-              </p>
-            ) : (
-              <button type="button" className="btn-secondary w-full" disabled={busy} onClick={report}>
-                {busy ? 'Đang gửi…' : 'Tôi đã chuyển khoản'}
-              </button>
-            )}
-            {reportError && (
-              <p className="text-center text-sm font-semibold text-red-700" role="alert">
-                Chưa gửi được, hãy thử lại. GrabCode vẫn tự kiểm tra giao dịch.
-              </p>
-            )}
-          </StickyActionBar>
-        </>
       )}
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-stone-50 p-4">
+          <div>
+            <p className="text-sm text-stone-600">Số tiền cần chuyển</p>
+            <p className="whitespace-nowrap font-display text-2xl font-extrabold tabular-nums text-stone-900 md:text-[28px]">{formatVnd(p.dueVnd)}</p>
+          </div>
+          <CopyButton value={String(p.dueVnd)} label="số tiền" />
+        </div>
+
+        {/* The transfer content comes before the QR: a wrong content is the costliest mistake (manual reconciliation). */}
+        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-900">Nội dung chuyển khoản (bắt buộc)</p>
+              <p className="break-all font-mono text-xl font-bold text-stone-900">{p.content}</p>
+            </div>
+            <CopyButton value={p.content} label="nội dung chuyển khoản" />
+          </div>
+          <p className="mt-2 text-sm text-amber-900">Ghi đúng {p.content}, không thêm chữ khác. Sai nội dung sẽ phải chờ đối soát thủ công.</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[240px_1fr] md:gap-6">
+        <div className="space-y-2">
+          <h3 className="font-display text-base font-bold text-stone-900">Cách 1 – Dùng mã QR</h3>
+          {qrBroken ? (
+            <p className="banner-info">Không tải được mã QR — hãy chuyển khoản tay theo thông tin bên dưới.</p>
+          ) : (
+            <>
+              <img
+                src={bank.qrUrl}
+                alt={`Mã VietQR chuyển ${formatVnd(p.dueVnd)}, nội dung ${p.content}`}
+                width={240}
+                height={240}
+                onError={() => setQrBroken(true)}
+                className="mx-auto h-60 w-60 rounded-xl border border-stone-200 bg-white"
+              />
+              <button type="button" className="btn-outline w-full" onClick={() => void saveQr(bank.qrUrl, orderId)}>
+                <span className="material-symbols-outlined !text-[20px]" aria-hidden>download</span>
+                Lưu ảnh QR
+              </button>
+              <p className="help">Mở app ngân hàng → Quét QR → Chọn ảnh từ thư viện. Số tiền và nội dung đã điền sẵn.</p>
+            </>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <h3 className="font-display text-base font-bold text-stone-900">Cách 2 – Chuyển khoản tay</h3>
+          <Row label="Ngân hàng"><span className="font-semibold">{bank.name}</span></Row>
+          <Row label="Số tài khoản" copy={{ value: bank.accountNumber.replace(/\s+/g, ''), label: 'số tài khoản' }}>
+            <span className="font-mono text-lg font-bold tracking-wide">{bank.accountNumber}</span>
+          </Row>
+          <Row label="Chủ tài khoản"><span className="font-bold">{bank.accountName}</span></Row>
+          <p className="help">Kiểm tra đúng tên chủ tài khoản trước khi chuyển. Chỉ chuyển theo thông tin trên trang này.</p>
+        </div>
+      </div>
+
+      <div className="banner-info">
+        <span className="material-symbols-outlined !text-[20px]" aria-hidden>info</span>
+        <div>
+          <p className="font-semibold">Sau khi chuyển</p>
+          <p>
+            {p.autoConfirm ? 'Ngân hàng xác nhận tự động, thường trong vài phút.' : `${BRAND.name} đối soát thủ công và xác nhận sớm nhất có thể.`} Trang này tự cập
+            nhật, bạn có thể đóng và quay lại từ{' '}
+            <Link href="/orders" className="font-semibold underline">Đơn của tôi</Link>.
+          </p>
+        </div>
+      </div>
+
+      {p.devDeposit && (
+        <button type="button" className="min-h-[48px] w-full rounded-full border-2 border-dashed border-stone-300 px-4 text-sm font-semibold text-stone-700" disabled={busy} onClick={simulate}>
+          Giả lập đã chuyển khoản (dev)
+        </button>
+      )}
+
+      <StickyActionBar>
+        {p.reportedAt ? (
+          <p className="banner-info min-h-[48px] items-center font-semibold" role="status">
+            <span className="material-symbols-outlined !text-[20px]" aria-hidden>schedule</span>
+            Đã báo chuyển khoản, đang chờ đối soát
+          </p>
+        ) : (
+          <button type="button" className="btn-primary w-full" disabled={busy} onClick={report}>
+            {busy ? (
+              <>
+                <span className="material-symbols-outlined spinner" aria-hidden>progress_activity</span>
+                Đang gửi…
+              </>
+            ) : (
+              'Tôi đã chuyển khoản'
+            )}
+          </button>
+        )}
+        {reportError && (
+          <p className="error-text justify-center lg:justify-start" role="alert">
+            Chưa gửi được, hãy thử lại. {BRAND.name} vẫn tự kiểm tra giao dịch.
+          </p>
+        )}
+      </StickyActionBar>
     </section>
   );
 }

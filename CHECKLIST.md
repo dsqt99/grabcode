@@ -1,4 +1,4 @@
-# GrabCode — Checklist tiến độ
+# FastDemo — Checklist tiến độ
 
 > Cập nhật **ngay khi xong mỗi việc** (Nguyên tắc 5 trong `CLAUDE.md`): tick, ghi commit hash ngắn, thêm việc mới phát sinh.
 > Ký hiệu: `[x]` xong · `[~]` đang làm / làm dở · `[ ]` chưa làm · 👤 cần chủ dự án làm (tài khoản, secret, quyết định).
@@ -223,6 +223,16 @@
 - [ ] Chạy `staging-up.sh` thật trên máy có Docker (build image, Caddy HTTPS) — chưa chạy được ở môi trường agent (không có Docker)
 - [ ] Rà lại `smoke-admin/milestones/dispatch/auth/realtime/qa` sau P0; thêm Centrifugo vào compose prod nếu cần realtime
 - [ ] CI: thêm bước boot core-api (PGlite/Postgres service) để bắt lỗi kiểu bump `platform-express` mà `typecheck` không thấy
+
+## Redesign web khách (HON-52) — branch `feat/redesign-web`
+
+- [x] Token + class `redesign-ds` vào `apps/web` (tailwind.config, globals.css), Navbar/Footer mới — `42df247`
+- [x] Trang chủ (hero, 3 cam kết, "Tiền của bạn đi đâu?", bỏ ảnh Unsplash + icon xe/đồ ăn, so sánh dạng thẻ ở mobile), `/order/new` (thanh bước, đặc tả skeleton, "{n} mốc") — `3052bb6`
+- [x] `/order/[id]`: thẻ trạng thái, khối hành động theo trạng thái, MoneyLedger, VietQR mobile-first, mốc dạng timeline, tài khoản hoàn thu gọn/khẩn, sheet có lý do khoá — `b2eb4a8` `9897ac1`
+- [x] `/orders`, đăng nhập (nút hiện mật khẩu, ẩn PERKS ở mobile), trang tĩnh — `c80029b`; hồ sơ chỉ đổi token, bỏ chữ "cuốc"; ảnh 390/1280 + axe: `docs/redesign/web/` (PNG đính kèm task HON-52)
+- [ ] Hồ sơ `/profile` theo bố cục mới (P1: tab dính, công tắc `role=switch`)
+- [ ] Phím ←/→ giữa tab "Đơn của tôi" (P1); dòng miễn trừ footer (chờ CTO/founder duyệt câu chữ)
+- [ ] Dọn token cũ (`emerald`, `brand-strong`…) khi cả 3 app xong redesign
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 

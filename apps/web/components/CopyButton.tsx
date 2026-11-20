@@ -19,7 +19,7 @@ export default function CopyButton({ value, label }: { value: string; label: str
     );
 
   return (
-    <button type="button" onClick={copy} aria-label={`Sao chép ${label}`} className="btn-secondary min-h-[44px] shrink-0 !px-4 !py-2 text-sm">
+    <button type="button" onClick={copy} aria-label={`Sao chép ${label}`} className="btn-secondary btn-sm shrink-0">
       <span aria-live="polite">{state === 'done' ? 'Đã chép ✓' : state === 'failed' ? 'Chép tay giúp' : 'Sao chép'}</span>
     </button>
   );

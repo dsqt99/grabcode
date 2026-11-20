@@ -26,7 +26,6 @@ function requireProductionEnv() {
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@grabcode/contracts', '@grabcode/auth-ui'],
-  images: { remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }] },
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
   },

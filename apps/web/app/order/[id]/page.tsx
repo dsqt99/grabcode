@@ -9,22 +9,24 @@ import GitTerminalLog from '../../../components/GitTerminalLog';
 import ConfirmSheet from '../../../components/ConfirmSheet';
 import DeliveryLinks from '../../../components/DeliveryLinks';
 import LiveStepper from '../../../components/LiveStepper';
-import MilestoneList from '../../../components/MilestoneList';
+import MilestoneList, { SubmittedMilestone } from '../../../components/MilestoneList';
+import MoneyLedger from '../../../components/MoneyLedger';
 import Navbar from '../../../components/Navbar';
 import OrderChatBox from '../../../components/OrderChatBox';
 import PaymentPanel from '../../../components/PaymentPanel';
 import RefundAccountCard from '../../../components/RefundAccountCard';
 import SandboxFrame from '../../../components/SandboxFrame';
-import StatusChip from '../../../components/StatusChip';
+import StatusChip, { TONE_BORDER } from '../../../components/StatusChip';
 import StickyActionBar from '../../../components/StickyActionBar';
 import SupportContact from '../../../components/SupportContact';
 import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
-import { useCurrency } from '../../../lib/currency';
 import { milestoneAmount, paysOnApproval, statusInput, statusView } from '../../../lib/orderStatus';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
 import { etaLabel, formatVnd, menuItemOf } from '../../../lib/pricing';
 import { hasSupport } from '../../../lib/support';
+import { BRAND } from '@grabcode/contracts';
+
 
 const POLL_MS = 3000;
 const LONG_WAIT_MS = 30 * 60_000;
@@ -38,8 +40,8 @@ function LongWaitNote({ since }: { since: string }) {
   }, []);
   if (now - new Date(since).getTime() < LONG_WAIT_MS) return null;
   return (
-    <p className="mt-2 text-sm font-semibold text-amber-700">
-      Đã hơn 30 phút chưa có freelancer nhận. Vận hành đã được báo; không ai nhận trong 24 giờ thì đơn tự huỷ và GrabCode hoàn tiền.
+    <p className="banner-warn">
+      Đã hơn 30 phút chưa có freelancer nhận. Vận hành đã được báo; không ai nhận trong 24 giờ thì đơn tự huỷ và {BRAND.name} hoàn tiền.
     </p>
   );
 }
@@ -77,7 +79,6 @@ function systemMsg(orderId: string, text: string): ChatMessage {
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
-  const { usd } = useCurrency();
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [note, setNote] = useState('');
   const [ticked, setTicked] = useState(false);
@@ -261,15 +262,23 @@ export default function OrderPage() {
       <>
         <Navbar />
         {missing ? (
-          <section className="mx-auto max-w-md space-y-4 px-4 py-12 text-center">
-            <p className="font-display text-lg font-bold text-ink">Không tìm thấy đơn này hoặc bạn không có quyền xem.</p>
-            <Link href="/orders" className="btn-primary">Về Đơn của tôi</Link>
-          </section>
+          <main className="mx-auto max-w-md px-4 py-12">
+            <section className="card flex flex-col items-center gap-3 py-10 text-center">
+              <span className="grid h-16 w-16 place-items-center rounded-full bg-stone-100 text-stone-600" aria-hidden>
+                <span className="material-symbols-outlined !text-[40px]">search_off</span>
+              </span>
+              <h1 className="font-display text-base font-bold text-stone-900">Không tìm thấy đơn này hoặc bạn không có quyền xem.</h1>
+              <Link href="/orders" className="btn-primary">Về Đơn của tôi</Link>
+            </section>
+          </main>
         ) : (
-          <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 md:px-8" role="status" aria-busy="true">
+          <div className="mx-auto max-w-6xl space-y-4 px-4 py-6 md:px-8" role="status" aria-busy="true">
             <span className="sr-only">Đang tải đơn hàng…</span>
-            <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
-            {[0, 1, 2].map((i) => <div key={i} className="h-32 animate-pulse rounded-lg bg-slate-100" />)}
+            <div className="skeleton h-10 w-40" />
+            <div className="skeleton h-40" />
+            <div className="skeleton h-60" />
+            <div className="skeleton h-[120px]" />
+            <div className="skeleton h-[120px]" />
           </div>
         )}
       </>
@@ -385,207 +394,335 @@ export default function OrderPage() {
   // A <div>, not a <label>: a label around the hint buttons would name the first button instead of the textarea.
   const noteField = (label: string, hints?: string[]) => (
     <div>
-      <label htmlFor="sheet-note" className="block font-semibold text-ink">{label}</label>
+      <label htmlFor="sheet-note" className="label">{label}</label>
       {hints && (
-        <span className="mt-2 flex flex-wrap gap-2">
+        <span className="-mx-4 mb-2 flex snap-x gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
           {hints.map((h) => (
-            <button key={h} type="button" className="chip min-h-[44px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
+            <button key={h} type="button" className="chip-neutral min-h-[44px] shrink-0 snap-start px-3" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
               {h}
             </button>
           ))}
         </span>
       )}
-      <textarea
-        id="sheet-note"
-        className="mt-2 w-full p-3 !text-base"
-        rows={4}
-        maxLength={2000}
-        value={note}
-        disabled={sending}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <span className="block text-right text-xs text-slate-500">
+      <textarea id="sheet-note" className="field" rows={4} maxLength={2000} value={note} disabled={sending} onChange={(e) => setNote(e.target.value)} />
+      <span className="mt-1 block text-right text-xs text-stone-600">
         {note.trim().length < minNote ? `Tối thiểu ${minNote} ký tự · ` : ''}
         {note.length}/2000
       </span>
     </div>
   );
   const tick = (label: string) => (
-    <label className="flex min-h-[44px] items-center gap-3 rounded-md border border-slate-200 p-3 font-semibold text-ink">
-      <input type="checkbox" className="h-5 w-5" checked={ticked} disabled={sending} onChange={(e) => setTicked(e.target.checked)} />
+    <label className="check-row font-semibold text-stone-900">
+      <input type="checkbox" className="check" checked={ticked} disabled={sending} onChange={(e) => setTicked(e.target.checked)} />
       {label}
     </label>
   );
+  /** Money box of a sheet: amber when money leaves escrow now, stone when nothing is paid (redesign-ds §7). */
+  const moneyBox = (label: string, amount: number, consequence: string, pays = true) => (
+    <div className={`rounded-xl border p-4 ${pays ? 'border-amber-200 bg-amber-50' : 'border-stone-200 bg-stone-50'}`}>
+      <p className="flex justify-between gap-3 font-semibold text-stone-900">
+        <span>{label}</span>
+        <span className="font-display text-xl font-extrabold tabular-nums">{formatVnd(amount)}</span>
+      </p>
+      <p className={`mt-1 text-sm ${pays ? 'text-amber-900' : 'text-stone-700'}`}>{consequence}</p>
+    </div>
+  );
   const sheetProps = { open: true, busy: sending, error: sheetError, onClose: () => setSheet(null) };
 
-  return (
-    <>
-      <Navbar />
-      <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 md:px-8">
-        <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="chip-dark">{order.id}</span>
-              <StatusChip tone={sv.tone} label={sv.label} />
-              {item && <span className="chip bg-slate-100 text-slate-700">{item.name}</span>}
-            </div>
-            <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
-            <p className="mt-1 text-sm text-slate-600">{sv.description}</p>
-          </div>
-          <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <div>
-              <dt className="text-slate-500">{input.priceQuoted ? 'Giá đơn' : 'Giá từ (chờ báo giá)'}</dt>
-              <dd className="font-display font-extrabold text-emerald-dark">
-                {formatVnd(order.priceVnd)}
-                {usd(order.priceVnd) && <span className="ml-2 text-xs font-normal text-slate-500">{usd(order.priceVnd)}</span>}
-              </dd>
-            </div>
-            <div><dt className="text-slate-500">Tiền của đơn</dt><dd className="font-semibold">{sv.money}</dd></div>
-            <div><dt className="text-slate-500">Thời gian</dt><dd className="font-semibold">{etaLabel(order.etaHours)}</dd></div>
-          </dl>
-        </header>
+  const { refundedVnd } = input.money;
+  const coderName = order.assignedCoder?.name ?? 'Freelancer';
+  const current = order.brief.milestones.find((m) => m.status !== 'COMPLETED');
+  const reviewing = ordersApiEnabled ? toReview : undefined;
+  // A refund is due now: the account form comes right under the action block, open (redesign-web-order §6).
+  const refundDue =
+    input.status === 'DISPUTED' ? heldVnd : (input.status === 'CANCELLED' || input.status === 'RESOLVED') && refundedVnd > 0 ? refundedVnd : undefined;
+  const askRefund = ordersApiEnabled && sv.askRefundAccount;
+  const approveLabel = (id: string) => (paysOnApproval(order, id) ? `Duyệt & trả ${formatVnd(amountOf(id))}` : 'Duyệt mốc cuối');
+  const showSandbox = !(ordersApiEnabled && !order.demoUrl);
+  const showDeliveryLinks = ordersApiEnabled && !order.demoUrl && !!order.assignedCoder;
+  // Real orders: no empty terminal ("chờ commit…") on unpaid, cancelled or link-only orders.
+  const showCommits = !ordersApiEnabled || (order.commits?.length ?? 0) > 0;
+  const showRepo = !!order.repoUrl && delivered;
+  const showClaimRepo = ordersApiEnabled && !!order.repoHandoverPending;
 
-        {/* Unpaid: the amount and QR come first on mobile (Màn A), the stepper only says "step 1" anyway. */}
-        {ordersApiEnabled && input.status === 'DRAFT' && <PaymentPanel orderId={order.id} />}
-
-        <LiveStepper step={sv.step} percent={percent} />
-
-        {input.status === 'DISPUTED' && (
-          <div className="card border-red-200 bg-red-50 text-sm text-red-800" role="status">
-            <p className="font-display font-bold">Đơn đang tranh chấp. {sv.description}</p>
-            {order.disputeReason && <p className="mt-1">Lý do: {order.disputeReason}</p>}
-          </div>
-        )}
-
-        {(input.status === 'FUNDED' || input.status === 'DISPATCHED') && (
-          <div className="card flex items-center gap-4 border-emerald/40 bg-emerald-mint/50 shadow-l2" role="status">
-            <span className="material-symbols-outlined shrink-0 text-emerald-dark" aria-hidden>radar</span>
-            <div>
-              <p className="font-display font-bold text-ink">{sv.label}</p>
-              <p className="text-sm text-slate-600">{sv.description}</p>
-              <LongWaitNote since={order.fundedAt ?? order.createdAt} />
-              {hasSupport && (
-                <p className="mt-2 text-sm text-slate-700">
-                  Huỷ đơn? Liên hệ hỗ trợ: <SupportContact />
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="min-w-0 space-y-6">
-            {/* Real orders: a live preview when one is READY, otherwise the freelancer's links (never a generated demo). */}
-            {ordersApiEnabled && !order.demoUrl ? order.assignedCoder && <DeliveryLinks order={order} /> : <SandboxFrame order={order} delivered={delivered} />}
-            {/* Real orders: no empty terminal ("chờ commit…") on unpaid, cancelled or link-only orders. */}
-            {(!ordersApiEnabled || (order.commits?.length ?? 0) > 0) && <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />}
-          </div>
-          <div className="min-w-0 space-y-6">
-            <div className="card space-y-3 shadow-l3">
-              {order.assignedCoder && (
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-mint font-display font-bold text-emerald-dark" aria-hidden>
-                    {order.assignedCoder.name.charAt(0)}
-                  </span>
-                  <div>
-                    <p className="font-display text-sm font-bold text-ink">{order.assignedCoder.name}</p>
-                    {order.assignedCoder.rating > 0 && (
-                      <p className="text-xs text-slate-500">{order.assignedCoder.tier} • {order.assignedCoder.rating} sao • {order.assignedCoder.completedOrders} đơn</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              <p className="text-sm text-slate-600">{sv.money}</p>
-              {(sv.canAccept || (ordersApiEnabled && toReview)) && (
-                <StickyActionBar>
-                  {sv.canAccept ? (
-                    <div className="flex gap-2 lg:flex-col">
-                      <button type="button" className="btn-primary flex-1 lg:w-full" onClick={() => openSheet({ kind: 'accept' })}>
-                        Nghiệm thu đơn
-                      </button>
-                      <button type="button" className="btn-secondary flex-1 lg:w-full" onClick={() => openSheet({ kind: 'revise' })}>
-                        Yêu cầu sửa
-                      </button>
-                    </div>
-                  ) : (
-                    toReview && (
-                      <button type="button" className="btn-primary w-full" onClick={() => openSheet({ kind: 'approve', milestoneId: toReview.id })}>
-                        Xem & duyệt {toReview.id}
-                      </button>
-                    )
-                  )}
-                </StickyActionBar>
-              )}
-              {ordersApiEnabled && sv.canDispute && (
-                <button type="button" className="min-h-[44px] w-full text-center text-sm font-semibold text-red-700 hover:underline" onClick={() => openSheet({ kind: 'dispute' })}>
-                  Mở tranh chấp
-                </button>
-              )}
-              {order.repoUrl && delivered && (
-                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
+  /** What the customer has to do (or is waiting for), right under the status card (redesign-web-order §3). */
+  const action = (() => {
+    switch (input.status) {
+      case 'DRAFT':
+        return ordersApiEnabled ? <PaymentPanel orderId={order.id} /> : null;
+      case 'FUNDED':
+      case 'DISPATCHED':
+        return (
+          <section className="card space-y-3" role="status" aria-labelledby="action-title">
+            <h2 id="action-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900">
+              <span className="material-symbols-outlined text-blue-700" aria-hidden>person_search</span>
+              {sv.label}
+              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-600 motion-reduce:animate-none" aria-hidden />
+            </h2>
+            <p className="text-stone-700">{sv.description}</p>
+            <LongWaitNote since={order.fundedAt ?? order.createdAt} />
+            {hasSupport && (
+              <p className="text-sm text-stone-700">
+                Muốn huỷ đơn? Liên hệ hỗ trợ: <SupportContact />
+              </p>
+            )}
+          </section>
+        );
+      case 'IN_PROGRESS':
+        return reviewing ? (
+          <SubmittedMilestone
+            milestone={reviewing}
+            onReview={(mid, approve) => openSheet({ kind: approve ? 'approve' : 'reject', milestoneId: mid })}
+            amountOf={amountOf}
+            paysOnApproval={(mid) => paysOnApproval(order, mid)}
+          />
+        ) : (
+          <section className="card space-y-1" aria-labelledby="action-title">
+            <h2 id="action-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900">
+              <span className="material-symbols-outlined text-brand-700" aria-hidden>code</span>
+              {current ? `${coderName} đang làm mốc ${current.id}: ${current.title}` : `${coderName} đang hoàn thiện để bàn giao`}
+            </h2>
+            <p className="text-sm text-stone-600">Thời gian dự kiến: {etaLabel(order.etaHours)}</p>
+          </section>
+        );
+      case 'DELIVERED': {
+        const links = order.brief.milestones.filter((m) => m.deliveryUrl);
+        return (
+          <section className="card-action space-y-3" aria-labelledby="action-title">
+            <h2 id="action-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900">
+              <span className="material-symbols-outlined text-amber-800" aria-hidden>inventory_2</span>
+              Freelancer đã bàn giao toàn bộ
+            </h2>
+            <p className="text-stone-700">{sv.description}</p>
+            {links.length > 0 && (
+              <ul className="divide-y divide-stone-100">
+                {links.map((m) => (
+                  <li key={m.id}>
+                    <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="flex min-h-[48px] items-center justify-between gap-3 font-semibold text-brand-800">
+                      <span className="min-w-0 truncate">{m.id} · {m.title}</span>
+                      <span className="material-symbols-outlined !text-[20px]" aria-hidden>open_in_new</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {moneyBox('Khi bạn nghiệm thu', acceptVnd, `${BRAND.name} trả nốt ${formatVnd(acceptVnd)} cho freelancer.`)}
+          </section>
+        );
+      }
+      case 'ACCEPTED':
+        return (
+          <div className="banner-success" role="status">
+            <span className="material-symbols-outlined" aria-hidden>verified</span>
+            <div className="space-y-1">
+              <p className="font-display text-base font-bold">Đơn đã hoàn tất · {sv.description}</p>
+              {showRepo && (
+                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center font-semibold underline">
                   Xem repo bàn giao
                 </a>
               )}
-              {ordersApiEnabled && order.repoHandoverPending && (
-                <button type="button" className="min-h-[44px] w-full text-center text-sm font-semibold text-emerald-dark hover:underline" onClick={() => openSheet({ kind: 'repo' })}>
-                  Nhận repo về tài khoản GitHub của bạn
-                </button>
-              )}
+            </div>
+          </div>
+        );
+      case 'DISPUTED':
+        return (
+          <div className="banner-danger" role="status">
+            <span className="material-symbols-outlined" aria-hidden>gavel</span>
+            <div className="space-y-1">
+              <p className="font-display text-base font-bold">Đơn đang tranh chấp</p>
+              <p>{sv.description}</p>
+              {order.disputeReason && <p>Lý do: {order.disputeReason}</p>}
               {hasSupport && (
-                <p className="border-t border-slate-100 pt-3 text-sm text-slate-700">
+                <p>
                   Cần hỗ trợ? <SupportContact />
                 </p>
               )}
             </div>
-            {ordersApiEnabled && sv.askRefundAccount && <RefundAccountCard orderId={order.id} />}
-            <MilestoneList
-              milestones={order.brief.milestones}
-              onReview={ordersApiEnabled && sv.canReview ? (id, approve) => openSheet({ kind: approve ? 'approve' : 'reject', milestoneId: id }) : undefined}
-              amountOf={amountOf}
-              paysOnApproval={(id) => paysOnApproval(order, id)}
-            />
-            <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
+          </div>
+        );
+      case 'RESOLVED':
+      case 'CANCELLED':
+        return (
+          <section className="card space-y-1" aria-labelledby="action-title">
+            <h2 id="action-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900">
+              <span className="material-symbols-outlined text-stone-600" aria-hidden>{input.status === 'RESOLVED' ? 'gavel' : 'cancel'}</span>
+              {input.status === 'RESOLVED' ? 'Đã xử lý tranh chấp' : 'Đơn đã huỷ'}
+            </h2>
+            <p className="text-stone-700">{sv.description}</p>
+          </section>
+        );
+    }
+  })();
+
+  return (
+    <>
+      <Navbar />
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-4 md:px-8 md:py-8 lg:space-y-6">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/orders" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 font-display text-sm font-semibold text-stone-700 hover:bg-stone-100">
+            <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_back</span>
+            Đơn của tôi
+          </Link>
+          <span className="chip-dark">{order.id}</span>
+        </div>
+
+        <header className={`card-raised space-y-3 border-l-4 ${TONE_BORDER[sv.tone]}`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusChip tone={sv.tone} label={sv.label} />
+            {item && <span className="chip-neutral">{item.name}</span>}
+          </div>
+          <h1 className="line-clamp-3 font-display text-2xl font-extrabold text-stone-900 md:text-3xl">{order.title}</h1>
+          <p className="text-stone-700">{sv.description}</p>
+          <LiveStepper step={sv.step} percent={percent} paused={input.status === 'DISPUTED'} />
+        </header>
+
+        {/* One DOM order for both layouts: on mobile the two columns dissolve (`contents`) and `order-*` interleaves them. */}
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
+          <div className="contents lg:col-span-8 lg:block lg:space-y-6">
+            {action && <div className="order-1">{action}</div>}
+            {askRefund && refundDue !== undefined && (
+              <div className="order-1">
+                <RefundAccountCard orderId={order.id} dueVnd={refundDue} />
+              </div>
+            )}
+            <div className="order-3">
+              <MilestoneList milestones={order.brief.milestones} amountOf={amountOf} paysOnApproval={(mid) => paysOnApproval(order, mid)} />
+            </div>
+            {(showSandbox || showDeliveryLinks || showCommits || showRepo || showClaimRepo) && (
+              <section className="card order-4 space-y-4" aria-label="Bàn giao">
+                {showSandbox ? <SandboxFrame order={order} delivered={delivered} /> : showDeliveryLinks && <DeliveryLinks order={order} />}
+                {showCommits && (
+                  <details className="group rounded-xl border border-stone-200">
+                    <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-4 font-display text-sm font-semibold text-stone-900">
+                      Lịch sử commit ({order.commits?.length ?? 0})
+                      <span className="material-symbols-outlined text-stone-600 transition group-open:rotate-180" aria-hidden>expand_more</span>
+                    </summary>
+                    <div className="px-2 pb-2">
+                      <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />
+                    </div>
+                  </details>
+                )}
+                {showRepo && (
+                  <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="btn-outline w-full">
+                    Xem repo bàn giao
+                  </a>
+                )}
+                {showClaimRepo && (
+                  <button type="button" className="btn-secondary w-full" onClick={() => openSheet({ kind: 'repo' })}>
+                    Nhận repo về tài khoản GitHub của bạn
+                  </button>
+                )}
+              </section>
+            )}
+            <div className="order-5">
+              <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
+            </div>
+          </div>
+
+          <div className="contents lg:sticky lg:top-24 lg:col-span-4 lg:block lg:space-y-6">
+            <div className="order-2">
+              <MoneyLedger money={input.money} priceVnd={order.priceVnd} priceQuoted={input.priceQuoted} />
+            </div>
+            {sv.canAccept && (
+              <StickyActionBar>
+                <div className="flex gap-2 lg:flex-col">
+                  <button type="button" className="btn-outline flex-1 lg:order-2" onClick={() => openSheet({ kind: 'revise' })}>
+                    Yêu cầu sửa
+                  </button>
+                  <button type="button" className="btn-primary flex-[2] lg:order-1" onClick={() => openSheet({ kind: 'accept' })}>
+                    Nghiệm thu đơn
+                  </button>
+                </div>
+              </StickyActionBar>
+            )}
+            {order.assignedCoder && (
+              <section className="card order-6 flex items-center gap-3" aria-label="Freelancer">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-50 font-display font-bold text-brand-800" aria-hidden>
+                  {order.assignedCoder.name.charAt(0)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs text-stone-600">Freelancer</p>
+                  <p className="font-display font-bold text-stone-900">{order.assignedCoder.name}</p>
+                  {order.assignedCoder.rating > 0 && (
+                    <p className="text-sm text-stone-600">{order.assignedCoder.tier} · {order.assignedCoder.rating} sao · {order.assignedCoder.completedOrders} đơn</p>
+                  )}
+                </div>
+              </section>
+            )}
+            {askRefund && refundDue === undefined && (
+              <div className="order-7">
+                <RefundAccountCard orderId={order.id} />
+              </div>
+            )}
+            {(hasSupport || (ordersApiEnabled && sv.canDispute)) && (
+              <section className="card order-8 space-y-3" aria-labelledby="support-title">
+                <h2 id="support-title" className="font-display text-base font-bold text-stone-900">Cần hỗ trợ?</h2>
+                {hasSupport && <SupportContact className="text-sm" />}
+                {ordersApiEnabled && sv.canDispute && (
+                  <div className="divider pt-3">
+                    <button type="button" className="btn-danger-ghost w-full" onClick={() => openSheet({ kind: 'dispute' })}>
+                      <span className="material-symbols-outlined !text-[20px]" aria-hidden>gavel</span>
+                      Mở tranh chấp
+                    </button>
+                    <p className="help">Chỉ dùng khi không thống nhất được với freelancer. Tiền còn giữ sẽ bị tạm khoá.</p>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         </div>
+
+        {/* Mobile only: the expanded milestone card already carries both buttons on desktop. */}
+        {reviewing && (
+          <div className="lg:hidden">
+            <StickyActionBar>
+              <div className="flex gap-2">
+                <button type="button" className="btn-outline flex-1 whitespace-nowrap px-3" onClick={() => openSheet({ kind: 'reject', milestoneId: reviewing.id })}>
+                  Yêu cầu sửa
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary flex-[2] whitespace-nowrap px-3"
+                  disabled={reviewing.qa?.status === 'FAILED'}
+                  onClick={() => openSheet({ kind: 'approve', milestoneId: reviewing.id })}
+                >
+                  {approveLabel(reviewing.id)}
+                </button>
+              </div>
+            </StickyActionBar>
+          </div>
+        )}
       </main>
 
       {sheet?.kind === 'approve' && sheetMilestone && (
         <ConfirmSheet
           {...sheetProps}
           title={`Duyệt mốc ${sheetMilestone.id} · ${sheetMilestone.title}`}
-          confirmLabel={paysOnApproval(order, sheetMilestone.id) ? `Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}` : 'Duyệt mốc cuối'}
+          confirmLabel={approveLabel(sheetMilestone.id)}
           canConfirm={ticked && sheetMilestone.qa?.status !== 'FAILED'}
+          blockedReason={sheetMilestone.qa?.status === 'FAILED' ? 'Kiểm tra tự động chưa đạt' : 'Tích ô xác nhận để tiếp tục'}
           onConfirm={() => review(sheetMilestone.id, true)}
         >
           {sheetMilestone.deliveryUrl ? (
-            <p>
-              Link bàn giao:{' '}
-              <a href={sheetMilestone.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="break-all font-semibold text-emerald-dark underline">
-                {sheetMilestone.deliveryUrl}
+            <div className="space-y-1">
+              <a href={sheetMilestone.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="btn-outline btn-sm">
+                <span className="material-symbols-outlined !text-[20px]" aria-hidden>open_in_new</span>
+                Mở bản bàn giao
               </a>
-            </p>
+              <p className="break-all text-xs text-stone-600">{sheetMilestone.deliveryUrl}</p>
+            </div>
           ) : (
             <p>Freelancer chưa gửi link bàn giao cho mốc này.</p>
           )}
-          {sheetMilestone.note && <p>Ghi chú của freelancer: “{sheetMilestone.note}”</p>}
-          {sheetMilestone.qa && <p>Kiểm tra tự động: {sheetMilestone.qa.status === 'PASSED' ? 'Đạt ✓' : sheetMilestone.qa.status === 'FAILED' ? 'Không đạt ✗ — hãy yêu cầu sửa' : 'Chưa có kết quả'}</p>}
-          {paysOnApproval(order, sheetMilestone.id) ? (
-            <div className="rounded-md bg-amber-50 p-3">
-              <p className="flex justify-between gap-3 font-semibold text-ink">
-                <span>Bạn sẽ trả cho mốc này</span>
-                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
-              </p>
-              <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
-            </div>
-          ) : (
-            <div className="rounded-md bg-slate-50 p-3">
-              <p className="flex justify-between gap-3 font-semibold text-ink">
-                <span>Tiền mốc cuối</span>
-                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
-              </p>
-              <p className="mt-1 text-slate-700">Duyệt mốc cuối chưa trả tiền: khoản này được GrabCode giữ tới khi bạn nghiệm thu cả đơn.</p>
-            </div>
+          {sheetMilestone.note && <p className="rounded-xl bg-stone-50 p-3">Ghi chú của freelancer: “{sheetMilestone.note}”</p>}
+          {sheetMilestone.qa && (
+            <p className={sheetMilestone.qa.status === 'FAILED' ? 'font-semibold text-red-700' : ''}>
+              Kiểm tra tự động: {sheetMilestone.qa.status === 'PASSED' ? 'Đạt ✓' : sheetMilestone.qa.status === 'FAILED' ? 'Không đạt ✗ — hãy yêu cầu sửa' : 'Chưa có kết quả'}
+            </p>
           )}
+          {paysOnApproval(order, sheetMilestone.id)
+            ? moneyBox('Bạn sẽ trả cho mốc này', amountOf(sheetMilestone.id), 'Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.')
+            : moneyBox('Tiền mốc cuối', amountOf(sheetMilestone.id), `Duyệt mốc cuối chưa trả tiền: khoản này được ${BRAND.name} giữ tới khi bạn nghiệm thu cả đơn.`, false)}
           {tick('Tôi đã mở link và kiểm tra mốc này')}
         </ConfirmSheet>
       )}
@@ -596,6 +733,7 @@ export default function OrderPage() {
           title={`Cần freelancer sửa gì ở ${sheetMilestone.id}?`}
           confirmLabel="Gửi yêu cầu sửa"
           canConfirm={note.trim().length >= MIN_NOTE.reject}
+          blockedReason={`Viết ít nhất ${MIN_NOTE.reject} ký tự`}
           onConfirm={() => review(sheetMilestone.id, false)}
         >
           {noteField('Mô tả cụ thể điều cần sửa', REVISION_HINTS)}
@@ -609,23 +747,25 @@ export default function OrderPage() {
           cancelLabel="Để sau"
           confirmLabel={acceptVnd > 0 ? `Nghiệm thu & trả ${formatVnd(acceptVnd)}` : 'Nghiệm thu đơn'}
           canConfirm={ticked}
+          blockedReason="Tích ô xác nhận để tiếp tục"
           onConfirm={accept}
         >
-          <ul className="space-y-1">
+          <ul className="divide-y divide-stone-100">
             {order.brief.milestones.map((m) => (
-              <li key={m.id}>
-                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title}{' '}
-                {m.status !== 'COMPLETED' ? '(chưa duyệt, sẽ được trả cùng lúc)' : paysOnApproval(order, m.id) ? '(đã duyệt, đã trả)' : '(đã duyệt, trả khi nghiệm thu)'}
+              <li key={m.id} className="flex items-start gap-2 py-2">
+                <span className={`material-symbols-outlined !text-[20px] ${m.status === 'COMPLETED' ? 'text-teal-700' : 'text-stone-500'}`} aria-hidden>
+                  {m.status === 'COMPLETED' ? 'check_circle' : 'radio_button_unchecked'}
+                </span>
+                <span>
+                  <span className="font-semibold text-stone-900">{m.id} · {m.title}</span>
+                  <span className="block text-xs text-stone-600">
+                    {m.status !== 'COMPLETED' ? '(chưa duyệt, sẽ được trả cùng lúc)' : paysOnApproval(order, m.id) ? '(đã duyệt, đã trả)' : '(đã duyệt, trả khi nghiệm thu)'}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
-          <div className="rounded-md bg-amber-50 p-3">
-            <p className="flex justify-between gap-3 font-semibold text-ink">
-              <span>Số tiền sẽ giải ngân ngay</span>
-              <span className="font-display tabular-nums">{formatVnd(acceptVnd)}</span>
-            </p>
-            <p className="mt-1 text-amber-900">Sau khi nghiệm thu: đơn hoàn tất, không mở tranh chấp được nữa, tiền đã trả không hoàn lại được.</p>
-          </div>
+          {moneyBox('Số tiền sẽ giải ngân ngay', acceptVnd, 'Sau khi nghiệm thu: đơn hoàn tất, không mở tranh chấp được nữa, tiền đã trả không hoàn lại được.')}
           {tick('Tôi đã kiểm tra bản bàn giao và đồng ý nghiệm thu')}
         </ConfirmSheet>
       )}
@@ -636,10 +776,11 @@ export default function OrderPage() {
           title="Yêu cầu freelancer sửa"
           confirmLabel="Gửi yêu cầu sửa"
           canConfirm={note.trim().length >= MIN_NOTE.revise}
+          blockedReason={`Viết ít nhất ${MIN_NOTE.revise} ký tự`}
           onConfirm={requestRevision}
         >
           {noteField('Cần freelancer sửa gì?', REVISION_HINTS)}
-          <p className="text-slate-600">Freelancer thấy nội dung này ở mốc cuối và nộp lại bản sửa để bạn duyệt. Nội dung cũng được gửi vào chat của đơn.</p>
+          <p className="text-stone-600">Freelancer thấy nội dung này ở mốc cuối và nộp lại bản sửa để bạn duyệt. Nội dung cũng được gửi vào chat của đơn.</p>
         </ConfirmSheet>
       )}
 
@@ -650,32 +791,44 @@ export default function OrderPage() {
           danger
           confirmLabel="Mở tranh chấp"
           canConfirm={note.trim().length >= MIN_NOTE.dispute}
+          blockedReason={`Viết ít nhất ${MIN_NOTE.dispute} ký tự`}
           onConfirm={dispute}
         >
           {noteField('Lý do mở tranh chấp')}
-          <p className="rounded-md bg-red-50 p-3 text-red-800">
+          <p className="banner-danger">
             {heldVnd > 0
-              ? `Tiền còn giữ (${formatVnd(heldVnd)}) sẽ bị tạm khoá cho tới khi GrabCode xử lý.`
-              : 'Hiện không còn tiền giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer. GrabCode vẫn xem xét tranh chấp.'}
+              ? `Tiền còn giữ (${formatVnd(heldVnd)}) sẽ bị tạm khoá cho tới khi ${BRAND.name} xử lý.`
+              : `Hiện không còn tiền giữ (0 đ): các mốc đã duyệt đã được trả cho freelancer. ${BRAND.name} vẫn xem xét tranh chấp.`}
           </p>
         </ConfirmSheet>
       )}
 
       {sheet?.kind === 'repo' && (
-        <ConfirmSheet {...sheetProps} title="Nhận repo về GitHub" confirmLabel="Nhận repo" canConfirm={note.trim().replace(/^@/, '').length > 0} onConfirm={claimRepo}>
-          <label className="block">
-            <span className="font-semibold text-ink">Tên GitHub (username)</span>
-            <input
-              className="mt-2 w-full px-3 py-2 !text-base"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              value={note}
-              disabled={sending}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </label>
-          <p className="text-slate-600">Bạn sẽ nhận lời mời qua email GitHub.</p>
+        <ConfirmSheet
+          {...sheetProps}
+          title="Nhận repo về GitHub"
+          confirmLabel="Nhận repo"
+          canConfirm={note.trim().replace(/^@/, '').length > 0}
+          blockedReason="Nhập tên GitHub"
+          onConfirm={claimRepo}
+        >
+          <div>
+            <label htmlFor="sheet-github" className="label">Tên GitHub (username)</label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" aria-hidden>@</span>
+              <input
+                id="sheet-github"
+                className="field !pl-8"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={note}
+                disabled={sending}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-stone-600">Bạn sẽ nhận lời mời qua email GitHub.</p>
         </ConfirmSheet>
       )}
     </>

@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { AuthError, useAuth } from '@grabcode/auth-ui';
 import Navbar from './Navbar';
+import Logo from './Logo';
+import { BRAND } from '@grabcode/contracts';
+
 
 const AUTH_ERRORS: Record<string, string> = {
   state: 'Phiên đăng nhập hết hạn hoặc không hợp lệ, vui lòng thử lại.',
@@ -14,8 +17,9 @@ const FORM_ERRORS: Record<number, string> = {
   401: 'Email hoặc mật khẩu không đúng.',
   409: 'Email đã được đăng ký, hãy đăng nhập.',
 };
-const INPUT = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
-const OAUTH_BTN = 'inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 font-display text-[15px] font-semibold text-ink transition hover:bg-slate-50';
+const INPUT = 'field';
+const LABEL = 'font-display text-sm font-semibold text-stone-900';
+const OAUTH_BTN = 'btn-outline w-full';
 
 const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
   { role: 'CUSTOMER', icon: 'business_center', title: 'Tôi cần thuê Coder', text: 'Đặt làm app, chuyển khoản trước, duyệt từng mốc' },
@@ -26,18 +30,18 @@ const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
 export function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) {
   return (
     <fieldset className="grid grid-cols-2 gap-2">
-      <legend className="mb-2 text-sm font-semibold text-ink">Bạn tham gia GrabCode với vai trò</legend>
+      <legend className="mb-2 font-display text-sm font-semibold text-stone-900">Bạn tham gia {BRAND.name} với vai trò</legend>
       {ROLES.map((r) => (
         <label
           key={r.role}
-          className={`relative cursor-pointer rounded-xl border p-3 transition ${
-            value === r.role ? 'border-emerald bg-emerald/5 ring-1 ring-emerald' : 'border-slate-200 hover:border-slate-300'
+          className={`relative cursor-pointer rounded-2xl border p-4 transition ${
+            value === r.role ? 'border-brand-700 bg-brand-50 ring-1 ring-brand-700' : 'border-stone-200 bg-white hover:border-stone-300'
           }`}
         >
-          <input type="radio" name="role" value={r.role} checked={value === r.role} onChange={() => onChange(r.role)} className="absolute right-3 top-3 accent-emerald" />
-          <span className="material-symbols-outlined text-emerald" aria-hidden>{r.icon}</span>
-          <span className="mt-1 block font-display text-sm font-bold text-ink">{r.title}</span>
-          <span className="mt-0.5 block text-xs text-slate-500">{r.text}</span>
+          <input type="radio" name="role" value={r.role} checked={value === r.role} onChange={() => onChange(r.role)} className="absolute right-3 top-3 h-5 w-5 accent-brand-700" />
+          <span className="material-symbols-outlined text-brand-700" aria-hidden>{r.icon}</span>
+          <span className="mt-1 block pr-6 font-display text-sm font-bold text-stone-900">{r.title}</span>
+          <span className="mt-0.5 block text-xs text-stone-600">{r.text}</span>
         </label>
       ))}
     </fieldset>
@@ -51,6 +55,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
   const [role, setRole] = useState<UserRole>(defaultRole);
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // OAuth callback redirects back with ?auth_error=state|oauth.
@@ -80,14 +85,15 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
   const oauthRole = isRegister ? role : undefined;
 
   return (
-    <section className={`card w-full p-6 sm:p-8 ${className}`}>
-      <h1 className="font-display text-2xl font-extrabold text-ink">{isRegister ? 'Tạo tài khoản GrabCode' : 'Đăng nhập GrabCode'}</h1>
-      <p className="mt-1 text-sm text-slate-500">
+    <section className={`card w-full ${className}`}>
+      <h1 className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">{isRegister ? `Tạo tài khoản ${BRAND.name}` : `Đăng nhập ${BRAND.name}`}</h1>
+      <p className="mt-1 text-stone-600">
         {isRegister ? 'Một tài khoản dùng cho cả Khách hàng và Coder.' : 'Dùng chung cho cổng Khách hàng và ứng dụng Coder.'}
       </p>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <p className="banner-danger mt-4" role="alert">
+          <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
           {error}
         </p>
       )}
@@ -99,9 +105,9 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
       )}
 
       {providers.password && (
-        <form onSubmit={submit} className="mt-5 grid gap-3">
+        <form onSubmit={submit} className="mt-5 grid gap-4">
           {isRegister && (
-            <label className="text-sm font-semibold text-ink">
+            <label className={LABEL}>
               Họ tên
               <input
                 required
@@ -109,11 +115,11 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
                 autoComplete="name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={`${INPUT} mt-1 font-normal`}
+                className={`${INPUT} mt-1.5 font-sans font-normal`}
               />
             </label>
           )}
-          <label className="text-sm font-semibold text-ink">
+          <label className={LABEL}>
             Email
             <input
               type="email"
@@ -121,22 +127,33 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
               autoComplete="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className={`${INPUT} mt-1 font-normal`}
+              className={`${INPUT} mt-1.5 font-sans font-normal`}
             />
           </label>
-          <label className="text-sm font-semibold text-ink">
+          <label className={LABEL}>
             Mật khẩu
+            <span className="relative mt-1.5 block">
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               minLength={isRegister ? 8 : 1}
               maxLength={128}
               autoComplete={isRegister ? 'new-password' : 'current-password'}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className={`${INPUT} mt-1 font-normal`}
+              className={`${INPUT} pr-12 font-sans font-normal`}
             />
-            {isRegister && <span className="mt-1 block text-xs font-normal text-slate-500">Tối thiểu 8 ký tự.</span>}
+            <button
+              type="button"
+              className="btn-icon absolute right-0.5 top-1/2 -translate-y-1/2"
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              <span className="material-symbols-outlined !text-[20px]" aria-hidden>{showPassword ? 'visibility_off' : 'visibility'}</span>
+            </button>
+            </span>
+            {isRegister && <span className="help font-sans font-normal">Tối thiểu 8 ký tự.</span>}
           </label>
           <button type="submit" disabled={busy} className="btn-primary mt-1 w-full">
             {busy ? 'Đang xử lý…' : isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}
@@ -147,8 +164,8 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
       {(providers.google || providers.github) && (
         <>
           {providers.password && (
-            <div className="my-5 flex items-center gap-3 text-xs text-slate-400" aria-hidden>
-              <span className="h-px flex-1 bg-slate-200" /> hoặc <span className="h-px flex-1 bg-slate-200" />
+            <div className="my-5 flex items-center gap-3 text-sm text-stone-500" aria-hidden>
+              <span className="h-px flex-1 bg-stone-200" /> hoặc <span className="h-px flex-1 bg-stone-200" />
             </div>
           )}
           <div className="grid gap-2">
@@ -176,9 +193,9 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
       )}
 
       {providers.password && (
-        <p className="mt-6 border-t border-slate-200 pt-5 text-center text-sm text-slate-500">
-          {isRegister ? 'Đã có tài khoản?' : 'Chưa có tài khoản GrabCode?'}{' '}
-          <button type="button" onClick={switchMode} className="font-semibold text-emerald-dark hover:underline">
+        <p className="mt-6 border-t border-stone-200 pt-4 text-center text-sm text-stone-600">
+          {isRegister ? 'Đã có tài khoản?' : `Chưa có tài khoản ${BRAND.name}?`}{' '}
+          <button type="button" onClick={switchMode} className="inline-flex min-h-[44px] items-center font-semibold text-brand-800 hover:underline">
             {isRegister ? 'Đăng nhập' : 'Đăng ký miễn phí'}
           </button>
         </p>
@@ -198,21 +215,22 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navbar />
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:px-8 lg:grid-cols-2 lg:items-stretch lg:py-14">
-        <section className="relative overflow-hidden rounded-2xl bg-ink p-8 text-white md:p-10">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald/30 blur-3xl" aria-hidden />
-          <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-primary-fixed/10 blur-3xl" aria-hidden />
-          <h2 className="relative font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
-            Đặt làm app như đặt đồ ăn. <span className="text-primary-fixed">Duyệt từng mốc</span> rồi mới trả tiền.
+      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:px-8 lg:grid-cols-2 lg:items-stretch lg:gap-8 lg:py-14">
+        <section className="rounded-3xl bg-ink p-6 text-white md:p-10">
+          <Logo tone="dark" />
+          <h2 className="mt-6 text-balance font-display text-2xl font-extrabold leading-tight tracking-tight md:text-4xl">
+            {BRAND.tagline}
           </h2>
-          <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và freelancer nhận đơn.</p>
-          <ul className="relative mt-8 space-y-4">
+          <p className="mt-2 font-display text-lg font-bold text-brand-300 md:text-xl">Duyệt từng mốc rồi mới trả tiền.</p>
+          <p className="mt-3 text-stone-300">Một tài khoản cho cả người đặt đơn và freelancer nhận đơn.</p>
+          {/* Hidden on phones: the form comes first there and this list only made the page longer. */}
+          <ul className="mt-8 hidden space-y-4 md:block">
             {PERKS.map((p) => (
               <li key={p.icon} className="flex items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald/20 text-primary-fixed">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-brand-300">
                   <span className="material-symbols-outlined !text-[20px]" aria-hidden>{p.icon}</span>
                 </span>
-                <span className="text-sm text-slate-100">{p.text}</span>
+                <span className="text-sm text-stone-100">{p.text}</span>
               </li>
             ))}
           </ul>

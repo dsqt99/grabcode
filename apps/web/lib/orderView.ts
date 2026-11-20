@@ -25,16 +25,16 @@ export function buildPreviewHtml(order: Order): string {
   return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f8fafc;color:#0f172a}
-header{background:#00b14f;color:#fff;padding:14px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+header{background:#EA580C;color:#fff;padding:14px 20px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
 header small{font-weight:500;opacity:.85}
 main{padding:20px;max-width:960px;margin:auto}
 h1{font-size:20px;margin:0 0 4px}p{color:#475569;font-size:14px;margin:0 0 16px}
 .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .col{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px}
 .col h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin:0 0 8px}
-.c{background:#e8f8ee;border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px;display:flex;gap:8px}
-.c b{color:#00873d}
-.btn{display:inline-block;background:#00b14f;color:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:13px;margin-top:8px}
+.c{background:#FFF7ED;border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px;display:flex;gap:8px}
+.c b{color:#C2410C}
+.btn{display:inline-block;background:#EA580C;color:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:13px;margin-top:8px}
 </style></head><body>
 <header><span>${esc(order.title)}</span><small>${esc(order.id)} - bản demo</small></header>
 <main><h1>${esc(order.title)}</h1><p>${esc(order.brief.scopeSummary)}</p>

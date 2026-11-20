@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { LoginBanner, LoginPanel, RolePicker } from '../../components/AuthGate';
 import { useAuth } from '@grabcode/auth-ui';
+import { BRAND } from '@grabcode/contracts';
+
 
 /** Only same-origin paths, so ?next= cannot bounce the user to another site ("/\\evil.com", "/\t/evil.com" parse as external). */
 const safeNext = (next: string | null) => {
@@ -46,8 +48,8 @@ function Login() {
     // New OAuth account created from the login tab: pick the role once.
     return (
       <LoginBanner>
-        <section className="card w-full p-6 sm:p-8">
-          <h1 className="font-display text-2xl font-extrabold text-ink">Chào {me?.name}, bạn dùng GrabCode để làm gì?</h1>
+        <section className="card w-full">
+          <h1 className="font-display text-2xl font-extrabold text-stone-900">Chào {me?.name}, bạn dùng {BRAND.name} để làm gì?</h1>
           <div className="mt-5">
             <RolePicker value={role} onChange={setRole} />
           </div>
@@ -60,13 +62,25 @@ function Login() {
             }}
             className="btn-primary mt-5 w-full"
           >
-            {busy ? 'Đang lưu…' : 'Tiếp tục'}
+            {busy ? (
+              <>
+                <span className="material-symbols-outlined spinner" aria-hidden>progress_activity</span>
+                Đang lưu…
+              </>
+            ) : (
+              'Tiếp tục'
+            )}
           </button>
         </section>
       </LoginBanner>
     );
   }
-  return <p className="py-16 text-center text-sm text-slate-500" role="status">Đang chuyển trang…</p>;
+  return (
+    <p className="mx-auto my-16 flex w-fit items-center gap-2 text-sm text-stone-600" role="status">
+      <span className="material-symbols-outlined spinner text-brand-600" aria-hidden>progress_activity</span>
+      Đang chuyển trang…
+    </p>
+  );
 }
 
 export default function LoginPage() {

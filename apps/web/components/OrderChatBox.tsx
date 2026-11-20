@@ -21,31 +21,31 @@ export default function OrderChatBox({ messages, onSend, coderName }: { messages
   };
 
   return (
-    <section aria-label="Chat với freelancer" className="card flex flex-col !p-0 shadow-l2">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-        <span className="material-symbols-outlined text-emerald" aria-hidden>chat</span>
-        <h2 className="font-display text-base font-bold text-ink">Chat {coderName ? `với ${coderName}` : 'đơn hàng'}</h2>
+    <section aria-labelledby="chat-title" className="card flex flex-col !p-0">
+      <div className="flex items-center gap-2 border-b border-stone-200 px-4 py-3">
+        <span className="material-symbols-outlined text-brand-700" aria-hidden>chat</span>
+        <h2 id="chat-title" className="font-display text-base font-bold text-stone-900">Chat {coderName ? `với ${coderName}` : 'đơn hàng'}</h2>
       </div>
-      <div className="h-64 space-y-3 overflow-y-auto p-4" role="log" aria-live="polite" aria-label="Tin nhắn" tabIndex={0}>
+      <div className="h-80 space-y-3 overflow-y-auto p-4 md:h-96" role="log" aria-live="polite" aria-label="Tin nhắn" tabIndex={0}>
         {messages.map((m) =>
           m.sender === 'SYSTEM' ? (
-            <p key={m.id} className="mx-auto w-fit max-w-full rounded-full bg-slate-100 px-3 py-1 text-center text-xs text-slate-700">{m.text}</p>
+            <p key={m.id} className="chip-neutral mx-auto h-auto w-fit max-w-full whitespace-normal rounded-xl py-1 text-center font-sans font-normal">{m.text}</p>
           ) : (
-            <div key={m.id} className={`flex flex-col ${m.sender === 'CUSTOMER' ? 'items-end' : 'items-start'} animate-pop`}>
-              <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.sender === 'CUSTOMER' ? 'rounded-br-sm bg-brand-strong text-white' : 'rounded-bl-sm bg-slate-100 text-ink'}`}>
+            <div key={m.id} className={`flex flex-col ${m.sender === 'CUSTOMER' ? 'items-end' : 'items-start'}`}>
+              <div className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${m.sender === 'CUSTOMER' ? 'rounded-br-md bg-brand-700 text-white' : 'rounded-bl-md bg-stone-100 text-stone-900'}`}>
                 {m.text}
               </div>
-              <span className="mt-0.5 text-xs text-slate-500">{m.senderName} • {formatTime(m.timestamp)}</span>
+              <span className="mt-0.5 text-xs text-stone-600">{m.senderName} · {formatTime(m.timestamp)}</span>
             </div>
           )
         )}
         <div ref={endRef} />
       </div>
-      <form onSubmit={submit} className="flex gap-2 border-t border-slate-100 p-3">
+      <form onSubmit={submit} className="flex items-center gap-2 border-t border-stone-200 p-3">
         <label htmlFor="chat-input" className="sr-only">Nhập tin nhắn</label>
-        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho freelancer..." className="min-w-0 flex-1 rounded-full px-4 py-2" />
-        <button type="submit" className="btn-primary min-h-[44px] min-w-[44px] !px-4 !py-2" aria-label="Gửi tin nhắn" disabled={!text.trim()}>
-          <span className="material-symbols-outlined !text-[18px]" aria-hidden>send</span>
+        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho freelancer..." className="field min-w-0 flex-1 !rounded-full" />
+        <button type="submit" className="btn-primary !min-h-[48px] w-12 shrink-0 !px-0" aria-label="Gửi tin nhắn" disabled={!text.trim()}>
+          <span className="material-symbols-outlined !text-[20px]" aria-hidden>send</span>
         </button>
       </form>
     </section>

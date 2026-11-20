@@ -1,15 +1,22 @@
 import type { MetadataRoute } from 'next';
+import { BRAND } from '@grabcode/contracts';
+
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'GrabCode Coder',
-    short_name: 'GrabCode Coder',
+    name: `${BRAND.name} Coder`,
+    short_name: `${BRAND.name} Coder`,
     description: 'Nhận đơn, làm app bằng công cụ AI, rút tiền về ngân hàng.',
     start_url: '/coder',
     scope: '/coder',
     display: 'standalone',
     background_color: '#f8fafc',
-    theme_color: '#00B14F',
-    icons: [{ src: '/coder/icon.png', sizes: '256x256', type: 'image/png', purpose: 'any' }],
+    theme_color: '#C2410C',
+    // public/ is served under basePath /coder.
+    icons: [
+      { src: '/coder/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/coder/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/coder/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
   };
 }
