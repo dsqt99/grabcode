@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/coder',
     scope: '/coder',
     display: 'standalone',
-    background_color: '#f8fafc',
+    background_color: '#FAFAF9',
     theme_color: '#C2410C',
     // public/ is served under basePath /coder.
     icons: [
