@@ -48,6 +48,12 @@ export default function MilestoneList({
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
                   {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
                 </div>
+                {m.deliveryUrl && (
+                  <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-flex max-w-full items-center gap-1 text-sm font-semibold text-emerald-dark underline">
+                    <span className="material-symbols-outlined !text-[16px]" aria-hidden>link</span>
+                    <span className="truncate">Xem bàn giao: {m.deliveryUrl}</span>
+                  </a>
+                )}
                 {m.qa && m.qa.checks.length > 0 && (
                   <details className="mt-2 text-xs text-slate-600">
                     <summary className="cursor-pointer">Chi tiết QA Gate</summary>

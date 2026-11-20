@@ -8,7 +8,7 @@ function titleFrom(prompt: string): string {
   return first.length > 70 ? `${first.slice(0, 67)}...` : first;
 }
 
-/** Deterministic, pure brief generator that simulates the Claude Sonnet analysis. */
+/** Deterministic, pure brief generator that stands in for the LLM brief when the AI service is unavailable. */
 export function genBrief(
   prompt: string,
   tier: OrderTier,

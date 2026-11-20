@@ -20,9 +20,9 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40">
       <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-slate-100 sm:text-sm">
-        <span className="material-symbols-outlined mr-1 !text-[16px] text-amber" aria-hidden>bolt</span>
-        Cam kết giao link demo chạy thật trong 2–8 giờ <span className="mx-1 hidden sm:inline">•</span>
-        <span className="hidden sm:inline">Đã có 500+ Coder sẵn sàng</span>
+        <span className="material-symbols-outlined mr-1 !text-[16px] text-amber" aria-hidden>shield</span>
+        Tiền giữ ký quỹ, chỉ giải ngân khi bạn duyệt từng mốc <span className="mx-1 hidden sm:inline">•</span>
+        <span className="hidden sm:inline">Thanh toán bằng chuyển khoản / VietQR</span>
       </div>
       <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
