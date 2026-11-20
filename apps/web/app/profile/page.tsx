@@ -16,6 +16,7 @@ import Navbar from '../../components/Navbar';
 import { RequireAuth } from '@grabcode/auth-ui';
 import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
+import { avatarFromFile } from '../../lib/avatar';
 import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
 
 const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-normal md:text-sm disabled:bg-slate-50 disabled:text-slate-500';
@@ -184,6 +185,7 @@ function AccountForm({ me }: { me: Me }) {
     country: me.country,
     timezone: me.timezone,
   });
+  const [avatarErr, setAvatarErr] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   return (
@@ -203,10 +205,40 @@ function AccountForm({ me }: { me: Me }) {
             person
           </span>
         )}
-        <label className={`${LABEL} flex-1`}>
-          Ảnh đại diện (URL)
-          <input type="url" value={f.avatarUrl} onChange={set('avatarUrl')} placeholder="https://…" className={INPUT} />
-        </label>
+        <div className="flex-1">
+          <span className={LABEL}>Ảnh đại diện</span>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <label className="btn-secondary cursor-pointer !px-4 !py-2">
+              Tải ảnh lên
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setAvatarErr(null);
+                  avatarFromFile(file).then(
+                    (url) => setF((cur) => ({ ...cur, avatarUrl: url })),
+                    (err: Error) => setAvatarErr(err.message),
+                  );
+                }}
+              />
+            </label>
+            {f.avatarUrl && (
+              <button type="button" onClick={() => setF({ ...f, avatarUrl: '' })} className="text-sm font-semibold text-slate-500 hover:text-red-700">
+                Xoá ảnh
+              </button>
+            )}
+          </div>
+          {avatarErr && (
+            <p className="mt-1 text-sm text-red-700" role="alert">
+              {avatarErr}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-slate-500">JPG, PNG hoặc WebP, tối đa 10 MB. Bấm “Lưu thay đổi” để áp dụng.</p>
+        </div>
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className={LABEL}>
