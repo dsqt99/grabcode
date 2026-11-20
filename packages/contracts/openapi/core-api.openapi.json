@@ -1960,7 +1960,21 @@
     "/v1/admin/orders": {
       "get": {
         "operationId": "adminListOrders",
-        "summary": "Admin: disputed orders and orders with money left in escrow (part-paid drafts, overpayments).",
+        "summary": "Admin: view=attention (default) = unpaid drafts waiting for a transfer, disputes, money left in escrow, paid orders nobody took for 30+ min; view=all = latest 200 orders.",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "attention",
+                "all"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1984,6 +1998,94 @@
           },
           "403": {
             "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/orders/{id}/confirm-payment": {
+      "post": {
+        "operationId": "adminConfirmPayment",
+        "summary": "Admin: book a bank transfer seen in the bank app onto a DRAFT order. Funds (and dispatches) the order once escrow holds the price. Same reference twice = 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPayment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order not DRAFT, or reference already booked",
             "content": {
               "application/json": {
                 "schema": {
@@ -2620,6 +2722,112 @@
           },
           "403": {
             "description": "Missing CODER role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "summary": "Coder: job board of paid orders no coder has taken yet (oldest first, own orders excluded).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing CODER role or suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{id}/claim": {
+      "post": {
+        "operationId": "claimJob",
+        "summary": "Coder takes a job from the board: the order moves to IN_PROGRESS and open wave offers become LOST. One active order per coder.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing CODER role or suspended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already taken, not paid yet, or the coder already has an order in progress",
             "content": {
               "application/json": {
                 "schema": {
@@ -3576,6 +3784,9 @@
                 "commitHash": {
                   "type": "string"
                 },
+                "deliveryUrl": {
+                  "type": "string"
+                },
                 "note": {
                   "type": "string"
                 },
@@ -3827,6 +4038,9 @@
                           "type": "string"
                         },
                         "commitHash": {
+                          "type": "string"
+                        },
+                        "deliveryUrl": {
                           "type": "string"
                         },
                         "note": {
@@ -4229,6 +4443,9 @@
                     "commitHash": {
                       "type": "string"
                     },
+                    "deliveryUrl": {
+                      "type": "string"
+                    },
                     "note": {
                       "type": "string"
                     },
@@ -4449,6 +4666,9 @@
                       "type": "string"
                     },
                     "commitHash": {
+                      "type": "string"
+                    },
+                    "deliveryUrl": {
                       "type": "string"
                     },
                     "note": {
@@ -4859,6 +5079,9 @@
                           "commitHash": {
                             "type": "string"
                           },
+                          "deliveryUrl": {
+                            "type": "string"
+                          },
                           "note": {
                             "type": "string"
                           },
@@ -5178,6 +5401,17 @@
               }
             ]
           },
+          "deliveryUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "note": {
             "type": "string",
             "maxLength": 2000
@@ -5252,6 +5486,9 @@
               }
             ]
           },
+          "autoConfirm": {
+            "type": "boolean"
+          },
           "devDeposit": {
             "type": "boolean"
           }
@@ -5263,6 +5500,7 @@
           "dueVnd",
           "content",
           "bank",
+          "autoConfirm",
           "devDeposit"
         ],
         "additionalProperties": false
@@ -5564,6 +5802,9 @@
                               "commitHash": {
                                 "type": "string"
                               },
+                              "deliveryUrl": {
+                                "type": "string"
+                              },
                               "note": {
                                 "type": "string"
                               },
@@ -5853,6 +6094,424 @@
         },
         "required": [
           "offers"
+        ],
+        "additionalProperties": false
+      },
+      "JobList": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "FUNDED",
+                    "DISPATCHED",
+                    "IN_PROGRESS",
+                    "DELIVERED",
+                    "ACCEPTED",
+                    "DISPUTED",
+                    "CANCELLED",
+                    "RESOLVED"
+                  ]
+                },
+                "tier": {
+                  "type": "string",
+                  "enum": [
+                    "EXPRESS",
+                    "STANDARD",
+                    "PRO",
+                    "TEMPLATE"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "prompt": {
+                  "type": "string"
+                },
+                "templateId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "framework": {
+                  "type": "string"
+                },
+                "brief": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "scopeSummary": {
+                      "type": "string"
+                    },
+                    "features": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "inScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "outOfScope": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "acceptanceCriteria": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "passed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "passed"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "milestones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "weightPercent": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING",
+                              "IN_PROGRESS",
+                              "SUBMITTED",
+                              "COMPLETED"
+                            ]
+                          },
+                          "submittedAt": {
+                            "type": "string"
+                          },
+                          "completedAt": {
+                            "type": "string"
+                          },
+                          "commitHash": {
+                            "type": "string"
+                          },
+                          "deliveryUrl": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "qa": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PASSED",
+                                  "FAILED",
+                                  "SKIPPED",
+                                  "ERROR"
+                                ]
+                              },
+                              "commitHash": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "checks": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "enum": [
+                                        "PASSED",
+                                        "FAILED",
+                                        "SKIPPED"
+                                      ]
+                                    },
+                                    "detail": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "status",
+                                    "detail"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "finishedAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "commitHash",
+                              "checks"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "description",
+                          "weightPercent",
+                          "status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "claudeMdContent": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "scopeSummary",
+                    "features",
+                    "inScope",
+                    "outOfScope",
+                    "acceptanceCriteria",
+                    "milestones",
+                    "claudeMdContent"
+                  ],
+                  "additionalProperties": false
+                },
+                "priceVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "payoutVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "etaHours": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "disputeReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "sandbox": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED",
+                            "EXPIRED"
+                          ]
+                        },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "error": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "expiresAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "url",
+                        "error",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "customer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "avatarUrl"
+                  ],
+                  "additionalProperties": false
+                },
+                "coder": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "tier": {
+                              "type": "string",
+                              "enum": [
+                                "BRONZE",
+                                "SILVER",
+                                "GOLD",
+                                "DIAMOND"
+                              ]
+                            },
+                            "completedOrders": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "rating": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "tier",
+                            "completedOrders",
+                            "rating"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "avatarUrl",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "tier",
+                "title",
+                "prompt",
+                "templateId",
+                "framework",
+                "brief",
+                "priceVnd",
+                "payoutVnd",
+                "etaHours",
+                "disputeReason",
+                "sandbox",
+                "customer",
+                "coder",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "jobs"
         ],
         "additionalProperties": false
       },
@@ -6254,11 +6913,20 @@
           "customerName": {
             "type": "string"
           },
+          "customerEmail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "coderName": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "createdAt": {
+            "type": "string"
           },
           "updatedAt": {
             "type": "string"
@@ -6273,7 +6941,9 @@
           "escrowVnd",
           "disputeReason",
           "customerName",
+          "customerEmail",
           "coderName",
+          "createdAt",
           "updatedAt"
         ],
         "additionalProperties": false
@@ -6330,11 +7000,20 @@
                 "customerName": {
                   "type": "string"
                 },
+                "customerEmail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "coderName": {
                   "type": [
                     "string",
                     "null"
                   ]
+                },
+                "createdAt": {
+                  "type": "string"
                 },
                 "updatedAt": {
                   "type": "string"
@@ -6349,7 +7028,9 @@
                 "escrowVnd",
                 "disputeReason",
                 "customerName",
+                "customerEmail",
                 "coderName",
+                "createdAt",
                 "updatedAt"
               ],
               "additionalProperties": false
@@ -6376,6 +7057,25 @@
         },
         "required": [
           "refundVnd"
+        ]
+      },
+      "ConfirmPayment": {
+        "type": "object",
+        "properties": {
+          "amountVnd": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 1000000000
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "amountVnd",
+          "reference"
         ]
       },
       "SuspenseList": {
