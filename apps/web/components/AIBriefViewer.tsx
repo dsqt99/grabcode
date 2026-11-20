@@ -12,8 +12,8 @@ function List({ items, icon, tone }: { items: string[]; icon: string; tone: stri
   return (
     <ul className="space-y-2">
       {items.map((t) => (
-        <li key={t} className="flex gap-2 text-sm text-slate-700">
-          <span className={`material-symbols-outlined !text-[18px] ${tone}`} aria-hidden>{icon}</span>
+        <li key={t} className="flex gap-2 text-sm text-stone-700">
+          <span className={`material-symbols-outlined !text-[20px] ${tone}`} aria-hidden>{icon}</span>
           {t}
         </li>
       ))}
@@ -21,46 +21,54 @@ function List({ items, icon, tone }: { items: string[]; icon: string; tone: stri
   );
 }
 
+function GroupTitle({ children }: { children: string }) {
+  return <h3 className="mb-2 font-display text-xs font-bold uppercase tracking-wide text-stone-600">{children}</h3>;
+}
+
 export default function AIBriefViewer({ brief, analyzing }: Props) {
   const [tab, setTab] = useState<'spec' | 'claude'>('spec');
 
   if (analyzing || !brief) {
+    // Skeleton shaped like the brief; no fake progress bar (it never matched the real analysis time).
     return (
-      <div className="card flex flex-col items-center gap-4 py-16 text-center shadow-l2" role="status" aria-live="polite">
-        <div className="relative grid h-16 w-16 place-items-center">
-          <span className="absolute h-16 w-16 animate-sonar rounded-full bg-emerald/40" />
-          <span className="material-symbols-outlined relative text-4xl text-emerald" aria-hidden>auto_awesome</span>
+      <div className="card space-y-4" aria-busy="true">
+        <p role="status" className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+          <span className="material-symbols-outlined text-brand-600" aria-hidden>auto_awesome</span>
+          AI đang soạn đặc tả từ yêu cầu của bạn…
+        </p>
+        <div className="skeleton h-6 w-3/5" />
+        <div className="space-y-2">
+          <div className="skeleton h-4 w-full" />
+          <div className="skeleton h-4 w-11/12" />
+          <div className="skeleton h-4 w-4/5" />
         </div>
-        <p className="font-display text-lg font-bold text-ink">AI đang soạn đặc tả từ yêu cầu của bạn...</p>
-        <p className="text-sm text-slate-500">Phân tích phạm vi, chia mốc bàn giao và soạn hướng dẫn cho freelancer</p>
-        <div className="h-1.5 w-56 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full w-full origin-left rounded-full bg-emerald" style={{ animation: 'grow 2s linear forwards' }} />
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="skeleton h-24" />
+          <div className="skeleton h-24" />
+          <div className="skeleton h-24" />
         </div>
-        <style>{'@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}'}</style>
       </div>
     );
   }
 
   return (
-    <div className="card !p-0 shadow-l2 animate-pop">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
-        <div>
-          <span className="chip-ok mb-2"><span className="material-symbols-outlined !text-[14px]" aria-hidden>verified</span>Đặc tả đã soạn</span>
-          <h2 className="font-display text-xl font-bold text-ink">{brief.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">{brief.scopeSummary}</p>
-        </div>
+    <div className="card !p-0">
+      <div className="border-b border-stone-200 p-4 md:p-6">
+        <span className="chip-success mb-2"><span className="material-symbols-outlined !text-[16px]" aria-hidden>verified</span>Đặc tả đã soạn</span>
+        <h2 className="font-display text-lg font-bold text-stone-900 md:text-xl">{brief.title}</h2>
+        <p className="mt-1 text-sm text-stone-600">{brief.scopeSummary}</p>
       </div>
 
-      <div role="tablist" aria-label="Chế độ xem" className="flex gap-1 border-b border-slate-100 px-5 pt-3">
-        {([['spec', 'Đặc tả'], ['claude', 'CLAUDE.md']] as const).map(([k, label]) => (
+      <div role="tablist" aria-label="Chế độ xem" className="flex gap-1 overflow-x-auto border-b border-stone-200 px-4 md:px-6">
+        {([['spec', 'Đặc tả'], ['claude', 'Hướng dẫn cho freelancer (CLAUDE.md)']] as const).map(([k, label]) => (
           <button
             key={k}
             role="tab"
             type="button"
             aria-selected={tab === k}
             onClick={() => setTab(k)}
-            className={`-mb-px rounded-t-md border-b-2 px-4 py-2 font-display text-sm font-semibold transition ${
-              tab === k ? 'border-emerald text-emerald-dark' : 'border-transparent text-slate-500 hover:text-ink'
+            className={`-mb-px min-h-[44px] shrink-0 border-b-2 px-3 font-display text-sm font-semibold transition ${
+              tab === k ? 'border-brand-700 text-brand-800' : 'border-transparent text-stone-600 hover:text-stone-900'
             }`}
           >
             {label}
@@ -69,51 +77,44 @@ export default function AIBriefViewer({ brief, analyzing }: Props) {
       </div>
 
       {tab === 'claude' ? (
-        <pre className="m-5 overflow-x-auto whitespace-pre-wrap rounded-lg bg-ink p-4 font-mono text-xs leading-relaxed text-slate-200">{brief.claudeMdContent}</pre>
+        <pre className="m-4 overflow-x-auto whitespace-pre-wrap rounded-xl bg-ink p-4 font-mono text-xs leading-relaxed text-stone-200 md:m-6">{brief.claudeMdContent}</pre>
       ) : (
-        <div className="space-y-6 p-5">
+        <div className="space-y-6 p-4 md:p-6">
           <section aria-label="Tính năng chính">
-            <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide text-slate-400">Mục tiêu cốt lõi</h3>
-            <List items={brief.features} icon="check_circle" tone="text-emerald" />
+            <GroupTitle>Mục tiêu cốt lõi</GroupTitle>
+            <List items={brief.features} icon="check_circle" tone="text-teal-700" />
           </section>
 
           <div className="grid gap-6 md:grid-cols-2">
             <section aria-label="Trong phạm vi">
-              <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide text-slate-400">Trong phạm vi</h3>
-              <List items={brief.inScope} icon="add_circle" tone="text-emerald" />
+              <GroupTitle>Trong phạm vi</GroupTitle>
+              <List items={brief.inScope} icon="add_circle" tone="text-teal-700" />
             </section>
             <section aria-label="Ngoài phạm vi">
-              <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide text-slate-400">Ngoài phạm vi</h3>
-              <List items={brief.outOfScope} icon="do_not_disturb_on" tone="text-slate-400" />
+              <GroupTitle>Ngoài phạm vi</GroupTitle>
+              <List items={brief.outOfScope} icon="do_not_disturb_on" tone="text-stone-500" />
             </section>
           </div>
 
           <section aria-label="Mốc thanh toán">
-            <h3 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-slate-400">3 mốc bàn giao</h3>
+            <GroupTitle>{`${brief.milestones.length} mốc bàn giao`}</GroupTitle>
             <ol className="grid gap-3 md:grid-cols-3">
               {brief.milestones.map((m) => (
-                <li key={m.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <li key={m.id} className="rounded-xl border border-stone-200 bg-stone-50 p-4">
                   <div className="flex items-center justify-between">
                     <span className="chip-dark">{m.id}</span>
-                    <span className="font-display text-lg font-extrabold text-emerald-dark">{m.weightPercent}%</span>
+                    <span className="font-display text-lg font-extrabold tabular-nums text-brand-800">{m.weightPercent}%</span>
                   </div>
-                  <p className="mt-2 font-display text-sm font-bold text-ink">{m.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{m.description}</p>
+                  <p className="mt-2 font-display text-sm font-bold text-stone-900">{m.title}</p>
+                  <p className="mt-1 text-sm text-stone-600">{m.description}</p>
                 </li>
               ))}
             </ol>
           </section>
 
           <section aria-label="Tiêu chí nghiệm thu">
-            <h3 className="mb-2 font-display text-sm font-bold uppercase tracking-wide text-slate-400">Tiêu chí nghiệm thu</h3>
-            <ul className="space-y-2">
-              {brief.acceptanceCriteria.map((c) => (
-                <li key={c.id} className="flex gap-2 text-sm text-slate-700">
-                  <span className="material-symbols-outlined !text-[18px] text-slate-300" aria-hidden>check_box_outline_blank</span>
-                  {c.text}
-                </li>
-              ))}
-            </ul>
+            <GroupTitle>Tiêu chí nghiệm thu</GroupTitle>
+            <List items={brief.acceptanceCriteria.map((c) => c.text)} icon="check_box_outline_blank" tone="text-stone-500" />
           </section>
         </div>
       )}

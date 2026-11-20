@@ -8,6 +8,8 @@ import { FRAMEWORKS, MENU, daysLabel, getMenuItem, type MenuItemCode } from '../
 import { BRAND } from '@grabcode/contracts';
 
 
+const MIN_PROMPT = 10;
+
 /** Home order box: pick a menu item (giá từ + days), describe the job; FastDemo quotes the final price before payment. */
 export default function InstantDispatch() {
   const router = useRouter();
@@ -18,7 +20,8 @@ export default function InstantDispatch() {
   const [framework, setFramework] = useState(FRAMEWORKS[0]);
 
   const item = getMenuItem(code);
-  const canSubmit = prompt.trim().length >= 10;
+  const length = prompt.trim().length;
+  const canSubmit = length >= MIN_PROMPT;
 
   const submit = () => {
     const q = new URLSearchParams({ prompt: prompt.trim(), item: code, framework });
@@ -27,79 +30,96 @@ export default function InstantDispatch() {
   };
 
   return (
-    <section id="dispatch" aria-labelledby="dispatch-title" className="rounded-xl border border-slate-200 bg-white p-4 shadow-l3 sm:p-6">
-      <h2 id="dispatch-title" className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
-        <span className="material-symbols-outlined text-emerald" aria-hidden>rocket_launch</span>
+    <section id="dispatch" aria-labelledby="dispatch-title" className="card-raised scroll-mt-20 space-y-4">
+      <h2 id="dispatch-title" className="flex items-center gap-2 font-display text-lg font-bold text-stone-900 md:text-xl">
+        <span className="material-symbols-outlined text-brand-700" aria-hidden>edit_note</span>
         Bạn cần làm gì?
       </h2>
 
-      <label htmlFor="item" className="mb-1 block font-display text-sm font-semibold text-ink">Loại việc</label>
-      <select id="item" value={code} onChange={(e) => setCode(e.target.value as MenuItemCode)} className="w-full p-2.5 !text-base">
-        {MENU.map((m) => (
-          <option key={m.code} value={m.code}>
-            {m.name} · từ {money(m.fromPriceVnd)}
-          </option>
-        ))}
-      </select>
-      <p className="mb-4 mt-2 text-sm text-slate-500">{item.scope}</p>
-
-      <label htmlFor="idea" className="mb-1 block font-display text-sm font-semibold text-ink">Mô tả việc cần làm</label>
-      <textarea
-        id="idea"
-        rows={4}
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
-        className="w-full resize-none p-3 !text-base"
-      />
-      <div className="mt-2 flex flex-wrap gap-2" aria-label="Gợi ý nhanh">
-        {SAMPLE_PROMPTS.map((p) => (
-          <button key={p} type="button" onClick={() => setPrompt(p)} className="chip bg-slate-100 text-left text-slate-600 transition hover:bg-emerald-mint hover:text-emerald-dark active:scale-95">
-            <span className="material-symbols-outlined !text-[14px]" aria-hidden>auto_awesome</span>
-            <span className="line-clamp-1 max-w-[16rem]">{p}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="tpl" className="mb-1 block font-display text-sm font-semibold text-ink">Template xuất phát</label>
-          <select id="tpl" value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-full p-2.5">
-            <option value="">Không dùng template</option>
-            {SEED_TEMPLATES.map((t) => (
-              <option key={t.id} value={t.id}>{t.title}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="fw" className="mb-1 block font-display text-sm font-semibold text-ink">Công nghệ</label>
-          <select id="fw" value={framework} onChange={(e) => setFramework(e.target.value)} className="w-full p-2.5">
-            {FRAMEWORKS.map((f) => (
-              <option key={f}>{f}</option>
-            ))}
-          </select>
+      <div>
+        <label htmlFor="item" className="label">Loại việc</label>
+        <select id="item" value={code} onChange={(e) => setCode(e.target.value as MenuItemCode)} className="field">
+          {MENU.map((m) => (
+            <option key={m.code} value={m.code}>
+              {m.name} · từ {money(m.fromPriceVnd)}
+            </option>
+          ))}
+        </select>
+        <div className="mt-2 rounded-xl bg-stone-50 p-3" aria-live="polite">
+          <p className="text-sm text-stone-700">{item.scope}</p>
+          <dl className="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <dt className="text-xs text-stone-600">Giá từ</dt>
+              <dd className="font-display font-bold tabular-nums text-brand-800">{money(item.fromPriceVnd)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-stone-600">Thời gian</dt>
+              <dd className="font-display font-bold text-stone-900">{daysLabel(item.days)}</dd>
+            </div>
+          </dl>
         </div>
       </div>
 
-      <div className="mt-5 flex flex-col gap-4 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between" aria-live="polite">
-        <dl className="flex gap-8">
+      <div>
+        <div className="flex items-baseline justify-between gap-2">
+          <label htmlFor="idea" className="label">Mô tả việc cần làm</label>
+          {length < MIN_PROMPT && <span className="text-xs text-stone-600">{length}/{MIN_PROMPT} ký tự tối thiểu</span>}
+        </div>
+        <textarea
+          id="idea"
+          rows={4}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
+          className="field resize-none"
+        />
+        <div className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Gợi ý nhanh">
+          {SAMPLE_PROMPTS.map((p) => (
+            <button key={p} type="button" onClick={() => setPrompt(p)} className="chip-neutral min-h-[44px] shrink-0 snap-start px-3 text-left hover:bg-brand-50 hover:text-brand-800">
+              <span className="material-symbols-outlined !text-[16px]" aria-hidden>auto_awesome</span>
+              <span className="line-clamp-1 max-w-[16rem]">{p}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <details className="group rounded-xl border border-stone-200">
+        <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-4 font-display text-sm font-semibold text-stone-900">
+          Tuỳ chọn kỹ thuật (không bắt buộc)
+          <span className="material-symbols-outlined text-stone-600 transition group-open:rotate-180" aria-hidden>expand_more</span>
+        </summary>
+        <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
           <div>
-            <dt className="text-xs font-medium text-slate-500">Giá từ</dt>
-            <dd className="font-display text-2xl font-extrabold text-emerald-dark">{money(item.fromPriceVnd)}</dd>
+            <label htmlFor="tpl" className="label">Template xuất phát</label>
+            <select id="tpl" value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="field">
+              <option value="">Không dùng template</option>
+              {SEED_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
           </div>
           <div>
-            <dt className="text-xs font-medium text-slate-500">Thời gian</dt>
-            <dd className="font-display text-lg font-extrabold text-ink">{daysLabel(item.days)}</dd>
+            <label htmlFor="fw" className="label">Công nghệ</label>
+            <select id="fw" value={framework} onChange={(e) => setFramework(e.target.value)} className="field">
+              {FRAMEWORKS.map((f) => (
+                <option key={f}>{f}</option>
+              ))}
+            </select>
           </div>
-        </dl>
-        <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full sm:w-auto">
+        </div>
+      </details>
+
+      <div>
+        <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full" aria-describedby="dispatch-help">
           Xem đặc tả & báo giá
           <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
         </button>
+        <p id="dispatch-help" className={`mt-2 text-sm ${canSubmit ? 'text-stone-600' : 'font-semibold text-amber-800'}`}>
+          {canSubmit
+            ? `Bạn chưa phải trả tiền ở bước này. ${BRAND.name} báo giá chốt trước khi bạn chuyển khoản.`
+            : 'Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.'}
+        </p>
       </div>
-      <p className="mt-2 text-xs text-slate-500">
-        {canSubmit ? `${BRAND.name} báo giá chốt cho đơn của bạn trước khi bạn chuyển khoản.` : 'Nhập ít nhất 10 ký tự hoặc chọn một gợi ý để tiếp tục.'}
-      </p>
     </section>
   );
 }
