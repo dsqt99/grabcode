@@ -47,6 +47,11 @@ export function formatVnd(v: number): string {
   return `${Math.round(v).toLocaleString('de-DE')} đ`;
 }
 
+/** Payment, escrow and payout screens always show VND; a USD user only gets this grey "≈ $" hint next to it. */
+export function usdHint(vnd: number, currency: Currency): string | null {
+  return currency === 'USD' ? `≈ ${formatMoney(vnd, 'USD')}` : null;
+}
+
 export function formatMoney(vnd: number, currency: Currency = 'VND'): string {
   if (currency === 'USD') return `$${(vnd / USD_RATE).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   return formatVnd(vnd);
