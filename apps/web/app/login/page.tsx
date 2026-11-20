@@ -6,8 +6,16 @@ import type { UserRole } from '@grabcode/contracts/schemas';
 import { LoginBanner, LoginPanel, RolePicker } from '../../components/AuthGate';
 import { useAuth } from '@grabcode/auth-ui';
 
-/** Only same-site paths, so ?next= cannot bounce the user to another site. */
-const safeNext = (next: string | null) => (next?.startsWith('/') && !next.startsWith('//') ? next : null);
+/** Only same-origin paths, so ?next= cannot bounce the user to another site ("/\\evil.com", "/\t/evil.com" parse as external). */
+const safeNext = (next: string | null) => {
+  if (!next?.startsWith('/') || typeof window === 'undefined') return null;
+  try {
+    const u = new URL(next, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search + u.hash : null;
+  } catch {
+    return null;
+  }
+};
 
 function Login() {
   const { status, me, addRole } = useAuth();

@@ -14,7 +14,8 @@ import {
   type WaveOffer,
 } from '@grabcode/contracts';
 import { onRealtimeHint } from '@grabcode/contracts';
-import type { ChatList, DispatchOffer, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
+import { payoutOf } from '@grabcode/contracts/schemas';
+import type { ChatList, DispatchOffer, JobList, OfferList, OrderDto, OrderList, OrderStatus, Presence, Wallet } from '@grabcode/contracts/schemas';
 import { API_URL, useAuth } from '@grabcode/auth-ui';
 
 const STORAGE_KEY = 'grabcode_coder_state';
@@ -69,6 +70,15 @@ async function api<T>(path: string, body?: unknown, method = body === undefined 
   return res.status === 204 ? (undefined as T) : res.json();
 }
 const orderPath = (id: string) => `/v1/orders/${encodeURIComponent(id)}`;
+/** Job board: paid orders nobody took yet (API mode only). */
+export const listJobs = async () => (await api<JobList>('/v1/jobs')).jobs;
+
+/** What the coder hands in with a milestone: a link (demo / repo / Drive file), a commit, and/or a note. */
+export interface HandIn {
+  deliveryUrl?: string;
+  commitHash?: string;
+  note?: string;
+}
 const transition = (id: string, status: OrderStatus) => api<OrderDto>(`${orderPath(id)}/transitions`, { status });
 
 /** Server wave offer -> the modal's card. */
@@ -96,7 +106,8 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 
 const initialState = (): CoderState => ({
   isOnline: SEED_CODER.isOnline,
-  walletVnd: SEED_CODER.walletBalanceVnd,
+  // API mode starts empty until the ledger answers; the seed balance is mock-mode only.
+  walletVnd: API_URL ? 0 : SEED_CODER.walletBalanceVnd,
   todayEarningsVnd: 0,
   todayKey: todayKey(),
   activeOrder: null,
@@ -172,7 +183,7 @@ export function buildDemoOrder(): { order: Order; offer: WaveOffer } {
     title: order.title,
     tier: order.tier,
     customerName: order.customerName,
-    netPayoutVnd: Math.round(order.priceVnd * 0.8),
+    netPayoutVnd: payoutOf(order.priceVnd),
     deadlineHours: order.etaHours,
     summary: order.brief.scopeSummary,
     expiresInSeconds: DEFAULT_OFFER_SECONDS,
@@ -448,9 +459,19 @@ export function useCoder() {
     [patch, setPending]
   );
 
-  /** API mode: submit for customer review (commit = latest pushed sha); mock mode: completes at once. */
+  /** Takes a job from the board; 409 when someone was faster or the coder already has an order in progress. */
+  const claimJob = useCallback(
+    (orderId: string) =>
+      api<OrderDto>(`/v1/jobs/${encodeURIComponent(orderId)}/claim`, {}).then(applyDto, (e: { status?: number }) => {
+        toast(e.status === 409 ? `Đơn ${orderId} đã có người nhận, hoặc bạn đang có đơn chưa xong.` : 'Nhận đơn chưa thành công, thử lại sau.', 'warn');
+        throw e;
+      }),
+    [applyDto, toast]
+  );
+
+  /** API mode: submit for customer review with the hand-in; mock mode: completes at once. */
   const completeMilestone = useCallback(
-    (milestoneId: string, commitHash?: string) => {
+    (milestoneId: string, handIn: HandIn = {}) => {
       const s = stateRef.current;
       const order = s.activeOrder;
       if (!order || s.delivered) return;
@@ -460,7 +481,8 @@ export function useCoder() {
       if (idx < 0 || idx !== expected) return; // enforce order
       const m = ms[idx];
       if (API_URL) {
-        api<OrderDto>(`${orderPath(order.id)}/milestones/${encodeURIComponent(m.id)}/submit`, commitHash ? { commitHash } : {}).then(applyDto, apiFail);
+        const body = Object.fromEntries(Object.entries(handIn).filter(([, v]) => v));
+        api<OrderDto>(`${orderPath(order.id)}/milestones/${encodeURIComponent(m.id)}/submit`, body).then(applyDto, apiFail);
         return;
       }
       patch({ completedMilestones: [...s.completedMilestones, m.id] });
@@ -554,6 +576,7 @@ export function useCoder() {
     acceptOffer,
     rejectOffer,
     completeMilestone,
+    claimJob,
     deliver,
     sendChat,
     dismissJob,
