@@ -6,6 +6,7 @@ import OnlineRadar from '../components/OnlineRadar';
 import WaveOfferModal from '../components/WaveOfferModal';
 import ActiveJobWorkspace from '../components/ActiveJobWorkspace';
 import PayoutCard from '../components/PayoutCard';
+import JobBoard from '../components/JobBoard';
 import { API_URL } from '@grabcode/auth-ui';
 import { formatVnd, useCoder } from '../lib/coderStore';
 
@@ -49,6 +50,7 @@ export default function Page() {
         ) : (
           <>
             <OnlineRadar isOnline={state.isOnline} onToggle={c.setOnline} />
+            {API_URL && <JobBoard onClaim={c.claimJob} />}
             {API_URL && <PayoutCard />}
             {state.history.length > 0 && (
               <section className="card">

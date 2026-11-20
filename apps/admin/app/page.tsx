@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { AdminCoder, AdminCoderList, AdminOrder, AdminOrderList, Me, Monitor, Payout, PayoutList, SuspenseItem, SuspenseList } from '@grabcode/contracts/schemas';
 import { ApiError, api, vnd, when } from '../lib/api';
 
-const TABS = { coders: 'Coder', orders: 'Tranh chấp & hoàn tiền', suspense: 'Đối soát suspense', payouts: 'Rút tiền', monitor: 'Worker / Queue' } as const;
+const TABS = { coders: 'Coder', orders: 'Đơn hàng & thanh toán', suspense: 'Đối soát suspense', payouts: 'Rút tiền', monitor: 'Worker / Queue' } as const;
 type Tab = keyof typeof TABS;
 const TIERS: NonNullable<AdminCoder['tierOverride']>[] = ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'];
 
@@ -124,8 +124,18 @@ function Coders() {
 const cancels = (o: AdminOrder) => ['DRAFT', 'FUNDED', 'DISPATCHED'].includes(o.status);
 
 function Orders() {
-  const { data, error, busy, act } = useList<AdminOrderList>('/v1/admin/orders');
+  const [view, setView] = useState<'attention' | 'all'>('attention');
+  const { data, error, busy, act } = useList<AdminOrderList>(`/v1/admin/orders?view=${view}`);
   const [refund, setRefund] = useState<Record<string, string>>({});
+  const [paid, setPaid] = useState<Record<string, { amount: string; ref: string }>>({});
+  const due = (o: AdminOrder) => Math.max(0, o.priceVnd - o.paidVnd);
+  const confirmPaid = (o: AdminOrder) => {
+    const p = paid[o.id] ?? { amount: '', ref: '' };
+    const amountVnd = Number(p.amount || due(o));
+    if (!p.ref.trim()) return alert('Nhập mã giao dịch ngân hàng (để tránh ghi nhận trùng).');
+    if (confirm(`Xác nhận đã NHẬN ${vnd(amountVnd)} cho ${o.id} (mã GD ${p.ref})? Kiểm tra app ngân hàng trước khi bấm.`))
+      void act(() => api(`/v1/admin/orders/${o.id}/confirm-payment`, 'POST', { amountVnd, reference: p.ref }));
+  };
   const resolve = (o: AdminOrder) =>
     act(() => api(`/v1/admin/orders/${o.id}/resolve`, 'POST', { refundVnd: Number(refund[o.id] ?? 0) }));
   const refundAll = (o: AdminOrder) => {
@@ -133,50 +143,86 @@ function Orders() {
       void act(() => api(`/v1/admin/orders/${o.id}/refund`, 'POST'));
   };
   return (
-    <Table head={['Đơn', 'Trạng thái', 'Giá / đã nạp', 'Escrow', 'Xử lý']} empty="Không có đơn cần xử lý." error={error}>
-      {(data?.orders ?? []).map((o) => (
-        <tr key={o.id}>
-          <td>
-            <b>{o.id}</b> {o.title}
-            <div className="text-xs text-slate-500">
-              {o.customerName}
-              {o.coderName && ` → ${o.coderName}`} · {when(o.updatedAt)}
-            </div>
-            {o.disputeReason && <div className="mt-1 text-xs text-red-700">Lý do: {o.disputeReason}</div>}
-          </td>
-          <td>{o.status}</td>
-          <td>
-            {vnd(o.priceVnd)}
-            <div className="text-xs text-slate-500">{vnd(o.paidVnd)}</div>
-          </td>
-          <td>{vnd(o.escrowVnd)}</td>
-          <td>
-            {o.status === 'DISPUTED' ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={o.escrowVnd}
-                  step={1000}
-                  className="w-32"
-                  aria-label={`Số tiền hoàn cho khách đơn ${o.id}`}
-                  placeholder="Hoàn cho khách"
-                  value={refund[o.id] ?? ''}
-                  onChange={(e) => setRefund({ ...refund, [o.id]: e.target.value })}
-                />
-                <button className="btn" disabled={busy} onClick={() => resolve(o)}>
-                  Chốt (còn lại trả coder)
-                </button>
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+        <button className={view === 'attention' ? 'btn' : 'btn-alt'} onClick={() => setView('attention')}>Cần xử lý</button>
+        <button className={view === 'all' ? 'btn' : 'btn-alt'} onClick={() => setView('all')}>Tất cả đơn</button>
+        <span className="text-slate-500">Đơn DRAFT = chờ khách chuyển khoản. Nội dung CK đúng là mã đơn bỏ gạch (VD GC1006).</span>
+      </div>
+      <Table head={['Đơn', 'Trạng thái', 'Giá / đã nạp', 'Escrow', 'Xử lý']} empty="Không có đơn cần xử lý." error={error}>
+        {(data?.orders ?? []).map((o) => (
+          <tr key={o.id}>
+            <td>
+              <b>{o.id}</b> {o.title}
+              <div className="text-xs text-slate-500">
+                {o.customerName}
+                {o.customerEmail && ` (${o.customerEmail})`}
+                {o.coderName && ` → ${o.coderName}`} · tạo {when(o.createdAt)}
               </div>
-            ) : (
-              <button className="btn-alt" disabled={busy} onClick={() => refundAll(o)}>
-                {cancels(o) ? 'Hoàn & huỷ đơn' : 'Hoàn tiền thừa'}
-              </button>
-            )}
-          </td>
-        </tr>
-      ))}
-    </Table>
+              {o.disputeReason && <div className="mt-1 text-xs text-red-700">Lý do: {o.disputeReason}</div>}
+            </td>
+            <td>{o.status}</td>
+            <td>
+              {vnd(o.priceVnd)}
+              <div className="text-xs text-slate-500">{vnd(o.paidVnd)}</div>
+            </td>
+            <td>{vnd(o.escrowVnd)}</td>
+            <td>
+              {o.status === 'DISPUTED' ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={o.escrowVnd}
+                    step={1000}
+                    className="w-32"
+                    aria-label={`Số tiền hoàn cho khách đơn ${o.id}`}
+                    placeholder="Hoàn cho khách"
+                    value={refund[o.id] ?? ''}
+                    onChange={(e) => setRefund({ ...refund, [o.id]: e.target.value })}
+                  />
+                  <button className="btn" disabled={busy} onClick={() => resolve(o)}>
+                    Chốt (còn lại trả coder)
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {o.status === 'DRAFT' && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="number"
+                        min={1000}
+                        step={1000}
+                        className="w-32"
+                        aria-label={`Số tiền đã nhận cho đơn ${o.id}`}
+                        placeholder={String(due(o))}
+                        value={paid[o.id]?.amount ?? ''}
+                        onChange={(e) => setPaid({ ...paid, [o.id]: { ref: paid[o.id]?.ref ?? '', amount: e.target.value } })}
+                      />
+                      <input
+                        className="w-32"
+                        aria-label={`Mã giao dịch ngân hàng của đơn ${o.id}`}
+                        placeholder="Mã GD (FT...)"
+                        value={paid[o.id]?.ref ?? ''}
+                        onChange={(e) => setPaid({ ...paid, [o.id]: { amount: paid[o.id]?.amount ?? '', ref: e.target.value } })}
+                      />
+                      <button className="btn" disabled={busy} onClick={() => confirmPaid(o)}>
+                        Xác nhận đã nhận tiền
+                      </button>
+                    </div>
+                  )}
+                  {(o.escrowVnd > 0 || cancels(o)) && (
+                    <button className="btn-alt self-start" disabled={busy} onClick={() => refundAll(o)}>
+                      {cancels(o) ? 'Hoàn & huỷ đơn' : 'Hoàn tiền thừa'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </>
   );
 }
 
