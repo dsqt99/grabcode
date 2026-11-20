@@ -5,7 +5,7 @@ Staging là một bản chạy thật của GrabCode (web khách, app freelancer
 - CEO/founder bấm thử cả luồng: đặt đơn → thanh toán → freelancer nhận → bàn giao → nghiệm thu.
 - Tester chạy E2E và smoke test trên đó (HON-22).
 
-Staging **không** dùng chung máy với production và **không** có tiền thật (STK ngân hàng trên đó là STK giả).
+Mặc định staging chạy trên VPS riêng. Nếu chỉ có VPS đang chạy production, dùng chế độ "shared VPS" ở mục 12 (không đụng cổng 80/443 và dữ liệu của production). Staging **không** có tiền thật (STK ngân hàng trên đó là STK giả).
 
 ## 1. Cần gì
 
@@ -14,7 +14,7 @@ Staging **không** dùng chung máy với production và **không** có tiền t
 | VPS | Ubuntu 22.04/24.04, **2 vCPU, 4 GB RAM, 40 GB SSD** (đủ cho demo). Khoảng 5–8 USD/tháng (Hetzner, DigitalOcean, Vultr Singapore) hoặc 150.000–350.000đ/tháng (Vietnix, BizFly, Viettel IDC). Kiểm tra lại giá trước khi mua. Lần build đầu cần ~3 GB RAM: bật swap 4 GB. |
 | Tên miền | Một subdomain, ví dụ `staging.grabcode.vn`. |
 | DNS | Bản ghi **A**: `staging.grabcode.vn` → IP của VPS. Mở cổng **80 và 443** trên firewall (Caddy cần cả hai để cấp HTTPS Let's Encrypt). |
-| GitHub | Quyền thêm Deploy key và GitHub Secrets của repo `dsqt99/grabcode`. |
+| GitHub | Quyền thêm GitHub Secrets của repo `dsqt99/grabcode`. |
 
 ## 2. Dựng staging bằng 1 lệnh
 
@@ -23,7 +23,7 @@ Trên VPS (hoặc máy bất kỳ có Docker, kể cả máy cá nhân để ch�
 ```bash
 curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER && newgrp docker
 sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
-git clone https://github.com/dsqt99/grabcode.git && cd grabcode      # repo private: dùng deploy key, xem mục 3
+git clone https://github.com/dsqt99/grabcode.git && cd grabcode      # repo private: cần quyền đọc; hoặc để GitHub Actions đẩy source (mục 3)
 ./infra/deploy/staging-up.sh staging.grabcode.vn
 ```
 
@@ -54,12 +54,14 @@ Muốn sửa biến: sửa `.env.staging` rồi chạy lại `staging-up.sh`. Bi
 
 ## 3. Tự động deploy bằng GitHub Actions
 
-Workflow `.github/workflows/deploy-staging.yml` chạy khi bấm tay (Actions → deploy-staging → Run workflow) và khi push vào `main`. **Chưa có secrets thì workflow kết thúc xanh với thông báo "skipped"**, không làm CI đỏ.
+Workflow `.github/workflows/deploy-staging.yml` **chỉ chạy tay**: Actions → deploy-staging → Run workflow (chọn branch, hoặc gõ branch/tag/SHA vào ô `ref`). Không có trigger khi push vào `main`, vì mỗi lần build tốn ~3 GB RAM trên VPS. **Chưa có secrets thì workflow kết thúc xanh với thông báo "skipped"**, không làm CI đỏ.
+
+VPS **không cần git, không cần clone repo, không cần deploy key**: runner đóng gói đúng commit bằng `git archive` rồi đẩy qua SSH (`tar -x` vào `~/grabcode-staging`). `.env.staging` và dữ liệu có sẵn trong thư mục đó được giữ nguyên (không xoá thư mục). Thư mục phải cố định giữa các lần deploy vì `staging-up.sh` so sánh thư mục làm việc của project `grabcode-staging`. File đã xoá khỏi repo sẽ còn sót lại trên VPS cho tới khi bạn xoá tay (không ảnh hưởng chạy).
 
 Cài một lần:
 
-1. Trên VPS, tạo user chạy deploy (thuộc nhóm `docker`) và clone repo vào `~/grabcode`. Repo private: tạo deploy key chỉ đọc (`ssh-keygen -t ed25519 -f ~/.ssh/grabcode_deploy`, thêm `.pub` vào GitHub → repo → Settings → Deploy keys, cấu hình `~/.ssh/config` cho github.com dùng khoá đó).
-2. Tạo cặp khoá SSH riêng cho GitHub Actions (`ssh-keygen -t ed25519 -f gha_staging`), thêm `gha_staging.pub` vào `~/.ssh/authorized_keys` của user deploy.
+1. Trên VPS, tạo user chạy deploy (thuộc nhóm `docker`), xem đoạn lệnh ở mục 12.
+2. Trên máy bạn, tạo cặp khoá SSH riêng cho GitHub Actions (`ssh-keygen -t ed25519 -f gha_staging -N ''`), thêm `gha_staging.pub` vào `~/.ssh/authorized_keys` của user deploy.
 3. Trong repo → Settings → Secrets and variables → Actions, thêm:
 
 | Secret | Giá trị |
@@ -67,12 +69,13 @@ Cài một lần:
 | `STAGING_SSH_HOST` | IP hoặc tên máy của VPS |
 | `STAGING_SSH_USER` | user deploy |
 | `STAGING_SSH_KEY` | nội dung file private key `gha_staging` |
-| `STAGING_DOMAIN` | `staging.grabcode.vn` |
+| `STAGING_DOMAIN` | `test-fastcode.cahy.io.vn` (hoặc `staging.grabcode.vn` nếu VPS riêng) |
+| `STAGING_HTTP_PORT` | `18080` (VPS dùng chung với production, mục 12). Bỏ trống = VPS riêng, Caddy dùng 80/443 |
 | `STAGING_SSH_PORT` (tuỳ chọn) | mặc định 22 |
 | `STAGING_SSH_KNOWN_HOSTS` (tuỳ chọn) | kết quả `ssh-keyscan -H <host>` lấy từ máy tin cậy; không có thì workflow tự lấy host key lần chạy (tin ở lần đầu) |
-| `STAGING_APP_DIR` (tuỳ chọn) | thư mục clone, mặc định `~/grabcode` |
+| `STAGING_APP_DIR` (tuỳ chọn) | thư mục source trên VPS, mặc định `~/grabcode-staging` (khác `~/grabcode` của production) |
 
-Workflow SSH vào VPS, `git checkout` đúng commit, chạy `staging-up.sh`, rồi gọi thử `https://<domain>/v1/auth/providers`. Không có khoá hay domain nào nằm trong repo.
+Workflow checkout code trên runner, đẩy source qua SSH, chạy `staging-up.sh`, rồi gọi thử `/v1/auth/providers` (chế độ shared: ngay trên VPS qua cổng `STAGING_HTTP_PORT`; chế độ riêng: qua `https://<domain>`). Không có khoá hay domain nào nằm trong repo.
 
 ## 4. Đăng nhập từng vai trò
 
@@ -154,7 +157,7 @@ node api/core-api/scripts/smoke-mvp.mjs      # toàn bộ luồng MVP (đặt đ
 ./infra/deploy/staging-reset.sh --yes
 ```
 
-Xoá toàn bộ volume (Postgres, NATS, chứng chỉ Caddy), dựng lại và nạp lại dữ liệu mẫu. Script từ chối chạy nếu thấy `.env.production` trên máy hoặc `.env.staging` thiếu `APP_ENV=staging`. Chỉ muốn nạp lại mà giữ DB thì không có lệnh riêng: seed bỏ qua khi dữ liệu mẫu đã có.
+Xoá toàn bộ volume (Postgres, NATS, chứng chỉ Caddy), dựng lại và nạp lại dữ liệu mẫu. Script từ chối chạy nếu thấy `.env.production` trên máy mà `.env.staging` không có `STAGING_HTTP_PORT` (chế độ shared, mục 12), hoặc `.env.staging` thiếu `APP_ENV=staging`. Chỉ muốn nạp lại mà giữ DB thì không có lệnh riêng: seed bỏ qua khi dữ liệu mẫu đã có.
 
 Seed gặp lỗi giữa chừng (log in `lần seed trước dừng giữa chừng`): chạy `staging-reset.sh --yes`.
 
@@ -185,3 +188,87 @@ dc restart core-api
 - **brief-worker** chạy nhưng không có `LLM_API_KEY` thì web dùng brief mẫu.
 - **Chưa có backup** cho staging (không cần cho demo).
 - Chưa kiểm tra bản build image trên Docker thật; xem phần báo cáo của HON-26 để biết đã chạy được gì.
+
+## 12. Chạy trên VPS đang có production (shared VPS)
+
+Dùng khi chỉ có một VPS và production đang chạy sẵn trên đó (reverse proxy của bạn giữ 80/443).
+
+**Cách hoạt động.** `staging-up.sh --port <cổng> <domain>` chạy cả stack với project `grabcode-staging` (volume `grabcode-staging_*` và network riêng; không dùng chung gì với project `grabcode` của production). Caddy của staging chạy HTTP thuần (`auto_https off`) và chỉ publish `127.0.0.1:<cổng>` (mặc định 18080), không dùng 80/443. Bạn tự trỏ domain vào cổng đó bằng reverse proxy đang có; proxy lo TLS. Script phát hiện `.env.production` thì tự vào chế độ này (mặc định cổng 18080); cũng có thể bật bằng `--port` hoặc `STAGING_HTTP_PORT`.
+
+Script dừng với lỗi rõ khi: cổng đang bận (trừ khi là Caddy staging của chính nó), project/volume trùng tên với production, đã có stack `grabcode-staging` từ thư mục clone khác, Compose cũ hơn 2.24, hoặc không có domain thật (domain được nhúng vào bản build web).
+
+**Cảnh báo RAM.** Lần build đầu ngốn ~3 GB RAM. Chế độ này build tuần tự (`COMPOSE_PARALLEL_LIMIT=1`, `COMPOSE_BAKE=false`) và cảnh báo nếu RAM+swap trống dưới ~3,5 GB, nhưng vẫn có thể làm production chậm hoặc bị OOM-kill trong lúc build. Nên: bật swap trước, build ngoài giờ cao điểm, kiểm tra `free -h`. Lúc chạy bình thường staging tốn thêm khoảng 1–1,5 GB RAM (Postgres, NATS, 3 app Next, các worker).
+
+### Cài một lần cho GitHub Actions (copy-paste trên VPS)
+
+Chạy bằng user có sudo. Thay `<PUBLIC_KEY>` bằng nội dung file `gha_staging.pub` (tạo ở mục 3).
+
+```bash
+# 1) Swap 4 GB (bỏ qua nếu `swapon --show` đã có swap đủ lớn)
+sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+# 2) User deploy (nhóm docker) + public key cho GitHub Actions
+sudo adduser --disabled-password --gecos '' deploy && sudo usermod -aG docker deploy
+sudo -u deploy mkdir -p /home/deploy/.ssh && sudo -u deploy chmod 700 /home/deploy/.ssh
+echo '<PUBLIC_KEY>' | sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys >/dev/null
+sudo chmod 600 /home/deploy/.ssh/authorized_keys
+# 3) nginx: test-fastcode.cahy.io.vn -> 127.0.0.1:18080 (xem cấu hình bên dưới), rồi:
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Sau đó đặt 5 secret ở mục 3 (`STAGING_SSH_HOST`, `STAGING_SSH_USER=deploy`, `STAGING_SSH_KEY`, `STAGING_DOMAIN=test-fastcode.cahy.io.vn`, `STAGING_HTTP_PORT=18080`) và bấm Run workflow. Thư mục `~/grabcode-staging` do workflow tự tạo. Muốn chạy tay không qua Actions thì cần tự chép source vào thư mục đó rồi `./infra/deploy/staging-up.sh --port 18080 test-fastcode.cahy.io.vn`.
+
+Cuối output script in "Cổng để map domain: 18080" kèm cấu hình mẫu. Ví dụ nginx (đã có TLS cho `test-fastcode.cahy.io.vn`):
+
+```nginx
+# ở cấp http {}
+map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+
+server {
+    # ... listen 443 ssl; server_name test-fastcode.cahy.io.vn; ssl_certificate ... (certbot --nginx -d test-fastcode.cahy.io.vn)
+    location / {
+        proxy_pass http://127.0.0.1:18080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+}
+```
+
+Hoặc Caddy:
+
+```caddy
+test-fastcode.cahy.io.vn {
+    reverse_proxy 127.0.0.1:18080
+}
+```
+
+Quan trọng: giữ `Host` và `X-Forwarded-Proto: https` (nginx cần các `proxy_set_header` ở trên; Caddy làm sẵn). Thiếu thì cookie đăng nhập và redirect sai. Nếu proxy của bạn chạy trong container Docker (không tới được `127.0.0.1` của host), thêm `--public` (bind `0.0.0.0`; chặn cổng này từ internet bằng firewall) hoặc trỏ proxy tới IP bridge của host.
+
+Realtime: hiện chưa có Centrifugo trong compose (mục 11), app dùng polling nên không cần WebSocket; cấu hình trên vẫn sẵn Upgrade cho sau này.
+
+### Chạy sau reverse proxy: cookie, CORS, IP
+
+- `DOMAIN`, `WEB_ORIGIN`, `API_PUBLIC_URL` đều là `https://<domain>` (script tự điền): CORS và cookie `secure` khớp với địa chỉ trình duyệt thấy.
+- Có hai lớp proxy (proxy của bạn → Caddy → app), nên script đặt `TRUST_PROXY=2` cho core-api để IP client (rate limit đăng nhập) lấy đúng từ `X-Forwarded-For`.
+- Caddy staging tin `X-Forwarded-*` chỉ từ dải IP trong `STAGING_TRUSTED_PROXIES` (mặc định `private_ranges`, tức mọi proxy cục bộ/docker). Proxy của bạn ở IP public khác (dùng `--public` từ máy khác): đặt `STAGING_TRUSTED_PROXIES=<IP proxy>` trong `.env.staging`.
+- Next.js nhận `Host` và `X-Forwarded-Proto` do Caddy chuyển tiếp nguyên vẹn.
+
+### Chạy bằng GitHub Actions (SSH)
+
+Thêm secret `STAGING_HTTP_PORT` (`18080`) bên cạnh các secret ở mục 3 (`STAGING_BIND_PUBLIC=true` nếu cần `--public`). Workflow đẩy source qua SSH, gọi `staging-up.sh --port ...`, rồi kiểm tra `http://127.0.0.1:<cổng>/v1/auth/providers` ngay trên VPS (không phụ thuộc domain đã map xong chưa). Workflow chỉ chạy tay (không tự chạy khi push vào `main`) để không build ~3 GB RAM trên VPS production ngoài ý muốn.
+
+### Cập nhật, tắt, gỡ
+
+```bash
+# cập nhật: bấm Run workflow (mục 3); hoặc chép source mới vào ~/grabcode-staging rồi:
+cd ~/grabcode-staging && ./infra/deploy/staging-up.sh                  # nhớ cổng/domain từ .env.staging
+docker compose -p grabcode-staging down                                # tắt, giữ dữ liệu
+./infra/deploy/staging-reset.sh --yes                                  # xoá dữ liệu staging và nạp lại seed
+docker compose -p grabcode-staging down -v                             # gỡ hẳn (chỉ volume grabcode-staging_*)
+```
+
+Lệnh `docker compose -p grabcode-staging ...` ở mục 9 cần thêm `-f infra/deploy/docker-compose.staging-shared.yml` khi ở chế độ này.
