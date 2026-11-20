@@ -232,3 +232,8 @@
 - [x] Liên kết tài khoản giữa các provider: nút Liên kết ở /profile khi đang login (`?link=1`, `core.user_identities`), không gộp theo email — 5e0f38d
 - [x] Gộp `RequireAuth` + `lib/auth.tsx` của web và coder vào `packages/auth-ui` (`@grabcode/auth-ui`) — 0f8e8a6
 - [x] Múi giờ đầy đủ (`Intl.supportedValuesOf`) trong `/profile`, contract từ chối múi giờ lạ (400) — `d4cd6a6` `39b366c`
+
+## Bug HON-50 — upload ảnh đại diện — branch `fix/hon-50-avatar-upload`
+
+- [x] `/profile`: nút Tải ảnh lên / Xoá ảnh; trình duyệt cắt vuông 128px, nén JPEG thành data URL; contract chỉ nhận http(s) hoặc data URL png/jpeg/webp ≤20.000 ký tự — c143888
+- [ ] Kho lưu file (object storage + URL ký sẵn) nếu cần ảnh lớn hơn hoặc file đính kèm khác; khi có thì chuyển avatar sang đó

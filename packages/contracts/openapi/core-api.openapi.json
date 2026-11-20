@@ -3720,9 +3720,18 @@
           "avatarUrl": {
             "anyOf": [
               {
-                "type": "string",
-                "maxLength": 300,
-                "format": "uri"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 300,
+                    "format": "uri"
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 20000,
+                    "pattern": "^data:image\\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$"
+                  }
+                ]
               },
               {
                 "type": "null"
