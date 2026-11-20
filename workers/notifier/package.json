@@ -16,7 +16,7 @@
     "web-push": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.6.6",
     "@types/web-push": "^3.6.4",
     "tsx": "^4.19.0",
     "typescript": "^5.8.2"
