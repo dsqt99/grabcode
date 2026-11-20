@@ -89,6 +89,13 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          # Secrets pasted into the GitHub UI often carry a trailing space or newline; drop all whitespace.
+          for v in HOST USER_NAME PORT DOMAIN APP_DIR HTTP_PORT BIND_PUBLIC; do
+            printf -v "$v" '%s' "$(printf '%s' "${!v}" | tr -d '[:space:]')"
+          done
+          for v in PORT HTTP_PORT; do
+            case "${!v}" in *[!0-9]*) echo "::error::The $v secret must be digits only (e.g. 18080); it contains other characters such as a host, a colon or a quote. Re-enter just the number."; exit 1;; esac
+          done
           SHA="$(git rev-parse HEAD)"
           mkdir -p ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/staging_key
