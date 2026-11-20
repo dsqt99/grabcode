@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { CoderTierSchema, OrderStatusSchema } from './order';
+import { AIBriefSchema } from './brief';
+import { CoderTierSchema, OrderStatusSchema, RefundAccountSchema } from './order';
+import { LedgerKindSchema } from './payment';
+import { ChatMessageSchema } from './realtime';
 
 // Admin portal (S7). Every /v1/admin/* route needs the ADMIN role (granted in the DB, never self-service).
 // Money moves only through balanced ledger txs (see payment.ts for accounts).
@@ -42,6 +45,8 @@ export const AdminOrderSchema = z.object({
   status: OrderStatusSchema,
   title: z.string(),
   priceVnd: z.number().int(),
+  /** Coder's total share fixed on the order; with priceVnd it gives the dispute split (disputeCoderShare). */
+  payoutVnd: z.number().int(),
   /** Everything deposited for the order. */
   paidVnd: z.number().int(),
   /** Still held in escrow:<id>. */
@@ -51,12 +56,37 @@ export const AdminOrderSchema = z.object({
   /** So the admin can reach the customer about a transfer. */
   customerEmail: z.string().nullable(),
   coderName: z.string().nullable(),
+  /** DRAFT -> FUNDED time; "waiting for a coder" (30 min) and auto refund (AUTO_REFUND_HOURS) count from here. */
+  fundedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type AdminOrder = z.infer<typeof AdminOrderSchema>;
 export const AdminOrderListSchema = z.object({ orders: z.array(AdminOrderSchema) });
 export type AdminOrderList = z.infer<typeof AdminOrderListSchema>;
+
+/** GET /v1/admin/orders/{id} (read only): everything needed to judge a dispute or a payment question. */
+export const AdminOrderDetailSchema = z.object({
+  order: AdminOrderSchema,
+  prompt: z.string(),
+  /** Milestones with delivery links, notes, submit / approve times. */
+  brief: AIBriefSchema,
+  refundAccount: RefundAccountSchema.nullable(),
+  /** Order chat, oldest first. */
+  messages: z.array(ChatMessageSchema),
+  /** Every ledger tx of the order, oldest first. */
+  ledger: z.array(
+    z.object({
+      txId: z.string(),
+      kind: LedgerKindSchema,
+      entries: z.array(z.object({ account: z.string(), amountVnd: z.number().int() })),
+      /** Bank reference / note recorded with the tx, when any. */
+      reference: z.string().nullable(),
+      createdAt: z.string(),
+    }),
+  ),
+});
+export type AdminOrderDetail = z.infer<typeof AdminOrderDetailSchema>;
 
 /**
  * POST /v1/admin/orders/{id}/resolve (DISPUTED -> RESOLVED). `refundVnd` of the escrow goes back to the customer,
@@ -77,6 +107,42 @@ export type ConfirmPayment = z.infer<typeof ConfirmPaymentSchema>;
 
 // POST /v1/admin/orders/{id}/refund (no body): refunds what escrow still holds. DRAFT -> CANCELLED; on a closed
 // order (ACCEPTED / RESOLVED / CANCELLED) it refunds the overpayment.
+
+// ---- Refunds to transfer by hand. Every ledger tx that books money back to a customer (refund / auto refund of an
+// order, suspense refund, refund part of a dispute split) opens one PENDING row; the admin transfers the money and
+// closes it with the bank reference. ----
+
+export const RefundStatusSchema = z.enum(['PENDING', 'PAID']);
+export const RefundSchema = z.object({
+  id: z.string().uuid(),
+  /** The ledger tx that booked the refund. */
+  txId: z.string(),
+  /** null for a suspense refund (transfer matched no order): pay back the sender from the bank statement. */
+  orderId: z.string().nullable(),
+  amountVnd: z.number().int(),
+  status: RefundStatusSchema,
+  customerName: z.string().nullable(),
+  customerEmail: z.string().nullable(),
+  /** Entered by the customer on the order page; null = ask the customer for it. */
+  refundAccount: RefundAccountSchema.nullable(),
+  /** Suspense refunds: the original transfer content, to find the sender. */
+  transferContent: z.string().nullable(),
+  /** Bank reference of the outgoing transfer, set when PAID. */
+  reference: z.string().nullable(),
+  createdAt: z.string(),
+  paidAt: z.string().nullable(),
+});
+export type Refund = z.infer<typeof RefundSchema>;
+export const RefundQuerySchema = z.object({ status: z.enum(['PENDING', 'all']).default('PENDING') });
+export const RefundListSchema = z.object({ refunds: z.array(RefundSchema) });
+export type RefundList = z.infer<typeof RefundListSchema>;
+
+/**
+ * POST /v1/admin/refunds/{id}/paid: the admin transferred the money. A bank reference closes one refund only (409 when
+ * it is already used, or the refund is already PAID).
+ */
+export const RefundPaidSchema = z.object({ reference: z.string().trim().min(3).max(100) });
+export type RefundPaid = z.infer<typeof RefundPaidSchema>;
 
 // ---- Suspense (transfers that matched no order) ----
 
