@@ -1,8 +1,10 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import type { z } from 'zod';
 import {
   AdminCoderPatchSchema,
+  AdminOrderQuerySchema,
+  ConfirmPaymentSchema,
   DisputeResolveSchema,
   OrderIdSchema,
   PayoutCreateSchema,
@@ -69,9 +71,16 @@ export class AdminController {
   }
 
   @Get('admin/orders')
-  async orders(@Req() req: Request): Promise<AdminOrderList> {
+  async orders(@Req() req: Request, @Query() query: unknown): Promise<AdminOrderList> {
     await this.admin(req);
-    return { orders: await this.svc.orders() };
+    return { orders: await this.svc.orders(undefined, parse(AdminOrderQuerySchema, query).view) };
+  }
+
+  @Post('admin/orders/:id/confirm-payment')
+  @HttpCode(200)
+  async confirmPayment(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<AdminOrder> {
+    const admin = await this.admin(req);
+    return this.svc.confirmPayment(admin, parse(OrderIdSchema, id), parse(ConfirmPaymentSchema, body));
   }
 
   @Post('admin/orders/:id/resolve')

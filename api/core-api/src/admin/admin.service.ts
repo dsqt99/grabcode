@@ -9,6 +9,7 @@ import {
   type AdminCoder,
   type AdminCoderPatch,
   type AdminOrder,
+  type ConfirmPayment,
   type DisputeResolve,
   type Monitor,
   type Payout,
@@ -17,10 +18,10 @@ import {
   type SuspenseItem,
 } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, users } from '../db/schema';
+import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderRepos, orders, outbox, payoutRequests, sessions, users } from '../db/schema';
 import { emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
 import { balanceOf, postTx } from '../payments/ledger.db';
-import { SUSPENSE, coderOf, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
+import { SUSPENSE, coderOf, depositEntries, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
 import { ReposService } from '../repos/repos.service';
 
 type UserRow = typeof users.$inferSelect;
@@ -102,30 +103,36 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       .where(and(eq(users.id, id), sql`'CODER' = any(${users.roles})`))
       .returning({ id: users.id });
     if (!row) throw new NotFoundException({ message: 'Coder not found' });
+    if (patch.suspended) await this.db.delete(sessions).where(eq(sessions.userId, id));
     return (await this.coders(id))[0];
   }
 
   // ---- Orders: disputes, refunds ----
 
-  async orders(id?: string): Promise<AdminOrder[]> {
+  /** attention: what an admin must act on (unpaid drafts first of all: confirm the transfer). all: latest orders. */
+  async orders(id?: string, view: 'attention' | 'all' = 'attention'): Promise<AdminOrder[]> {
     const rows = await this.db
-      .select({ o: orders, customerName: customer.name, coderName: coder.name, escrow: escrowSql, paid: paidSql })
+      .select({ o: orders, customerName: customer.name, customerEmail: customer.email, coderName: coder.name, escrow: escrowSql, paid: paidSql })
       .from(orders)
       .innerJoin(customer, eq(customer.id, orders.customerUserId))
       .leftJoin(coder, eq(coder.id, orders.coderUserId))
       .where(
         id
           ? eq(orders.id, id)
-          : or(
-              eq(orders.status, 'DISPUTED'),
-              and(inArray(orders.status, [...REFUNDABLE]), sql`${escrowSql} > 0`),
-              // createdAt, not updatedAt: every dispatch wave bumps updatedAt.
-              and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - interval '30 minutes'`),
-            ),
+          : view === 'all'
+            ? undefined
+            : or(
+                // Waiting for the customer's transfer (older unpaid drafts drop off; part-paid ones stay via escrow > 0).
+                and(eq(orders.status, 'DRAFT'), sql`${orders.createdAt} > now() - interval '7 days'`),
+                eq(orders.status, 'DISPUTED'),
+                and(inArray(orders.status, [...REFUNDABLE]), sql`${escrowSql} > 0`),
+                // createdAt, not updatedAt: every dispatch wave bumps updatedAt.
+                and(inArray(orders.status, [...UNASSIGNED]), isNull(orders.coderUserId), sql`${orders.createdAt} < now() - interval '30 minutes'`),
+              ),
       )
       .orderBy(desc(orders.updatedAt))
       .limit(200);
-    return rows.map(({ o, customerName, coderName, escrow, paid }) => ({
+    return rows.map(({ o, customerName, customerEmail, coderName, escrow, paid }) => ({
       id: o.id,
       status: o.status,
       title: o.title,
@@ -134,7 +141,9 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       escrowVnd: Number(escrow),
       disputeReason: o.disputeReason,
       customerName,
+      customerEmail,
       coderName,
+      createdAt: iso(o.createdAt),
       updatedAt: iso(o.updatedAt),
     }));
   }
@@ -153,7 +162,7 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       if (body.refundVnd > escrow) throw new BadRequestException({ message: `Refund above escrow (${escrow} VND)` });
       if (escrow > 0) {
         // A dispute always has an assigned coder (only DELIVERED orders can be disputed).
-        await postTx(tx, `resolve:${id}`, 'RELEASE', id, resolveEntries(id, escrow, body.refundVnd, row.coderUserId!), {
+        await postTx(tx, `resolve:${id}`, 'RELEASE', id, resolveEntries(id, escrow, body.refundVnd, row.coderUserId!, row.priceVnd, row.payoutVnd), {
           refundVnd: body.refundVnd,
           note: body.note ?? null,
         });
@@ -164,7 +173,24 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     return (await this.orders(id))[0];
   }
 
-  /** Refunds what escrow holds. DRAFT -> CANCELLED (even with nothing paid); closed orders: overpayment only. */
+  /**
+   * The admin saw the customer's transfer in the bank app: book it onto the order's escrow (same ledger path as the
+   * SePay webhook). Keyed by the bank reference, so a double click or a repeat books it once. Full price -> FUNDED.
+   */
+  async confirmPayment(admin: UserRow, id: string, body: ConfirmPayment): Promise<AdminOrder> {
+    const reference = body.reference.replace(/\s+/g, '').toUpperCase();
+    await this.db.transaction(async (tx) => {
+      const row = await this.lockOrder(tx, id);
+      if (row.status !== 'DRAFT') throw new ConflictException({ message: `Order is ${row.status}, not waiting for payment` });
+      const meta = { source: 'admin', adminUserId: admin.id, reference, content: reference };
+      if (!(await postTx(tx, `manual:${id}:${reference}`, 'DEPOSIT', id, depositEntries(id, body.amountVnd), meta))) {
+        throw new ConflictException({ message: 'This bank reference is already booked on this order' });
+      }
+      await fundIfCovered(tx, row);
+    });
+    return (await this.orders(id))[0];
+  }
+
   onModuleInit() {
     if (AUTO_REFUND_HOURS > 0) this.sweeper = setInterval(() => void this.refundStale().catch((e) => console.error('auto refund failed', e)), 10 * 60_000);
   }
@@ -187,7 +213,9 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     return done;
   }
 
-  /** onlyCancel: the sweeper must never refund an order that turned in-progress between its select and this lock. */
+  /**
+   * Refunds what escrow holds. DRAFT -> CANCELLED (even with nothing paid); closed orders: overpayment only.
+   * onlyCancel: the sweeper must never refund an order that turned in-progress between its select and this lock. */
   async refund(id: string, onlyCancel = false): Promise<AdminOrder> {
     await this.db.transaction(async (tx) => {
       const row = await this.lockOrder(tx, id);
