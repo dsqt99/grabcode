@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CoderState } from '../lib/coderStore';
+import type { CoderState, HandIn } from '../lib/coderStore';
 import { formatVnd, getMilestones, repoUrlOf } from '../lib/coderStore';
 import { useOrderRepo } from '../lib/repo';
 import CoderChat from './CoderChat';
@@ -14,13 +14,15 @@ export default function ActiveJobWorkspace({
   onDismiss,
 }: {
   state: CoderState;
-  onCompleteMilestone: (id: string, commitHash?: string) => void;
+  onCompleteMilestone: (id: string, handIn?: HandIn) => void;
   onDeliver: () => void;
   onSendChat: (text: string) => void;
   onDismiss: () => void;
 }) {
   const order = state.activeOrder;
   const [copied, setCopied] = useState(false);
+  // API mode: the hand-in form (link + note) for the current milestone.
+  const [handIn, setHandIn] = useState<{ url: string; note: string } | null>(null);
   const real = useOrderRepo(order);
   if (!order) return null;
 
@@ -136,6 +138,11 @@ export default function ActiveJobWorkspace({
                     <p className="text-sm font-semibold text-ink">{m.title}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{m.description}</p>
                     {m.status === 'SUBMITTED' && <p className="mt-1 text-xs font-semibold text-amber-700">Đã nộp{m.commitHash ? ` @${m.commitHash.slice(0, 7)}` : ''} — chờ khách duyệt</p>}
+                    {m.deliveryUrl && (
+                      <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block truncate text-xs font-semibold text-emerald-dark underline">
+                        {m.deliveryUrl}
+                      </a>
+                    )}
                     {m.qa && m.status !== 'COMPLETED' && (
                       <p className={`mt-1 text-xs font-semibold ${m.qa.status === 'FAILED' ? 'text-red-600' : m.qa.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-500'}`}>
                         QA Gate: {m.qa.status}
@@ -158,6 +165,49 @@ export default function ActiveJobWorkspace({
 
       <CoderChat messages={state.chat} onSend={onSendChat} disabled={state.completed} />
 
+      {handIn && !allDone && (
+        <form
+          className="card fixed inset-x-0 bottom-24 z-50 mx-auto flex max-w-md flex-col gap-3 shadow-l3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onCompleteMilestone(milestones[nextIdx].id, { deliveryUrl: handIn.url.trim(), note: handIn.note.trim(), commitHash: gh?.commits[0]?.sha });
+            setHandIn(null);
+          }}
+        >
+          <h3 className="font-display text-sm font-bold">Bàn giao {milestones[nextIdx].id}: {milestones[nextIdx].title}</h3>
+          <label className="text-xs font-semibold text-slate-600">
+            Link bàn giao (demo, repo GitHub, file Google Drive...)
+            <input
+              type="url"
+              inputMode="url"
+              placeholder="https://"
+              pattern="https?://.+"
+              value={handIn.url}
+              onChange={(e) => setHandIn({ ...handIn, url: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <label className="text-xs font-semibold text-slate-600">
+            Ghi chú cho khách
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={handIn.note}
+              onChange={(e) => setHandIn({ ...handIn, note: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setHandIn(null)} className="btn-secondary min-h-[44px] flex-1">
+              Huỷ
+            </button>
+            <button type="submit" disabled={!handIn.url.trim() && !handIn.note.trim()} className="btn-primary min-h-[44px] flex-1">
+              Gửi khách duyệt
+            </button>
+          </div>
+        </form>
+      )}
+
       <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-l3 backdrop-blur">
         {state.completed ? (
           <button type="button" onClick={onDismiss} className="btn-primary min-h-[52px] w-full">
@@ -179,7 +229,7 @@ export default function ActiveJobWorkspace({
             <button
               type="button"
               disabled={milestones[nextIdx].status === 'SUBMITTED'}
-              onClick={() => onCompleteMilestone(milestones[nextIdx].id, gh?.commits[0]?.sha)}
+              onClick={() => (real ? setHandIn({ url: '', note: '' }) : onCompleteMilestone(milestones[nextIdx].id))}
               className="btn-primary min-h-[52px] shrink-0 !px-5"
             >
               <span className="material-symbols-outlined" aria-hidden>task_alt</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import { SEED_CODER } from "@grabcode/contracts";
 import { useAuth } from "@grabcode/auth-ui";
 import { formatVnd } from "../lib/coderStore";
 
@@ -26,10 +25,10 @@ export default function DriverHeader({
   compact?: boolean;
 }) {
   const { me, logout } = useAuth();
-  // Signed in: tier/rating from core-api (rating null until reviews exist); mock mode: SEED_CODER.
-  const c = me ? { tier: me.coderStats?.tier ?? "BRONZE", rating: me.coderStats?.rating ?? null } : SEED_CODER;
-  const name = me?.name ?? SEED_CODER.name;
-  const avatar = me ? me.avatarUrl : SEED_CODER.avatar;
+  // Tier/rating only from core-api (rating null until reviews exist); no profile: neutral placeholders.
+  const c = { tier: me?.coderStats?.tier ?? null, rating: me?.coderStats?.rating ?? null };
+  const name = me?.name ?? "Freelancer";
+  const avatar = me?.avatarUrl ?? null;
   return (
     <header
       className={`bg-ink px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white ${compact ? "pb-5" : "pb-6"}`}
@@ -59,12 +58,16 @@ export default function DriverHeader({
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-base font-bold">{name}</p>
           <div className="mt-0.5 flex items-center gap-2">
+            {c.tier ? (
             <span className="chip bg-amber-tint !py-0.5 text-amber-text">
               <span className="material-symbols-outlined !text-[14px]">
                 military_tech
               </span>
               {TIER_LABEL[c.tier]} · {c.tier}
             </span>
+            ) : (
+              <span className="text-sm text-slate-400">—</span>
+            )}
             {c.rating !== null && (
             <span className="flex items-center gap-0.5 font-display text-sm font-semibold text-amber">
               <span
