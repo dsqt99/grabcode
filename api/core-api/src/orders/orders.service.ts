@@ -20,6 +20,7 @@ import {
   type OrderStatus,
   type ChatMessage,
   type ChatPostedEvent,
+  type RefundAccount,
 } from '@grabcode/contracts/schemas';
 import type { z } from 'zod';
 import { DB, type Db } from '../db/client';
@@ -60,7 +61,7 @@ export async function emit(tx: Tx, r: Row, from: OrderStatus | null) {
  */
 export async function fundIfCovered(tx: Tx, row: Row) {
   if (row.status !== 'DRAFT' || (await balanceOf(tx, escrowOf(row.id))) < row.priceVnd) return;
-  const [next] = await tx.update(orders).set({ status: 'FUNDED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+  const [next] = await tx.update(orders).set({ status: 'FUNDED', fundedAt: sql`now()`, updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
   await emit(tx, next, 'DRAFT');
   await dispatchEvent(tx, SUBJECTS.DISPATCH_REQUESTED, { orderId: row.id, wave: 0, coderUserIds: [] });
 }
@@ -124,7 +125,12 @@ async function requestHandover(tx: Tx, row: Row) {
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
 }
 
-const chatOf = (r: Row, m: typeof orderMessages.$inferSelect, senderName: string): ChatMessage => ({
+// Raw "orders"."id": the subqueries must bind to the outer orders row.
+const paidSql = sql<string>`(select coalesce(sum(e.amount_vnd), 0) from core.ledger_entries e where e.account = 'escrow:' || "orders"."id" and e.amount_vnd > 0)`;
+const heldSql = sql<string>`(select coalesce(sum(e.amount_vnd), 0) from core.ledger_entries e where e.account = 'escrow:' || "orders"."id")`;
+const refundedSql = sql<string>`(select coalesce(sum(r.amount_vnd), 0) from core.refunds r where r.order_id = "orders"."id")`;
+
+export const chatOf = (r: Pick<Row, 'customerUserId'>, m: typeof orderMessages.$inferSelect, senderName: string): ChatMessage => ({
   id: m.id,
   orderId: m.orderId,
   sender: m.senderUserId === r.customerUserId ? 'CUSTOMER' : 'CODER',
@@ -210,6 +216,23 @@ export class OrdersService {
   }
 
   /** True when the user is the customer or the assigned coder (used to scope repo access). */
+  /** Customer only (the coder never sees where the customer's money goes back to). */
+  async refundAccount(user: UserRow, id: string): Promise<RefundAccount | null> {
+    const [row] = await this.db.select().from(orders).where(eq(orders.id, id));
+    if (!row || row.customerUserId !== user.id) throw new NotFoundException({ message: 'Order not found' });
+    return row.refundAccount;
+  }
+
+  async setRefundAccount(user: UserRow, id: string, account: RefundAccount): Promise<RefundAccount> {
+    const [row] = await this.db
+      .update(orders)
+      .set({ refundAccount: { ...account, accountNumber: account.accountNumber.replace(/\s+/g, '') } })
+      .where(and(eq(orders.id, id), eq(orders.customerUserId, user.id)))
+      .returning({ refundAccount: orders.refundAccount });
+    if (!row) throw new NotFoundException({ message: 'Order not found' });
+    return row.refundAccount!;
+  }
+
   async isParty(userId: string, orderId: string): Promise<boolean> {
     const [row] = await this.db
       .select({ id: orders.id })
@@ -328,6 +351,9 @@ export class OrdersService {
         customer,
         coder,
         coderAccepted: sql<number>`(select count(*)::int from ${orders} x where x.coder_user_id = ${orders.coderUserId} and x.status = 'ACCEPTED')`,
+        paid: paidSql,
+        held: heldSql,
+        refunded: refundedSql,
       })
       .from(orders)
       .innerJoin(customer, eq(customer.id, orders.customerUserId))
@@ -335,7 +361,7 @@ export class OrdersService {
       .where(where)
       .orderBy(order === 'newest' ? desc(orders.createdAt) : asc(orders.createdAt))
       .limit(limit);
-    return rows.map(({ o, customer: c, coder: k, coderAccepted }) => ({
+    return rows.map(({ o, customer: c, coder: k, coderAccepted, paid, held, refunded }) => ({
       id: o.id,
       status: o.status,
       tier: o.tier,
@@ -348,6 +374,13 @@ export class OrdersService {
       disputeReason: o.disputeReason,
       sandbox: o.sandbox,
       payoutVnd: o.payoutVnd,
+      money: {
+        paidVnd: Number(paid),
+        heldVnd: Number(held),
+        releasedVnd: Number(paid) - Number(held) - Number(refunded),
+        refundedVnd: Number(refunded),
+      },
+      fundedAt: o.fundedAt?.toISOString() ?? null,
       etaHours: o.etaHours,
       customer: party(c),
       // rating stays null until customer reviews exist (S4), same as /v1/me.
