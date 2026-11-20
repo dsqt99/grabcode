@@ -39,6 +39,11 @@ export interface StatusView {
 }
 
 const v = formatVnd;
+/** dd/MM, as in the spec (toLocaleDateString('vi-VN') gives "20-11" in Chromium). */
+export const dayMonth = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
 /** P0-3 AC3: what left escrow for approved milestones (price share, not the coder's cut) out of the order total. */
 const disbursed = (releasedVnd: number, priceVnd: number) => `Đã giải ngân ${v(releasedVnd)} / tổng ${v(priceVnd)}`;
 
@@ -114,7 +119,7 @@ export function statusView(o: StatusInput): StatusView {
         askRefundAccount: true,
       };
     case 'ACCEPTED': {
-      const day = o.completedAt ? new Date(o.completedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : null;
+      const day = o.completedAt ? dayMonth(o.completedAt) : null;
       return {
         ...base,
         tone: 'ok',
