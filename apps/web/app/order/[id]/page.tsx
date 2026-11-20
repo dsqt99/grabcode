@@ -275,8 +275,14 @@ export default function OrderPage() {
   const percent = progressPercent(order);
   const delivered = input.status === 'DELIVERED' || input.status === 'ACCEPTED';
   const amountOf = (milestoneId: string) => milestoneAmount(order, milestoneId);
-  /** What accepting the whole order pays now: every share still held, incl. the last milestone (same as the server sweep). */
-  const acceptVnd = heldVnd;
+  /**
+   * What accepting the whole order pays now: the shares not released yet, incl. the last milestone (same as the server sweep).
+   * Capped by what escrow holds (an order delivered before Q2 already paid its last share; an overpayment is not released).
+   */
+  const acceptVnd = Math.min(
+    heldVnd,
+    order.brief.milestones.reduce((s, m) => s + (m.status === 'COMPLETED' && paysOnApproval(order, m.id) ? 0 : amountOf(m.id)), 0),
+  );
   const item = menuItemOf(order.menuItem);
 
   const openSheet = (next: Sheet) => {
