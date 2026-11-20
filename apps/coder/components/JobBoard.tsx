@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { OrderDto } from '@grabcode/contracts/schemas';
+import { etaLabel, type OrderDto } from '@grabcode/contracts/schemas';
 import { formatVnd, listJobs } from '../lib/coderStore';
 
 const REFRESH_MS = 15_000;
@@ -43,7 +43,7 @@ export default function JobBoard({ onClaim }: { onClaim: (orderId: string) => Pr
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs text-slate-500">
-                    {j.id} · {j.customer.name} · dự kiến ~{j.etaHours} giờ
+                    {j.id} · {j.customer.name} · {etaLabel(j.etaHours)}
                   </p>
                   <p className="font-display text-sm font-bold text-ink">{j.title}</p>
                 </div>

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AIBriefSchema, OrderTierSchema } from './brief';
 import { VnPhoneSchema } from './phone';
+import { MenuItemCodeSchema } from './pricing';
 
 // Order core (S1). Postgres core.orders is the source of truth; every status change also writes an outbox event.
 
@@ -12,9 +13,10 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
 
 /**
  * Allowed edges -> actor. Anything not listed is rejected with 409.
- * DELIVERED -> IN_PROGRESS is the customer's "request revision".
+ * DELIVERED -> IN_PROGRESS is the customer's "request revision" (note required): the last milestone reopens with the note so the
+ * coder hands in a new link for it.
  * -> DISPUTED (customer, with a reason) freezes the escrow still held: no milestone can be approved or paid until an admin resolves it.
- * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
+ * DRAFT -> FUNDED happens when the price is quoted by an admin and the escrow ledger holds it in full, never by request.
  * DRAFT -> CANCELLED (unpaid or part-paid order, deposit refunded) and DISPUTED -> RESOLVED (escrow split) are taken by an admin (S7).
  * FUNDED -> DISPATCHED (first wave sent) and FUNDED|DISPATCHED -> IN_PROGRESS (a coder accepts an offer or claims the job
  * from the board, POST /v1/jobs/{id}/claim) are taken by dispatch.
@@ -52,7 +54,10 @@ export const coderTierFor = (completed: number): z.infer<typeof CoderTierSchema>
 
 export const OrderCreateSchema = z.object({
   prompt: z.string().trim().max(4000),
-  tier: OrderTierSchema,
+  /** Menu item (pricing.ts MENU): the order starts at its "giá từ" until an admin quotes it. */
+  menuItem: MenuItemCodeSchema,
+  /** Legacy package field, no longer priced or shown; kept for the brief job and old orders. */
+  tier: OrderTierSchema.default('STANDARD'),
   templateId: z.string().max(100).nullish(),
   framework: z.string().max(200).default('Next.js 15 + Tailwind CSS'),
   /** Brief the customer reviewed (AI or fallback). Milestone statuses are reset to PENDING by the server. */
@@ -66,10 +71,20 @@ export const OrderCreateSchema = z.object({
   acceptTerms: z.literal(true),
 });
 
-/** Body of POST /v1/orders/{id}/transitions. `reason` is required for DISPUTED (shown to the admin). */
+/** Minimum length of the customer's note when asking for changes after delivery. */
+export const REVISION_NOTE_MIN = 10;
+
+/**
+ * Body of POST /v1/orders/{id}/transitions. `reason` is required for DISPUTED (shown to the admin) and for IN_PROGRESS
+ * (the customer's revision request after delivery, >= REVISION_NOTE_MIN chars, shown to the coder on the reopened milestone).
+ */
 export const OrderTransitionSchema = z
   .object({ status: OrderStatusSchema, reason: z.string().trim().max(2000).optional() })
-  .refine((b) => b.status !== 'DISPUTED' || !!b.reason, { message: 'A reason is required to dispute', path: ['reason'] });
+  .refine((b) => b.status !== 'DISPUTED' || !!b.reason, { message: 'A reason is required to dispute', path: ['reason'] })
+  .refine((b) => b.status !== 'IN_PROGRESS' || (b.reason ?? '').length >= REVISION_NOTE_MIN, {
+    message: `Describe the changes (at least ${REVISION_NOTE_MIN} characters)`,
+    path: ['reason'],
+  });
 
 /** Absolute http(s) link (delivery links are rendered as <a href>, so no javascript: / data:). */
 export const HttpUrlSchema = z
@@ -109,6 +124,12 @@ export function milestoneShare(total: number, weights: number[], index: number) 
   const upTo = (n: number) => Math.round((total * ws.slice(0, n).reduce((s, w) => s + w, 0)) / sum);
   return upTo(index + 1) - upTo(index);
 }
+
+/**
+ * Founder decision (HON-10 Q2): approving a milestone pays its share right away, except the last one, whose share stays
+ * in escrow until the customer accepts the whole order (ACCEPTED pays every share still held).
+ */
+export const releasesOnApproval = (index: number, count: number) => index < count - 1;
 
 /**
  * Dispute split (S7): of what escrow still holds after `refundVnd` goes back to the customer, the coder gets the order's
@@ -167,13 +188,18 @@ export const OrderSchema = z.object({
   id: z.string(),
   status: OrderStatusSchema,
   tier: OrderTierSchema,
+  /** null for orders created before the menu (they keep their package price). */
+  menuItem: MenuItemCodeSchema.nullable(),
   title: z.string(),
   prompt: z.string(),
   templateId: z.string().nullable(),
   framework: z.string(),
   brief: AIBriefSchema,
+  /** "Giá từ" of the menu item until priceQuotedAt, then the price the admin quoted (what the customer transfers). */
   priceVnd: z.number().int(),
-  /** What the coder receives in total, fixed when the order is created (CODER_PAYOUT_RATE at that time). */
+  /** When an admin quoted the final price. null: waiting for a quote, the payment QR is not shown and the order cannot be funded. */
+  priceQuotedAt: z.string().nullable(),
+  /** What the coder receives in total, fixed with the price (CODER_PAYOUT_RATE at that time). */
   payoutVnd: z.number().int(),
   money: OrderMoneySchema,
   /** When the escrow first held the full price (DRAFT -> FUNDED); the 30 min / AUTO_REFUND_HOURS clocks start here. */

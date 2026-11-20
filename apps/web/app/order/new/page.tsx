@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { normalizeVnPhone, payoutOf } from '@grabcode/contracts/schemas';
+import { estimateOrder, normalizeVnPhone, payoutOf } from '@grabcode/contracts/schemas';
 import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/contracts';
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
@@ -12,14 +12,13 @@ import { createOrder, ordersApiEnabled, requestBrief } from '../../../lib/api';
 import { useAuth } from '@grabcode/auth-ui';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
-import { FRAMEWORKS, estimate, getTemplate, getTier, isTier } from '../../../lib/pricing';
+import { FRAMEWORKS, daysLabel, getMenuItem, getTemplate } from '../../../lib/pricing';
 
 function NewOrder() {
   const router = useRouter();
   const { me } = useAuth();
   const sp = useSearchParams();
-  const tierParam = sp.get('tier');
-  const tier = isTier(tierParam) ? tierParam : 'EXPRESS';
+  const item = getMenuItem(sp.get('item'));
   const templateId = sp.get('template');
   const framework = sp.get('framework') ?? FRAMEWORKS[0];
   const initialPrompt = sp.get('prompt') ?? '';
@@ -40,7 +39,7 @@ function NewOrder() {
   const validPhone = normalizeVnPhone(phone);
 
   useEffect(() => {
-    if (!prompt.trim() && tier !== 'TEMPLATE') {
+    if (!prompt.trim()) {
       setAnalyzing(false);
       setBrief(null);
       return;
@@ -49,9 +48,9 @@ function NewOrder() {
     setBriefFailed(false);
     const asked = prompt;
     const ctrl = new AbortController();
-    requestBrief({ prompt: asked, tier, templateId, framework }, ctrl.signal)
+    requestBrief({ prompt: asked, templateId, framework }, ctrl.signal)
       // No API configured (local demo): simulated 2s analysis with the template brief.
-      .then((b) => b ?? new Promise<AIBrief>((r) => setTimeout(() => r(genBrief(asked, tier, templateId, framework)), 2000)))
+      .then((b) => b ?? new Promise<AIBrief>((r) => setTimeout(() => r(genBrief(asked, item.code, templateId, framework)), 2000)))
       .then(
         (b) => {
           if (ctrl.signal.aborted) return;
@@ -71,17 +70,17 @@ function NewOrder() {
     return () => ctrl.abort();
     // Re-run only when the user requests a new analysis (run) or inputs from URL change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run, tier, templateId, framework]);
+  }, [run, item.code, templateId, framework]);
 
-  const cfg = getTier(tier);
   const tpl = getTemplate(templateId);
-  const est = estimate(tier, prompt, templateId);
+  // "Giá từ" of the item: the server creates the order with it and an admin quotes the final price before payment.
+  const est = estimateOrder(item.code);
 
   const stale = !!brief && analyzedPrompt !== null && prompt.trim() !== analyzedPrompt.trim();
   const blocker = !brief || analyzing
     ? null
     : stale
-      ? 'Bạn đã sửa yêu cầu — bấm "Phân tích lại" để cập nhật đặc tả và giá.'
+      ? 'Bạn đã sửa yêu cầu — bấm "Phân tích lại" để cập nhật đặc tả.'
       : needPhone && !validPhone
         ? 'Nhập số điện thoại để GrabCode liên hệ về đơn.'
         : !agreed
@@ -92,10 +91,10 @@ function NewOrder() {
     if (!brief || stale) return;
     setSubmitting(true);
     if (ordersApiEnabled) {
-      // Server prices the order (DRAFT); the order page shows the bank transfer that funds and dispatches it.
+      // DRAFT at the item's "giá từ"; the order page shows the transfer QR once an admin quoted the price.
       setError(null);
       try {
-        const created = await createOrder({ prompt, tier, templateId, framework, brief, acceptTerms: true, ...(needPhone && validPhone ? { phone: validPhone } : {}) });
+        const created = await createOrder({ prompt, menuItem: item.code, templateId, framework, brief, acceptTerms: true, ...(needPhone && validPhone ? { phone: validPhone } : {}) });
         router.push(`/order/${created.id}`);
       } catch (e) {
         console.error(e);
@@ -108,7 +107,7 @@ function NewOrder() {
     const now = new Date().toISOString();
     const order: Order = {
       id,
-      tier,
+      tier: 'STANDARD',
       title: brief.title.replace(/^Đặc tả kỹ thuật:\s*/, ''),
       customerName: me?.name ?? 'Khách hàng',
       customerPrompt: prompt,
@@ -127,7 +126,7 @@ function NewOrder() {
       id: `offer-${id}`,
       orderId: id,
       title: order.title,
-      tier,
+      tier: 'STANDARD',
       customerName: order.customerName,
       netPayoutVnd: payoutOf(est.priceVnd),
       deadlineHours: est.etaHours,
@@ -146,7 +145,7 @@ function NewOrder() {
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-8 md:px-8">
         <div className="mb-6">
-          <span className="chip-ok">Gói {cfg.label} • ~{est.etaHours}h</span>
+          <span className="chip-ok">{item.name} • {daysLabel(item.days)}</span>
           <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">Xác nhận đặc tả & đặt đơn</h1>
           {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p>}
         </div>
@@ -157,9 +156,9 @@ function NewOrder() {
               <label htmlFor="prompt" className="mb-1 block font-display text-sm font-semibold text-ink">Yêu cầu của bạn</label>
               <textarea id="prompt" rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="w-full resize-none p-3" placeholder="Mô tả app bạn cần..." />
               {stale && (
-                <p className="mt-2 text-sm font-semibold text-amber-text" role="status">Bạn đã sửa yêu cầu — bấm Phân tích lại để cập nhật đặc tả và giá.</p>
+                <p className="mt-2 text-sm font-semibold text-amber-text" role="status">Bạn đã sửa yêu cầu — bấm Phân tích lại để cập nhật đặc tả.</p>
               )}
-              <button type="button" onClick={() => setRun((n) => n + 1)} disabled={analyzing || (!prompt.trim() && tier !== 'TEMPLATE')} className="btn-secondary mt-3 !py-2 !text-sm">
+              <button type="button" onClick={() => setRun((n) => n + 1)} disabled={analyzing || !prompt.trim()} className="btn-secondary mt-3 !py-2 !text-sm">
                 <span className="material-symbols-outlined !text-[18px]" aria-hidden>refresh</span>
                 Phân tích lại
               </button>
@@ -175,9 +174,9 @@ function NewOrder() {
             )}
           </div>
           <EscrowCheckout
-            tierLabel={cfg.label}
-            priceVnd={est.priceVnd}
-            etaHours={est.etaHours}
+            itemName={item.name}
+            fromPriceVnd={item.fromPriceVnd}
+            days={item.days}
             disabled={!brief || analyzing || !!blocker}
             hint={blocker}
             submitting={submitting}

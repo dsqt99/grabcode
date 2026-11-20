@@ -41,7 +41,9 @@ export const PaymentInstructionsSchema = z.object({
   dueVnd: z.number().int(),
   /** Exact transfer content (payment code). */
   content: z.string(),
-  /** null when the receiving account is not configured (PAYMENT_* env). qrUrl: VietQR image with amount + content filled in. */
+  /** false: DRAFT waiting for the admin's quote; bank is null and the customer must not transfer yet. */
+  priceQuoted: z.boolean(),
+  /** null when the price is not quoted yet or the receiving account is not configured (PAYMENT_* env). qrUrl: VietQR image with amount + content filled in. */
   bank: z.object({ name: z.string(), accountNumber: z.string(), accountName: z.string(), qrUrl: z.string() }).nullable(),
   /** true: a SePay webhook confirms transfers automatically; false: an admin confirms them by hand. */
   autoConfirm: z.boolean(),

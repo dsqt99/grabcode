@@ -2,10 +2,12 @@
 // notifications.push is on, to every browser they subscribed (core.push_subscriptions, written by core-api).
 // Needs VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY (npx web-push generate-vapid-keys); without them it acks and skips.
 // Idempotent via notifier.processed_events. Zalo ZNS / FCM / email are not wired yet.
+// Also runs the ops notices to Telegram (admin.ts, own consumer: order.created, payment.reported, order.disputed, payout.requested).
 import { AckPolicy, connect, type JsMsg } from 'nats';
 import postgres from 'postgres';
 import webpush from 'web-push';
 import { ChatPostedEventSchema, DispatchEventSchema, MilestoneEventSchema, OrderEventSchema, STREAM_NAME, STREAM_SUBJECTS, SUBJECTS } from '@grabcode/contracts/schemas';
+import { runAdminNotices } from './admin';
 import { noticesFor } from './messages';
 
 const DURABLE = 'notifier';
@@ -30,6 +32,7 @@ await jsm.consumers
   .add(STREAM_NAME, { durable_name: DURABLE, ack_policy: AckPolicy.Explicit, filter_subjects, max_deliver: MAX_DELIVER, deliver_policy: 'new' as never })
   .catch(() => jsm.consumers.update(STREAM_NAME, DURABLE, { filter_subjects }));
 const js = nc.jetstream();
+const adminNotices = runAdminNotices(nc, sql);
 
 interface Sub { endpoint: string; p256dh: string; auth: string }
 
@@ -89,5 +92,6 @@ for await (const m of messages) {
     m.nak(5000);
   });
 }
+await adminNotices;
 await nc.drain();
 await sql.end();

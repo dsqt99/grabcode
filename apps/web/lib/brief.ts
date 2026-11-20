@@ -1,5 +1,5 @@
-import { AIBrief, OrderTier, SEED_TEMPLATES } from '@grabcode/contracts';
-import { getTier } from './pricing';
+import { AIBrief, SEED_TEMPLATES } from '@grabcode/contracts';
+import { daysLabel, getMenuItem, type MenuItemCode } from './pricing';
 
 function titleFrom(prompt: string): string {
   const clean = prompt.trim().replace(/\s+/g, ' ');
@@ -11,13 +11,13 @@ function titleFrom(prompt: string): string {
 /** Deterministic, pure brief generator that stands in for the LLM brief when the AI service is unavailable. */
 export function genBrief(
   prompt: string,
-  tier: OrderTier,
+  item: MenuItemCode,
   templateId?: string | null,
   framework = 'Next.js 15 + Tailwind CSS'
 ): AIBrief {
   const tpl = SEED_TEMPLATES.find((t) => t.id === templateId);
-  const cfg = getTier(tier);
-  const title = tpl && tier === 'TEMPLATE' ? tpl.title : titleFrom(prompt);
+  const cfg = getMenuItem(item);
+  const title = !prompt.trim() && tpl ? tpl.title : titleFrom(prompt);
   const lower = prompt.toLowerCase();
 
   const features: string[] = [];
@@ -57,7 +57,7 @@ export function genBrief(
   const claudeMdContent = [
     '# HƯỚNG DẪN DÀNH CHO CODER (CLAUDE.md)',
     `## Dự án: ${title}`,
-    `- **Gói dịch vụ:** ${cfg.label} (${cfg.hours} giờ)`,
+    `- **Loại việc:** ${cfg.name} (${daysLabel(cfg.days)})`,
     `- **Công nghệ yêu cầu:** ${framework}`,
     `- **Yêu cầu gốc của khách:** ${prompt.trim() || '(trống)'}`,
     '- **Tiêu chuẩn giao diện:** Emerald Mobility Design System (#00B14F)',
@@ -81,7 +81,7 @@ export function genBrief(
 
   return {
     title: `Đặc tả kỹ thuật: ${title}`,
-    scopeSummary: `Xây dựng app "${title}" theo gói ${cfg.label}, chia 3 mốc thanh toán 20% / 50% / 30%.`,
+    scopeSummary: `${cfg.name}: "${title}". Chia 3 mốc 20% / 50% / 30%; mốc cuối được trả khi khách nghiệm thu cả đơn.`,
     features,
     inScope,
     outOfScope,

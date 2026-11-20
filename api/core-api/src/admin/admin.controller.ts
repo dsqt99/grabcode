@@ -7,6 +7,7 @@ import {
   ConfirmPaymentSchema,
   DisputeResolveSchema,
   OrderIdSchema,
+  OrderQuoteSchema,
   PayoutCreateSchema,
   PayoutDecisionSchema,
   RefundPaidSchema,
@@ -92,6 +93,13 @@ export class AdminController {
   async confirmPayment(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<AdminOrder> {
     const admin = await this.admin(req);
     return this.svc.confirmPayment(admin, parse(OrderIdSchema, id), parse(ConfirmPaymentSchema, body));
+  }
+
+  @Post('admin/orders/:id/quote')
+  @HttpCode(200)
+  async quote(@Req() req: Request, @Param('id') id: string, @Body() body: unknown): Promise<AdminOrder> {
+    await this.admin(req);
+    return this.svc.quote(parse(OrderIdSchema, id), parse(OrderQuoteSchema, body));
   }
 
   @Post('admin/orders/:id/resolve')

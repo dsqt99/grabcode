@@ -19,16 +19,19 @@ const QA = {
 
 /**
  * `onReview` (API mode, order IN_PROGRESS) shows approve / request-changes on the SUBMITTED milestone; the page opens
- * a confirmation sheet for both. `amountOf`: escrow share the milestone releases (VND).
+ * a confirmation sheet for both. `amountOf`: escrow share of the milestone (VND). `paysOnApproval`: false for the last
+ * milestone, whose share is only paid when the whole order is accepted.
  */
 export default function MilestoneList({
   milestones,
   onReview,
   amountOf,
+  paysOnApproval = () => true,
 }: {
   milestones: Milestone[];
   onReview?: (milestoneId: string, approve: boolean) => void;
   amountOf?: (milestoneId: string) => number;
+  paysOnApproval?: (milestoneId: string) => boolean;
 }) {
   return (
     <section aria-label="Các mốc bàn giao" className="space-y-3">
@@ -87,7 +90,7 @@ export default function MilestoneList({
                       title={m.qa?.status === 'FAILED' ? 'QA chưa đạt — yêu cầu Coder sửa trước' : undefined}
                       onClick={() => onReview(m.id, true)}
                     >
-                      {amountOf ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}
+                      {amountOf && paysOnApproval(m.id) ? `Duyệt & trả ${formatVnd(amountOf(m.id))}` : 'Duyệt mốc'}
                     </button>
                     <button
                       type="button"

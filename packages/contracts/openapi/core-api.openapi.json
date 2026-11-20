@@ -1064,7 +1064,7 @@
     "/v1/orders/{id}/transitions": {
       "post": {
         "operationId": "transitionOrder",
-        "summary": "Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED hands the repo over), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (escrow holds the price), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.",
+        "summary": "Move the order. IN_PROGRESS->DELIVERED (assigned coder, all milestones approved), DELIVERED->ACCEPTED|IN_PROGRESS (customer; ACCEPTED pays every share still held, incl. the last milestone, and hands the repo over; IN_PROGRESS = revision, reason of 10+ chars required, reopens the last milestone with it), IN_PROGRESS|DELIVERED->DISPUTED (customer, reason required; freezes the escrow still held). DRAFT->FUNDED (price quoted and escrow holds it), FUNDED->DISPATCHED (wave sent) and DISPATCHED->IN_PROGRESS (POST /v1/offers/{id}/accept) are taken by the server.",
         "parameters": [
           {
             "name": "id",
@@ -2258,6 +2258,94 @@
           },
           "409": {
             "description": "Order not DRAFT, or reference already booked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/orders/{id}/quote": {
+      "post": {
+        "operationId": "adminQuoteOrder",
+        "summary": "Admin: set the final price and delivery days of a DRAFT order (never below what was already paid). The customer sees the payment QR only after this. Funds the order if escrow already holds the price.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderQuote"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body or price below the amount paid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing ADMIN role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Order not DRAFT",
             "content": {
               "application/json": {
                 "schema": {
@@ -4213,6 +4301,7 @@
             "maxLength": 4000
           },
           "tier": {
+            "default": "STANDARD",
             "type": "string",
             "enum": [
               "EXPRESS",
@@ -4239,8 +4328,7 @@
           }
         },
         "required": [
-          "prompt",
-          "tier"
+          "prompt"
         ]
       },
       "BriefJob": {
@@ -4660,7 +4748,26 @@
             "type": "string",
             "maxLength": 4000
           },
+          "menuItem": {
+            "type": "string",
+            "enum": [
+              "FIX",
+              "LANDING",
+              "COMPANY_SITE",
+              "SHOP",
+              "ZALO_MINI_APP",
+              "CHATBOT",
+              "PAYMENT",
+              "MARKETPLACE_SYNC",
+              "INTERNAL_TOOL",
+              "BOOKING",
+              "RESCUE",
+              "DEPLOY",
+              "MVP"
+            ]
+          },
           "tier": {
+            "default": "STANDARD",
             "type": "string",
             "enum": [
               "EXPRESS",
@@ -4870,7 +4977,7 @@
         },
         "required": [
           "prompt",
-          "tier",
+          "menuItem",
           "brief",
           "acceptTerms"
         ]
@@ -4902,6 +5009,31 @@
               "STANDARD",
               "PRO",
               "TEMPLATE"
+            ]
+          },
+          "menuItem": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FIX",
+                  "LANDING",
+                  "COMPANY_SITE",
+                  "SHOP",
+                  "ZALO_MINI_APP",
+                  "CHATBOT",
+                  "PAYMENT",
+                  "MARKETPLACE_SYNC",
+                  "INTERNAL_TOOL",
+                  "BOOKING",
+                  "RESCUE",
+                  "DEPLOY",
+                  "MVP"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "title": {
@@ -5101,6 +5233,12 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "priceQuotedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "payoutVnd": {
             "type": "integer",
@@ -5302,12 +5440,14 @@
           "id",
           "status",
           "tier",
+          "menuItem",
           "title",
           "prompt",
           "templateId",
           "framework",
           "brief",
           "priceVnd",
+          "priceQuotedAt",
           "payoutVnd",
           "money",
           "fundedAt",
@@ -5353,6 +5493,31 @@
                     "STANDARD",
                     "PRO",
                     "TEMPLATE"
+                  ]
+                },
+                "menuItem": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "FIX",
+                        "LANDING",
+                        "COMPANY_SITE",
+                        "SHOP",
+                        "ZALO_MINI_APP",
+                        "CHATBOT",
+                        "PAYMENT",
+                        "MARKETPLACE_SYNC",
+                        "INTERNAL_TOOL",
+                        "BOOKING",
+                        "RESCUE",
+                        "DEPLOY",
+                        "MVP"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
                 },
                 "title": {
@@ -5552,6 +5717,12 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "priceQuotedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "payoutVnd": {
                   "type": "integer",
@@ -5753,12 +5924,14 @@
                 "id",
                 "status",
                 "tier",
+                "menuItem",
                 "title",
                 "prompt",
                 "templateId",
                 "framework",
                 "brief",
                 "priceVnd",
+                "priceQuotedAt",
                 "payoutVnd",
                 "money",
                 "fundedAt",
@@ -5938,6 +6111,9 @@
           "content": {
             "type": "string"
           },
+          "priceQuoted": {
+            "type": "boolean"
+          },
           "bank": {
             "anyOf": [
               {
@@ -5988,6 +6164,7 @@
           "paidVnd",
           "dueVnd",
           "content",
+          "priceQuoted",
           "bank",
           "autoConfirm",
           "devDeposit",
@@ -6190,6 +6367,31 @@
                         "TEMPLATE"
                       ]
                     },
+                    "menuItem": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "FIX",
+                            "LANDING",
+                            "COMPANY_SITE",
+                            "SHOP",
+                            "ZALO_MINI_APP",
+                            "CHATBOT",
+                            "PAYMENT",
+                            "MARKETPLACE_SYNC",
+                            "INTERNAL_TOOL",
+                            "BOOKING",
+                            "RESCUE",
+                            "DEPLOY",
+                            "MVP"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -6387,6 +6589,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "priceQuotedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "payoutVnd": {
                       "type": "integer",
@@ -6588,12 +6796,14 @@
                     "id",
                     "status",
                     "tier",
+                    "menuItem",
                     "title",
                     "prompt",
                     "templateId",
                     "framework",
                     "brief",
                     "priceVnd",
+                    "priceQuotedAt",
                     "payoutVnd",
                     "money",
                     "fundedAt",
@@ -6659,6 +6869,31 @@
                     "STANDARD",
                     "PRO",
                     "TEMPLATE"
+                  ]
+                },
+                "menuItem": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "FIX",
+                        "LANDING",
+                        "COMPANY_SITE",
+                        "SHOP",
+                        "ZALO_MINI_APP",
+                        "CHATBOT",
+                        "PAYMENT",
+                        "MARKETPLACE_SYNC",
+                        "INTERNAL_TOOL",
+                        "BOOKING",
+                        "RESCUE",
+                        "DEPLOY",
+                        "MVP"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
                 },
                 "title": {
@@ -6858,6 +7093,12 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
+                },
+                "priceQuotedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "payoutVnd": {
                   "type": "integer",
@@ -7059,12 +7300,14 @@
                 "id",
                 "status",
                 "tier",
+                "menuItem",
                 "title",
                 "prompt",
                 "templateId",
                 "framework",
                 "brief",
                 "priceVnd",
+                "priceQuotedAt",
                 "payoutVnd",
                 "money",
                 "fundedAt",
@@ -7634,7 +7877,43 @@
           "title": {
             "type": "string"
           },
+          "menuItem": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FIX",
+                  "LANDING",
+                  "COMPANY_SITE",
+                  "SHOP",
+                  "ZALO_MINI_APP",
+                  "CHATBOT",
+                  "PAYMENT",
+                  "MARKETPLACE_SYNC",
+                  "INTERNAL_TOOL",
+                  "BOOKING",
+                  "RESCUE",
+                  "DEPLOY",
+                  "MVP"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "priceVnd": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "priceQuotedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etaHours": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -7704,7 +7983,10 @@
           "id",
           "status",
           "title",
+          "menuItem",
           "priceVnd",
+          "priceQuotedAt",
+          "etaHours",
           "payoutVnd",
           "paidVnd",
           "escrowVnd",
@@ -7748,7 +8030,43 @@
                 "title": {
                   "type": "string"
                 },
+                "menuItem": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "FIX",
+                        "LANDING",
+                        "COMPANY_SITE",
+                        "SHOP",
+                        "ZALO_MINI_APP",
+                        "CHATBOT",
+                        "PAYMENT",
+                        "MARKETPLACE_SYNC",
+                        "INTERNAL_TOOL",
+                        "BOOKING",
+                        "RESCUE",
+                        "DEPLOY",
+                        "MVP"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "priceVnd": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "priceQuotedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "etaHours": {
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
@@ -7818,7 +8136,10 @@
                 "id",
                 "status",
                 "title",
+                "menuItem",
                 "priceVnd",
+                "priceQuotedAt",
+                "etaHours",
                 "payoutVnd",
                 "paidVnd",
                 "escrowVnd",
@@ -7867,7 +8188,43 @@
               "title": {
                 "type": "string"
               },
+              "menuItem": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "FIX",
+                      "LANDING",
+                      "COMPANY_SITE",
+                      "SHOP",
+                      "ZALO_MINI_APP",
+                      "CHATBOT",
+                      "PAYMENT",
+                      "MARKETPLACE_SYNC",
+                      "INTERNAL_TOOL",
+                      "BOOKING",
+                      "RESCUE",
+                      "DEPLOY",
+                      "MVP"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "priceVnd": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "priceQuotedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "etaHours": {
                 "type": "integer",
                 "minimum": -9007199254740991,
                 "maximum": 9007199254740991
@@ -7937,7 +8294,10 @@
               "id",
               "status",
               "title",
+              "menuItem",
               "priceVnd",
+              "priceQuotedAt",
+              "etaHours",
               "payoutVnd",
               "paidVnd",
               "escrowVnd",
@@ -8557,6 +8917,25 @@
         "required": [
           "amountVnd",
           "reference"
+        ]
+      },
+      "OrderQuote": {
+        "type": "object",
+        "properties": {
+          "priceVnd": {
+            "type": "integer",
+            "minimum": 100000,
+            "maximum": 1000000000
+          },
+          "etaDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120
+          }
+        },
+        "required": [
+          "priceVnd",
+          "etaDays"
         ]
       },
       "SuspenseList": {

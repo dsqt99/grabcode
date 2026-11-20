@@ -183,7 +183,19 @@
 - [x] Trang đơn theo `OrderDto.status` gốc, stepper có "Thanh toán", ConfirmSheet trước khi trả tiền, chỉ VND ở màn tiền, bỏ số tiền trả coder khỏi chat khách — c7538c7
 - [x] Admin: bắt buộc nhập số tiền đã nhận / số hoàn khi chốt tranh chấp, confirm ghi rõ hai bên
 - [ ] 👤 Vận hành xác nhận câu chữ trạng thái CANCELLED/RESOLVED và quy trình chuyển trả
-- [ ] Q2 (founder): giữ mốc cuối tới khi nghiệm thu hay nhả theo mốc như hiện tại
+- [x] Q2 (founder): giữ mốc cuối tới khi nghiệm thu — làm ở HON-21 (P0-C)
+
+## Ra mắt VN — P0-C quyết định founder (HON-21) — branch `feat/p0c-founder-decisions`
+
+- [x] P0-3 / Q2: duyệt mốc cuối không nhả tiền, giữ tới ACCEPTED (`releasesOnApproval`); test PGlite — 299747d
+- [x] P0-3 / B3: "Yêu cầu sửa" sau bàn giao bắt buộc ghi chú ≥10 ký tự, mở lại mốc cuối kèm ghi chú (app coder hiện), coder nộp lại link + ghi chú — 299747d
+- [x] P0-3 / B4: tranh chấp sau bàn giao còn phần mốc cuối để chia; trang đơn "Đã giải ngân X / tổng Y"; sheet duyệt mốc cuối ghi rõ tiền giữ tới nghiệm thu — a1dafb3
+- [x] P0-7 / Q3: menu 13 món HON-9 trong `pricing.ts` (giá từ, số ngày); bỏ 4 gói + `PROMPT_SURCHARGE`; admin báo giá đơn DRAFT (`POST /v1/admin/orders/:id/quote`); chưa báo giá thì không QR, không FUNDED; migration 0019 coi đơn cũ đã báo giá — 299747d a1dafb3
+- [x] P0-4 / Q5: notifier gửi Telegram cho admin (`order.created`, `payment.reported`, `order.disputed`, `payout.requested`), idempotent theo event_id, thiếu env thì chỉ log; DEPLOY.md 3.8 — 20895cb
+- [ ] P0-4: phát `payment.reported` từ nút "Tôi đã chuyển khoản" (HON-20 / P0-B; contract đã có)
+- [ ] Báo khách khi admin báo giá xong (hiện khách thấy khi mở lại trang đơn; admin gọi theo SĐT)
+- [ ] `tier` (4 gói cũ) còn trong DB/contract làm trường kế thừa mặc định `STANDARD`: gỡ hẳn khi dọn brief-worker
+- [ ] 👤 Founder duyệt `CODER_PAYOUT_RATE` (HON-9 đề xuất 75%, đang 70%)
 
 ## Ra mắt VN — P0-B luồng khách/freelancer (HON-20) — branch `feat/p0b-launch-flows`
 

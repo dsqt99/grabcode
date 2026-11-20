@@ -39,8 +39,10 @@ export class PaymentsService {
     const paidVnd = await paidFor(this.db, row.id);
     const dueVnd = Math.max(0, row.priceVnd - paidVnd);
     const content = paymentCodeOf(row.id);
+    // No bank details / QR before the admin quotes the price (Q3): the customer must not transfer the "giá từ".
+    const priceQuoted = !!row.priceQuotedAt;
     const bank =
-      PAYMENT_BANK_ID && PAYMENT_ACCOUNT_NUMBER
+      priceQuoted && PAYMENT_BANK_ID && PAYMENT_ACCOUNT_NUMBER
         ? {
             name: PAYMENT_BANK_NAME,
             accountNumber: PAYMENT_ACCOUNT_NUMBER,
@@ -54,6 +56,7 @@ export class PaymentsService {
       paidVnd,
       dueVnd,
       content,
+      priceQuoted,
       bank,
       autoConfirm: !!SEPAY_WEBHOOK_API_KEY,
       devDeposit: DEV_LOGIN_ENABLED,
@@ -68,6 +71,8 @@ export class PaymentsService {
   async reportTransfer(user: UserRow, orderId: string): Promise<PaymentInstructions> {
     const row = await this.ownOrder(user, orderId);
     if (row.status !== 'DRAFT') throw new ConflictException({ message: `Order is ${row.status}, not waiting for payment` });
+    // No QR before the admin quotes the price (Q3), so there is no transfer to report yet.
+    if (!row.priceQuotedAt) throw new ConflictException({ message: 'The price is not quoted yet' });
     const dueVnd = Math.max(0, row.priceVnd - (await paidFor(this.db, row.id)));
     await this.db.transaction(async (tx) => {
       const [stamped] = await tx
@@ -91,7 +96,7 @@ export class PaymentsService {
   async devDeposit(user: UserRow, orderId: string): Promise<PaymentInstructions> {
     const row = await this.ownOrder(user, orderId);
     const due = row.priceVnd - (await paidFor(this.db, row.id));
-    if (due > 0) await this.recordDeposit(`dev:${randomUUID()}`, row.id, due, { source: 'dev' });
+    if (due > 0 && row.priceQuotedAt) await this.recordDeposit(`dev:${randomUUID()}`, row.id, due, { source: 'dev' });
     return this.instructions(user, orderId);
   }
 

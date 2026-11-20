@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { etaLabel } from '@grabcode/contracts/schemas';
 import type { PendingOffer } from '../lib/coderStore';
 import { formatVnd } from '../lib/coderStore';
 
@@ -120,7 +121,7 @@ export default function WaveOfferModal({
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="chip-dark">{TIER_LABEL[offer.tier] ?? offer.tier}</span>
           <span className="chip-warn">
-            <span className="material-symbols-outlined !text-[14px]">schedule</span> Deadline {offer.deadlineHours} giờ
+            <span className="material-symbols-outlined !text-[14px]">schedule</span> {etaLabel(offer.deadlineHours)}
           </span>
           {(offer.templateName || order.templateName) && <span className="chip-ok">{offer.templateName || order.templateName}</span>}
         </div>

@@ -83,6 +83,22 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
     );
   }
 
+  // HON-10 Q3: no QR / bank account before GrabCode quotes the final price (the server sends none either).
+  if (!p.priceQuoted) {
+    return (
+      <section className="card flex gap-4 border-amber-300 shadow-l3" aria-label="Chờ báo giá" role="status">
+        <span className="material-symbols-outlined shrink-0 text-amber-700" aria-hidden>request_quote</span>
+        <div>
+          <h2 className="font-display text-lg font-bold text-ink">Chờ GrabCode báo giá</h2>
+          <p className="text-sm text-slate-600">
+            GrabCode đang đọc yêu cầu và sẽ báo giá chốt cho đơn này (giá từ {formatVnd(p.priceVnd)}). Mã QR chuyển khoản hiện ở đây khi có giá chốt.
+            Vui lòng chưa chuyển khoản trước khi có giá chốt. Trang này tự cập nhật.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   const simulate = async () => {
     setBusy(true);
     setP(await devDeposit(orderId).catch(() => p));

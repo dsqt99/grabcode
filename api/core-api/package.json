@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/password.test.ts src/repos/repos.test.ts src/admin/admin.service.test.ts src/dispatch/approval.test.ts src/orders/customer-flow.test.ts",
+    "test": "tsx --test src/orders/transition.test.ts src/payments/ledger.test.ts src/realtime/token.test.ts src/auth/password.test.ts src/repos/repos.test.ts src/admin/admin.service.test.ts src/dispatch/approval.test.ts src/orders/customer-flow.test.ts src/orders/orders.service.test.ts",
     "smoke:dispatch": "node scripts/smoke-dispatch.mjs",
     "smoke:auth": "node scripts/smoke-auth.mjs"
   },

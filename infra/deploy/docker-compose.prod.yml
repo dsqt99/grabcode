@@ -76,10 +76,9 @@ services:
     <<: *node-service
     build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/brief-worker' } }
 
-  # Optional WebPush (needs VAPID_* in .env.production): docker compose ... --profile push up -d
+  # Ops notices to Telegram (TELEGRAM_* in .env.production; logged only when unset) and WebPush (VAPID_*; off when unset).
   notifier:
     <<: *node-service
-    profiles: ['push']
     build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/notifier' } }
 
   web:

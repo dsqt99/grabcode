@@ -3,6 +3,7 @@ import { AIBriefSchema } from './brief';
 import { CoderApprovalSchema, CoderProfileDetailsSchema } from './auth';
 import { CoderTierSchema, OrderStatusSchema, RefundAccountSchema } from './order';
 import { LedgerKindSchema } from './payment';
+import { MenuItemCodeSchema } from './pricing';
 import { ChatMessageSchema } from './realtime';
 
 // Admin portal (S7). Every /v1/admin/* route needs the ADMIN role (granted in the DB, never self-service).
@@ -54,7 +55,11 @@ export const AdminOrderSchema = z.object({
   id: z.string(),
   status: OrderStatusSchema,
   title: z.string(),
+  menuItem: MenuItemCodeSchema.nullable(),
   priceVnd: z.number().int(),
+  /** null: DRAFT waiting for the admin's quote (POST /v1/admin/orders/{id}/quote); the customer sees no payment QR yet. */
+  priceQuotedAt: z.string().nullable(),
+  etaHours: z.number().int(),
   /** Coder's total share fixed on the order; with priceVnd it gives the dispute split (disputeCoderShare). */
   payoutVnd: z.number().int(),
   /** Everything deposited for the order. */
@@ -118,6 +123,17 @@ export const ConfirmPaymentSchema = z.object({
   reference: z.string().trim().min(3).max(100),
 });
 export type ConfirmPayment = z.infer<typeof ConfirmPaymentSchema>;
+
+/**
+ * POST /v1/admin/orders/{id}/quote (DRAFT only): the admin sets the final price and delivery days (founder decision Q3).
+ * Re-quoting is allowed while DRAFT, never below what the customer already transferred. payoutVnd follows the new price.
+ * The order is funded right away if the escrow already holds the quoted price.
+ */
+export const OrderQuoteSchema = z.object({
+  priceVnd: z.number().int().min(100_000).max(1_000_000_000).refine((v) => v % 1000 === 0, 'Round to 1,000 VND'),
+  etaDays: z.number().int().min(1).max(120),
+});
+export type OrderQuote = z.infer<typeof OrderQuoteSchema>;
 
 // POST /v1/admin/orders/{id}/refund (no body): refunds what escrow still holds. DRAFT -> CANCELLED; on a closed
 // order (ACCEPTED / RESOLVED / CANCELLED) it refunds the overpayment.

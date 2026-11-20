@@ -165,17 +165,49 @@ crontab -e
 
 Nên chép định kỳ thư mục `~/backups` ra ngoài máy chủ (Google Drive, S3...).
 
+### 3.8 Thông báo admin qua Telegram
+
+Service `notifier` gửi tin vào một nhóm Telegram của vận hành khi có:
+
+- đơn mới (`order.created`), cần báo giá;
+- khách bấm "Tôi đã chuyển khoản" (`payment.reported`);
+- khách mở tranh chấp (`order.disputed`);
+- freelancer gửi yêu cầu rút tiền (`payout.requested`).
+
+Mỗi tin có mã đơn, số tiền, tên + SĐT khách (hoặc freelancer) và link `/admin`. Mỗi sự kiện chỉ gửi một lần: notifier chống trùng theo `event_id` trong bảng `notifier.processed_admin_events`.
+
+**Tạo bot (khoảng 5 phút):**
+
+1. Trong Telegram, nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `GrabCode Ops`) và username kết thúc bằng `bot`. BotFather trả về **token** dạng `123456789:AA...`. Token này là bí mật: không gửi qua chat, không commit.
+2. Tạo một nhóm Telegram cho vận hành và thêm bot vào nhóm. Gửi một tin bất kỳ trong nhóm, ví dụ `/start`.
+3. Lấy **chat id** của nhóm: mở `https://api.telegram.org/bot<TOKEN>/getUpdates` trên trình duyệt, tìm `"chat":{"id":-100...}`. Chat id của nhóm là số âm.
+4. Điền vào `.env.production`:
+
+   ```
+   TELEGRAM_BOT_TOKEN=123456789:AA...
+   TELEGRAM_ADMIN_CHAT_ID=-100...
+   ADMIN_PUBLIC_URL=https://grabcode.vn/admin   # bỏ trống thì dùng {WEB_ORIGIN đầu tiên}/admin
+   ```
+
+5. Khởi động lại notifier: `docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml up -d notifier`. Log phải có dòng `admin notices started (Telegram on)`.
+6. Thử: đặt một đơn mới. Nhóm sẽ nhận tin "Đơn mới GC-… — cần báo giá".
+
+Thiếu một trong hai biến `TELEGRAM_*` thì ứng dụng vẫn chạy bình thường: notifier chỉ in nội dung thông báo ra log (`docker compose ... logs notifier`). Telegram lỗi tạm thời (mạng, 429, 5xx) thì notifier thử lại tối đa 5 lần, giãn cách tăng dần. Lỗi 4xx (sai chat id, bot bị xoá khỏi nhóm) chỉ ghi log, không thử lại.
+
 ## 4. Thu tiền: hiện tại và sau này
 
-**Hiện tại: chuyển khoản / VietQR, admin xác nhận tay.**
+**Hiện tại: admin báo giá, khách chuyển khoản / VietQR, admin xác nhận tay.**
 
-- Trang thanh toán hiện QR (`img.vietqr.io`) đã điền sẵn số tiền và nội dung là mã đơn bỏ gạch, ví dụ `GC1006`.
+- Khách chọn một món trong menu (mục 5). Đơn mới ở trạng thái DRAFT với "giá từ" của món đó và **chưa hiện QR**.
+- Admin đọc yêu cầu (có tin Telegram, mục 3.8), vào `/admin` → "Đơn hàng & thanh toán" và bấm "Báo giá": nhập giá chốt và số ngày giao. Có thể báo giá lại khi đơn còn DRAFT, nhưng không thấp hơn số tiền khách đã chuyển.
+- Sau khi báo giá, trang thanh toán của khách hiện giá chốt và QR (`img.vietqr.io`) đã điền sẵn số tiền và nội dung là mã đơn bỏ gạch, ví dụ `GC1006`.
 - Admin mở app ngân hàng, thấy tiền vào, rồi vào `/admin` → "Đơn hàng & thanh toán". Nhập số tiền và **mã giao dịch ngân hàng** (FT...) rồi bấm "Xác nhận đã nhận tiền".
 - Cùng một mã giao dịch không thể ghi nhận hai lần cho một đơn.
 - Nhận đủ tiền thì đơn chuyển FUNDED và hiện cho freelancer.
 - Tiền nằm trong sổ cái kép (`core.ledger_*`):
-  - khách duyệt mốc nào thì nhả phần tiền của mốc đó;
-  - freelancer nhận `payoutVnd`, chốt theo tỷ lệ lúc tạo đơn;
+  - khách duyệt mốc nào thì nhả phần tiền của mốc đó, **trừ mốc cuối**: phần mốc cuối (mặc định 30%) được giữ tới khi khách nghiệm thu cả đơn;
+  - khách "Yêu cầu sửa" sau bàn giao (ghi chú tối thiểu 10 ký tự) thì mốc cuối mở lại, freelancer nộp link mới cho mốc đó;
+  - freelancer nhận `payoutVnd`, chốt theo tỷ lệ lúc tạo đơn và lúc báo giá;
   - nền tảng giữ phần còn lại.
 - Rút tiền cho freelancer: freelancer gửi yêu cầu trong app, admin chuyển khoản tay rồi bấm duyệt ở tab "Rút tiền".
 
@@ -202,8 +234,8 @@ Từ đó, trang thanh toán báo "chờ ngân hàng xác nhận" thay cho "admi
 
 Mọi con số nằm ở **một file**: `packages/contracts/src/schemas/pricing.ts`.
 
-- `TIER_PRICING`, `TEMPLATE_PRICING`: giá theo gói và theo template.
-- `TEMPLATE_BASE_DISCOUNT`, `PROMPT_SURCHARGE`: hệ số giảm khi dựng từ template, và phụ phí theo độ dài mô tả.
-- `CODER_PAYOUT_RATE`: tỷ lệ trả freelancer, hiện là 0,7.
+- `MENU`: các món theo HON-9: mã món, tên, phạm vi, "giá từ" và số ngày giao. Giá thật của từng đơn do admin báo (mục 4). Không có phụ phí theo độ dài mô tả.
+- `CODER_PAYOUT_RATE`: tỷ lệ trả freelancer, hiện là 0,7. Đổi tỷ lệ chỉ cần sửa dòng này.
+- `DEFAULT_MILESTONE_WEIGHTS`: trọng số mốc mặc định 20/50/30. Mốc cuối được giữ tới khi nghiệm thu (`releasesOnApproval` trong `order.ts`).
 
-Web và API đều đọc từ file này. Khi đổi tỷ lệ, chỉ **đơn tạo sau đó** áp dụng tỷ lệ mới. Đơn cũ giữ `payout_vnd` đã chốt.
+Web và API đều đọc từ file này. Khi đổi tỷ lệ, chỉ **đơn tạo hoặc báo giá sau đó** áp dụng tỷ lệ mới. Đơn cũ giữ `payout_vnd` đã chốt. Đơn tạo trước khi có menu được coi là đã báo giá (migration `0019_menu_quote`) và giữ nguyên giá.
