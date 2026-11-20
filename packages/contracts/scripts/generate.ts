@@ -39,6 +39,7 @@ import {
   AdminCoderPatchSchema,
   AdminOrderSchema,
   AdminOrderListSchema,
+  ConfirmPaymentSchema,
   DisputeResolveSchema,
   MonitorSchema,
   PayoutSchema,
@@ -48,7 +49,7 @@ import {
   SuspenseListSchema,
   SuspenseResolveSchema,
 } from '../src/schemas/admin.ts';
-import { OfferListSchema, PresenceSchema } from '../src/schemas/dispatch.ts';
+import { JobListSchema, OfferListSchema, PresenceSchema } from '../src/schemas/dispatch.ts';
 import { DevDepositSchema, PaymentInstructionsSchema, SepayWebhookSchema, WalletSchema } from '../src/schemas/payment.ts';
 import {
   MilestoneRejectSchema,
@@ -464,7 +465,21 @@ write('openapi/core-api.openapi.json', {
       },
     },
     '/v1/admin/orders': {
-      get: { operationId: 'adminListOrders', summary: 'Admin: disputed orders and orders with money left in escrow (part-paid drafts, overpayments).', responses: { '200': { description: 'OK', content: json('AdminOrderList') }, '401': unauthorized, '403': adminOnly } },
+      get: {
+        operationId: 'adminListOrders',
+        summary: 'Admin: view=attention (default) = unpaid drafts waiting for a transfer, disputes, money left in escrow, paid orders nobody took for 30+ min; view=all = latest 200 orders.',
+        parameters: [{ name: 'view', in: 'query', required: false, schema: { type: 'string', enum: ['attention', 'all'] } }],
+        responses: { '200': { description: 'OK', content: json('AdminOrderList') }, '401': unauthorized, '403': adminOnly },
+      },
+    },
+    '/v1/admin/orders/{id}/confirm-payment': {
+      post: {
+        operationId: 'adminConfirmPayment',
+        summary: 'Admin: book a bank transfer seen in the bank app onto a DRAFT order. Funds (and dispatches) the order once escrow holds the price. Same reference twice = 409.',
+        parameters: [orderId],
+        requestBody: { required: true, content: json('ConfirmPayment') },
+        responses: { '200': { description: 'OK', content: json('AdminOrder') }, '400': { description: 'Invalid body', content: json('ErrorResponse') }, '401': unauthorized, '403': adminOnly, '404': notFound, '409': { description: 'Order not DRAFT, or reference already booked', content: json('ErrorResponse') } },
+      },
     },
     '/v1/admin/orders/{id}/resolve': {
       post: {
@@ -535,6 +550,27 @@ write('openapi/core-api.openapi.json', {
         responses: { '200': { description: 'OK', content: json('Presence') }, '401': unauthorized, '403': { description: 'Missing CODER role', content: json('ErrorResponse') } },
       },
     },
+    '/v1/jobs': {
+      get: {
+        operationId: 'listJobs',
+        summary: 'Coder: job board of paid orders no coder has taken yet (oldest first, own orders excluded).',
+        responses: { '200': { description: 'OK', content: json('JobList') }, '401': unauthorized, '403': { description: 'Missing CODER role or suspended', content: json('ErrorResponse') } },
+      },
+    },
+    '/v1/jobs/{id}/claim': {
+      post: {
+        operationId: 'claimJob',
+        summary: 'Coder takes a job from the board: the order moves to IN_PROGRESS and open wave offers become LOST. One active order per coder.',
+        parameters: [orderId],
+        responses: {
+          '200': { description: 'OK', content: json('Order') },
+          '401': unauthorized,
+          '403': { description: 'Missing CODER role or suspended', content: json('ErrorResponse') },
+          '404': notFound,
+          '409': { description: 'Already taken, not paid yet, or the coder already has an order in progress', content: json('ErrorResponse') },
+        },
+      },
+    },
     '/v1/offers/{id}/accept': {
       post: {
         operationId: 'acceptOffer',
@@ -598,6 +634,7 @@ write('openapi/core-api.openapi.json', {
       DevDeposit: schema(DevDepositSchema, 'input'),
       Wallet: schema(WalletSchema),
       OfferList: schema(OfferListSchema),
+      JobList: schema(JobListSchema),
       Presence: schema(PresenceSchema),
       ChatMessage: schema(ChatMessageSchema),
       ChatSend: schema(ChatSendSchema, 'input'),
@@ -610,6 +647,7 @@ write('openapi/core-api.openapi.json', {
       AdminOrder: schema(AdminOrderSchema),
       AdminOrderList: schema(AdminOrderListSchema),
       DisputeResolve: schema(DisputeResolveSchema, 'input'),
+      ConfirmPayment: schema(ConfirmPaymentSchema, 'input'),
       SuspenseList: schema(SuspenseListSchema),
       SuspenseResolve: schema(SuspenseResolveSchema, 'input'),
       Payout: schema(PayoutSchema),
