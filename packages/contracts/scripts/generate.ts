@@ -31,6 +31,7 @@ import {
   ChatPostedEventSchema,
   RepoHandoverRequestedEventSchema,
   RepoHandedOverEventSchema,
+  PaymentReportedEventSchema,
   SUBJECTS,
 } from '../src/schemas/events.ts';
 import {
@@ -742,3 +743,4 @@ write('events/deploy.ready.schema.json', schema(DeployReadyEventSchema));
 write('events/deploy.failed.schema.json', schema(DeployFailedEventSchema));
 write('events/deploy.expired.schema.json', schema(DeployExpiredEventSchema));
 write('events/chat.posted.schema.json', schema(ChatPostedEventSchema));
+write('events/payment.reported.schema.json', schema(PaymentReportedEventSchema));

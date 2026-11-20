@@ -5,6 +5,7 @@ import { AIBriefSchema } from './brief';
 export * from './brief';
 export * from './events';
 export * from './auth';
+export * from './phone';
 export * from './repo';
 export * from './order';
 export * from './pricing';

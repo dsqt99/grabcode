@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AIBriefSchema } from './brief';
+import { CoderApprovalSchema, CoderProfileDetailsSchema } from './auth';
 import { CoderTierSchema, OrderStatusSchema, RefundAccountSchema } from './order';
 import { LedgerKindSchema } from './payment';
 import { ChatMessageSchema } from './realtime';
@@ -17,6 +18,11 @@ export const AdminCoderSchema = z.object({
   /** Effective tier: tierOverride ?? computed from accepted orders. */
   tier: CoderTierSchema,
   tierOverride: CoderTierSchema.nullable(),
+  /** New coders start PENDING (P0-8): no job board, offers, claim or accept until an admin approves them. */
+  approval: CoderApprovalSchema,
+  /** What the admin judges the application on; null until the coder saves a profile. */
+  profile: CoderProfileDetailsSchema.pick({ headline: true, bio: true, skills: true, experienceLevel: true, githubUrl: true, portfolioUrls: true }).nullable(),
+  phone: z.string().nullable(),
   /** Suspended coders get no offers. */
   suspended: z.boolean(),
   online: z.boolean(),
@@ -29,10 +35,14 @@ export type AdminCoder = z.infer<typeof AdminCoderSchema>;
 export const AdminCoderListSchema = z.object({ coders: z.array(AdminCoderSchema) });
 export type AdminCoderList = z.infer<typeof AdminCoderListSchema>;
 
-/** PATCH /v1/admin/coders/{id}. tierOverride null = back to the computed tier. */
+/** PATCH /v1/admin/coders/{id}. tierOverride null = back to the computed tier. approval: approve / reject the application. */
 export const AdminCoderPatchSchema = z
-  .object({ tierOverride: CoderTierSchema.nullable().optional(), suspended: z.boolean().optional() })
-  .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined, { message: 'Nothing to change' });
+  .object({
+    tierOverride: CoderTierSchema.nullable().optional(),
+    suspended: z.boolean().optional(),
+    approval: CoderApprovalSchema.exclude(['PENDING']).optional(),
+  })
+  .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined || b.approval !== undefined, { message: 'Nothing to change' });
 export type AdminCoderPatch = z.infer<typeof AdminCoderPatchSchema>;
 
 // ---- Orders. view=attention (default): unpaid drafts waiting for a transfer, disputes, money left in escrow,
@@ -55,6 +65,10 @@ export const AdminOrderSchema = z.object({
   customerName: z.string(),
   /** So the admin can reach the customer about a transfer. */
   customerEmail: z.string().nullable(),
+  /** Vietnamese mobile from the customer's profile (asked on the first order). */
+  customerPhone: z.string().nullable(),
+  /** The customer pressed "Tôi đã chuyển khoản" (DRAFT orders): check the bank app. */
+  paymentReportedAt: z.string().nullable(),
   coderName: z.string().nullable(),
   /** DRAFT -> FUNDED time; "waiting for a coder" (30 min) and auto refund (AUTO_REFUND_HOURS) count from here. */
   fundedAt: z.string().nullable(),
