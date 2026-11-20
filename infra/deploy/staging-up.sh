@@ -59,7 +59,7 @@ if [ ! -f "$ENV_FILE" ]; then
   echo "Created .env.staging (generated secrets, never committed)."
 fi
 DOMAIN_ARG="${1:-${DOMAIN:-}}"
-CURRENT_DOMAIN="$(grep -E '^DOMAIN=' "$ENV_FILE" | head -1 | cut -d= -f2-)"
+CURRENT_DOMAIN="$(grep -E '^DOMAIN=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)"
 DOMAIN_VALUE="${DOMAIN_ARG:-${CURRENT_DOMAIN:-localhost}}"
 case "$DOMAIN_VALUE" in *://*|*/*|*" "*) die "DOMAIN must be a bare host name such as staging.example.com (no https://, no path).";; esac
 # An explicit argument overrides the stored domain; anything else only fills blanks.
@@ -75,7 +75,8 @@ setenv DEMO_PASSWORD "$(rand 12)Aa1"
 setenv APP_ENV staging
 setenv AUTH_DEV_LOGIN true
 
-get() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2-; }
+# A missing key prints nothing. `|| true`: under pipefail grep's "no match" would otherwise kill the script without a message.
+get() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
 [ "$(get APP_ENV)" = "staging" ] || die ".env.staging must contain APP_ENV=staging."
 [ "$(get AUTH_DEV_LOGIN)" = "true" ] || die ".env.staging must contain AUTH_DEV_LOGIN=true (the seed and the smoke scripts need it)."
 
