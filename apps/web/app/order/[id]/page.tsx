@@ -266,7 +266,8 @@ export default function OrderPage() {
             <Link href="/orders" className="btn-primary">Về Đơn của tôi</Link>
           </section>
         ) : (
-          <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 md:px-8" aria-busy="true" aria-label="Đang tải đơn hàng">
+          <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 md:px-8" role="status" aria-busy="true">
+            <span className="sr-only">Đang tải đơn hàng…</span>
             <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
             {[0, 1, 2].map((i) => <div key={i} className="h-32 animate-pulse rounded-lg bg-slate-100" />)}
           </div>

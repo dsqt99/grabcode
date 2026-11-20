@@ -39,7 +39,16 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
   }, [open]);
 
   // The order page unmounts the sheet instead of passing open=false: give focus back to the opener then too (Màn C AC4).
-  useEffect(() => () => (opener.current as HTMLElement | null)?.focus?.(), []);
+  // A successful action can remove the opener (e.g. "Xem & duyệt M1"): fall back to the page heading, not <body>.
+  useEffect(
+    () => () => {
+      const el = opener.current as HTMLElement | null;
+      const target = el?.isConnected ? el : document.querySelector<HTMLElement>('main h1');
+      if (target && !el?.isConnected) target.tabIndex = -1;
+      target?.focus?.();
+    },
+    [],
+  );
 
   const close = () => !busy && onClose();
 
