@@ -23,3 +23,5 @@ Cách chụp: `apps/web` chạy `next dev` với `NEXT_PUBLIC_API_URL` trỏ t�
 | `D-don-cua-toi` | D – Đơn của tôi | tab "Cần bạn xử lý" |
 
 Đo tự động trên từng ảnh (A–D): không cuộn ngang (scrollWidth = 390), Navbar cao 56px, không còn chữ "grabcode", không có "..", không còn phần tử bấm được cao < 44px (trừ link/nút nằm trong câu chữ).
+
+> **LỖI THỜI:** ảnh trong thư mục này chụp ở bản tông indigo (trước khi đổi sang concept "giao đồ ăn" tông cam, HON-43 lần 2). Chưa chụp lại vì máy không dựng được staging.

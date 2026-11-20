@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/coder',
     display: 'standalone',
     background_color: '#f8fafc',
-    theme_color: '#4338CA',
+    theme_color: '#C2410C',
     // public/ is served under basePath /coder.
     icons: [
       { src: '/coder/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

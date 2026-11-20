@@ -6,10 +6,10 @@
 export const BRAND = {
   name: 'FastDemo',
   /**
-   * TẠM: CMO's recommendation (HON-38), the founder has NOT approved it yet.
+   * TẠM (HON-43, theo chỉ đạo founder: cosplay app giao đồ ăn, vibe code ship demo nhanh). Founder CHƯA chốt câu chữ.
    * A full sentence with its own punctuation: never append to it in components.
    */
-  tagline: 'Giao demo nhanh, tận nơi. Ưng rồi mới chốt.',
+  tagline: 'Đặt demo như đặt đồ ăn. Vibe code giao nhanh, ưng mới chốt.',
   /** Org line used in the footer. */
   company: 'Hoàng Hải Tech',
 } as const;

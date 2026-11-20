@@ -8,7 +8,7 @@
   h1, h2, h3, h4 { @apply font-display; }
   /* 16px on mobile: iOS Safari zooms into smaller fields on focus (UX P1-3). */
   input, textarea, select { @apply rounded-md border border-slate-300 bg-slate-50 text-base outline-none transition md:text-sm; }
-  input:focus, textarea:focus, select:focus { @apply border-emerald; box-shadow: 0 0 0 3px rgba(79,70,229, 0.15); }
+  input:focus, textarea:focus, select:focus { @apply border-emerald; box-shadow: 0 0 0 3px rgba(234,88,12, 0.15); }
 }
 
 @layer components {

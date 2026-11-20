@@ -6,8 +6,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#3730a3',
-        'brand-strong': '#4338CA',
+        primary: '#9A3412',
+        'brand-strong': '#C2410C',
       },
     },
   },

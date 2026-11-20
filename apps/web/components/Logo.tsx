@@ -1,14 +1,16 @@
 import { BRAND } from '@grabcode/contracts';
 import { splitBrandName } from '../lib/brand';
 
-/** Brand mark: indigo tile + play glyph ("xem demo") with two speed bars ("nhanh"). Same artwork as app/icon1.svg. */
+/** Brand mark: orange tile + delivery bag with a play glyph ("demo") and two speed bars ("giao nhanh"). Same artwork as app/icon1.svg. */
 export function LogoMark({ size = 28, tone = 'light' }: { size?: number; tone?: 'light' | 'dark' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden focusable="false">
-      <rect width="64" height="64" rx="16" fill={tone === 'dark' ? '#4F46E5' : '#4338CA'} />
-      <rect x="12" y="25" width="11" height="5" rx="2.5" fill="#A5B4FC" />
-      <rect x="15" y="34" width="8" height="5" rx="2.5" fill="#A5B4FC" />
-      <path d="M28 20.6v22.8a2 2 0 0 0 3.06 1.7l18.3-11.4a2 2 0 0 0 0-3.4L31.06 18.9A2 2 0 0 0 28 20.6Z" fill="#fff" />
+      <rect width="64" height="64" rx="16" fill={tone === 'dark' ? '#EA580C' : '#C2410C'} />
+      <rect x="7" y="30" width="10" height="4.5" rx="2.25" fill="#FDBA74" />
+      <rect x="10" y="39" width="7" height="4.5" rx="2.25" fill="#FDBA74" />
+      <path d="M26 24c0-4 2.6-7 6-7s6 3 6 7" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+      <path d="M21 25h22a2 2 0 0 1 2 2.1l-1.4 19a3 3 0 0 1-3 2.8H23.4a3 3 0 0 1-3-2.8L19 27.1A2 2 0 0 1 21 25Z" fill="#fff" />
+      <path d="M29 31v10l8.5-5Z" fill={tone === 'dark' ? '#EA580C' : '#C2410C'} />
     </svg>
   );
 }
