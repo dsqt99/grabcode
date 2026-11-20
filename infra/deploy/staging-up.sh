@@ -103,7 +103,7 @@ if [ "$SHARED" = 1 ]; then
       die "volume ${PROJECT}_$v belongs to the production project: refusing."
     fi
   done
-  other="$(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Label "com.docker.compose.project.working_dir"}}' | grep -vxF "$ROOT" | head -1 || true)"
+  other="$(docker ps -a --filter "label=com.docker.compose.project=$PROJECT" --format '{{.Label "com.docker.compose.project.working_dir"}}' | grep -vxF -e "$ROOT" -e "$ROOT/infra/deploy" | head -1 || true)"  # compose labels the first -f file's folder
   [ -z "$other" ] || die "a '$PROJECT' stack already exists from another checkout ($other): remove it or run from that folder."
 else
   [ -f "$ROOT/.env.production" ] && die ".env.production exists here: this looks like a production host. Use shared-VPS mode: staging-up.sh --port 18080 <domain>"
