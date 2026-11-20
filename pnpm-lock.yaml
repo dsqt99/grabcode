@@ -116,8 +116,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       lucide-react:
-        specifier: ^0.468.0
-        version: 0.468.0(react@19.3.1)
+        specifier: ^1.73.0
+        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: ^15.1.0
         version: 15.5.27(@opentelemetry/api@1.10.0)(@types/node@20.17.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -159,8 +159,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       lucide-react:
-        specifier: ^0.468.0
-        version: 0.468.0(react@19.3.1)
+        specifier: ^1.73.0
+        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
       next:
         specifier: ^15.1.0
         version: 15.5.27(@opentelemetry/api@1.10.0)(@types/node@20.17.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1945,10 +1945,14 @@ packages:
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
-  lucide-react@0.468.0:
-    resolution: {integrity: sha512-6koYRhnM2N0GGZIdXzSeiNwguv1gt/FAjZOiPl76roBi3xKEXa4WmfpxgQwTTL4KipXjefrnf3oV4IsYhi4JFA==}
+  lucide-react@1.73.0:
+    resolution: {integrity: sha512-fVOzGviL9mTfHenG1PbCfIceavyGlnpYNSYr+aGZHLRymAJ7DTP6KHuqt0uBkCKAoenr1UVkwSbDIYt2xIesEQ==}
     peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
+      '@types/react': '*'
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -3853,9 +3857,11 @@ snapshots:
 
   lodash.merge@4.6.2: {}
 
-  lucide-react@0.468.0(react@19.3.1):
+  lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       react: 19.3.1
+    optionalDependencies:
+      '@types/react': 19.3.0
 
   math-intrinsics@1.1.0: {}
 
