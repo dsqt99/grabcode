@@ -4285,6 +4285,7 @@
             "maxLength": 4000
           },
           "tier": {
+            "default": "STANDARD",
             "type": "string",
             "enum": [
               "EXPRESS",
@@ -4311,8 +4312,7 @@
           }
         },
         "required": [
-          "prompt",
-          "tier"
+          "prompt"
         ]
       },
       "BriefJob": {
