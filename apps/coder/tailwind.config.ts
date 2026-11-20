@@ -30,11 +30,12 @@ const config: Config = {
         'tertiary-container': '#d68900',
         error: '#ba1a1a',
         'error-container': '#ffdad6',
-        // brand-strong: primary button background (white text ~4.6:1). emerald.dark is for text, also on mint / slate-50 backgrounds (AA).
+        // brand-strong: primary button background (white text 7.9:1). emerald.dark is for text, also on mint / slate-50 backgrounds (AA).
+        // emerald (#4F46E5): white text 6.3:1, but only 2.8:1 on ink: on dark backgrounds use inverse-primary for text.
         'brand-strong': '#4338CA',
         emerald: { DEFAULT: '#4F46E5', dark: '#3730A3', mint: '#EEF2FF', mintHover: '#E0E7FF' },
         ink: { DEFAULT: '#0F172A', soft: '#1E293B' },
-        amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#B45309' },
+        amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#92400E' },
       },
       fontFamily: {
         display: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'sans-serif'],

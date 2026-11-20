@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@grabcode/auth-ui';
 import { BRAND } from '@grabcode/contracts';
+import Logo from './Logo';
 
 
 const PUBLIC_LINKS = [
@@ -35,8 +36,8 @@ export default function Navbar() {
       <header className="sticky top-0 z-40">
         <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:h-16 md:px-8">
-            <Link href="/" className="flex shrink-0 items-center">
-              <span className="font-display text-xl font-extrabold tracking-tight text-ink md:text-2xl">{BRAND.name}</span>
+            <Link href="/" className="flex min-h-[44px] shrink-0 items-center" aria-label={`${BRAND.name} – Trang chủ`}>
+              <Logo />
             </Link>
 
             <ul className="hidden items-center gap-1 md:flex">
@@ -53,12 +54,12 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               {status === 'anon' ? (
                 pathname !== '/login' && (
-                  <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-secondary !px-4 !py-2 text-sm">
+                  <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-secondary min-h-[44px] min-w-[44px] !px-4 !py-2 text-sm">
                     <span className="material-symbols-outlined !text-[18px]" aria-hidden>login</span> Đăng nhập
                   </Link>
                 )
               ) : (
-                <Link href="/profile" className="btn-ghost !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
+                <Link href="/profile" className="btn-ghost min-h-[44px] min-w-[44px] !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
                   {me?.avatarUrl ? (
                     <img src={me.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                   ) : me ? (
@@ -73,7 +74,7 @@ export default function Navbar() {
               <Link href="/#dispatch" className="btn-primary hidden !py-2 sm:inline-flex">Đặt làm app</Link>
               <button
                 type="button"
-                className="btn-ghost md:hidden"
+                className="btn-ghost min-h-[44px] min-w-[44px] md:hidden"
                 aria-expanded={open}
                 aria-label="Mở menu"
                 onClick={() => setOpen((v) => !v)}

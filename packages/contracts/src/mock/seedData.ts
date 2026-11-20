@@ -102,8 +102,8 @@ export const INITIAL_DEMO_ORDER: Order = {
   etaHours: 3,
   createdAt: new Date().toISOString(),
   assignedCoder: SEED_CODER,
-  demoUrl: "https://grabcode-crm-preview.vercel.app",
-  repoUrl: "https://github.com/grabcode-sandbox/gc-9821-crm-poc",
+  demoUrl: "https://fastdemo-crm-preview.vercel.app",
+  repoUrl: "https://github.com/fastdemo-sandbox/gc-9821-crm-poc",
   brief: {
     title: "Đặc tả kỹ thuật: Mini CRM Bất Động Sản Đô Thị Mới",
     scopeSummary: "Xây dựng Web App CRM tối giản cho sale bất động sản quản lý quỹ căn, đặt chỗ giữ chỗ và thông báo chốt cọc thời gian thực.",

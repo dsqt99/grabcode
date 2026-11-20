@@ -134,7 +134,7 @@ export const getMilestones = (order: Order): Milestone[] =>
   order.brief.milestones && order.brief.milestones.length > 0 ? order.brief.milestones : GENERIC_MILESTONES;
 
 export const repoUrlOf = (order: Order): string =>
-  order.repoUrl || `https://github.com/grabcode-sandbox/gc-${order.id.toLowerCase().replace(/^gc-/, '')}-poc`;
+  order.repoUrl || `https://github.com/fastdemo-sandbox/gc-${order.id.toLowerCase().replace(/^gc-/, '')}-poc`;
 
 const randomHex7 = () =>
   Array.from({ length: 7 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
@@ -524,7 +524,7 @@ export function useCoder() {
       type: 'ORDER_DELIVERED',
       payload: {
         orderId: order.id,
-        demoUrl: `https://grabcode-${order.id.toLowerCase()}.vercel.app`,
+        demoUrl: `https://fastdemo-${order.id.toLowerCase()}.vercel.app`,
         repoUrl: repoUrlOf(order),
       },
       timestamp: nowIso(),

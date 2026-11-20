@@ -18,7 +18,7 @@ const POLL_MS = 3000;
 async function saveQr(url: string, orderId: string) {
   try {
     const blob = await (await fetch(url)).blob();
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `grabcode-${orderId}-qr.png` });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${BRAND.name.toLowerCase()}-${orderId}-qr.png` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   } catch {
@@ -89,7 +89,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
   if (!p.priceQuoted) {
     return (
       <section className="card flex gap-4 border-amber-300 shadow-l3" aria-label="Chờ báo giá" role="status">
-        <span className="material-symbols-outlined shrink-0 text-amber-700" aria-hidden>request_quote</span>
+        <span className="material-symbols-outlined shrink-0 text-amber-text" aria-hidden>request_quote</span>
         <div>
           <h2 className="font-display text-lg font-bold text-ink">Chờ {BRAND.name} báo giá</h2>
           <p className="text-sm text-slate-600">

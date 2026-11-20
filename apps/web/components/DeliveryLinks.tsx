@@ -25,7 +25,7 @@ export default function DeliveryLinks({ order }: { order: Order }) {
                   </p>
                   <p className="truncate text-xs text-slate-600">{m.deliveryUrl}</p>
                 </div>
-                <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="btn-secondary shrink-0 !px-4 !py-2 text-sm">
+                <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="btn-secondary min-h-[44px] shrink-0 !px-4 !py-2 text-sm">
                   Mở link
                 </a>
               </li>

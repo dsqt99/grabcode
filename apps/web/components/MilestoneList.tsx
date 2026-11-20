@@ -4,8 +4,8 @@ import { formatVnd } from '../lib/pricing';
 
 const META = {
   COMPLETED: { icon: 'check_circle', cls: 'text-emerald', label: 'Hoàn thành' },
-  SUBMITTED: { icon: 'rate_review', cls: 'text-amber', label: 'Chờ bạn duyệt' },
-  IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber', label: 'Đang làm' },
+  SUBMITTED: { icon: 'rate_review', cls: 'text-amber-text', label: 'Chờ bạn duyệt' },
+  IN_PROGRESS: { icon: 'progress_activity', cls: 'text-amber-text', label: 'Đang làm' },
   PENDING: { icon: 'radio_button_unchecked', cls: 'text-slate-300', label: 'Chờ' },
 } as const;
 
@@ -53,23 +53,23 @@ export default function MilestoneList({
                 <p className="mt-1 text-xs text-slate-500">{m.description}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={m.status === 'COMPLETED' ? 'chip-ok' : m.status === 'IN_PROGRESS' ? 'chip-warn' : 'chip bg-slate-100 text-slate-700'}>{meta.label}</span>
-                  {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-emerald">{m.commitHash}</code>}
+                  {m.commitHash && <code className="rounded bg-ink px-2 py-0.5 font-mono text-[11px] text-inverse-primary">{m.commitHash}</code>}
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
-                  {m.completedAt && <span className="text-xs text-slate-400">{formatTime(m.completedAt)}</span>}
+                  {m.completedAt && <span className="text-xs text-slate-500">{formatTime(m.completedAt)}</span>}
                 </div>
                 {m.deliveryUrl && (
-                  <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-flex max-w-full items-center gap-1 text-sm font-semibold text-emerald-dark underline">
+                  <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-1 inline-flex min-h-[44px] max-w-full items-center gap-1 text-sm font-semibold text-emerald-dark underline">
                     <span className="material-symbols-outlined !text-[16px]" aria-hidden>link</span>
                     <span className="truncate">Xem bàn giao: {m.deliveryUrl}</span>
                   </a>
                 )}
                 {m.qa && m.qa.checks.length > 0 && (
                   <details className="mt-2 text-xs text-slate-600">
-                    <summary className="cursor-pointer">Chi tiết QA Gate</summary>
+                    <summary className="inline-flex min-h-[44px] cursor-pointer items-center">Chi tiết QA Gate</summary>
                     <ul className="mt-1 space-y-1">
                       {m.qa.checks.map((c) => (
                         <li key={c.name}>
-                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-400'}>
+                          <span className={c.status === 'FAILED' ? 'font-semibold text-red-600' : c.status === 'PASSED' ? 'text-emerald-dark' : 'text-slate-500'}>
                             {c.name}: {c.status}
                           </span>
                           {c.status === 'FAILED' && c.detail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-[11px]">{c.detail}</pre>}
@@ -82,7 +82,7 @@ export default function MilestoneList({
                   <p className="mt-2 text-xs text-slate-600">{m.status === 'SUBMITTED' ? 'Coder ghi chú' : 'Bạn yêu cầu sửa'}: {m.note}</p>
                 )}
                 {m.status === 'SUBMITTED' && onReview && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
                       className="btn-primary !min-h-[44px] flex-1 !py-1 text-sm"

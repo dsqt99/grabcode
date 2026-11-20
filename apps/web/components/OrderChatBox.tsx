@@ -43,8 +43,8 @@ export default function OrderChatBox({ messages, onSend, coderName }: { messages
       </div>
       <form onSubmit={submit} className="flex gap-2 border-t border-slate-100 p-3">
         <label htmlFor="chat-input" className="sr-only">Nhập tin nhắn</label>
-        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho freelancer..." className="min-w-0 flex-1 rounded-full px-4 py-2" />
-        <button type="submit" className="btn-primary !px-4 !py-2" aria-label="Gửi tin nhắn" disabled={!text.trim()}>
+        <input id="chat-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhắn cho freelancer..." className="min-h-[44px] min-w-0 flex-1 rounded-full px-4 py-2" />
+        <button type="submit" className="btn-primary min-h-[44px] !px-4 !py-2" aria-label="Gửi tin nhắn" disabled={!text.trim()}>
           <span className="material-symbols-outlined !text-[18px]" aria-hidden>send</span>
         </button>
       </form>

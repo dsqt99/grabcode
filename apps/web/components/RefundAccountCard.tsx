@@ -48,7 +48,7 @@ export default function RefundAccountCard({ orderId }: { orderId: string }) {
     <label className="block text-sm">
       <span className="font-semibold text-slate-700">{label}</span>
       <input
-        className="mt-1 w-full px-3 py-2 !text-base"
+        className="mt-1 min-h-[44px] w-full px-3 py-2 !text-base"
         value={form[key]}
         disabled={busy}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}

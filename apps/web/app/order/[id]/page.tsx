@@ -378,7 +378,7 @@ export default function OrderPage() {
       {hints && (
         <span className="mt-2 flex flex-wrap gap-2">
           {hints.map((h) => (
-            <button key={h} type="button" className="chip min-h-[32px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
+            <button key={h} type="button" className="chip min-h-[44px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
               {h}
             </button>
           ))}
@@ -508,7 +508,7 @@ export default function OrderPage() {
                 </button>
               )}
               {order.repoUrl && delivered && (
-                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-sm font-semibold text-emerald-dark hover:underline">
+                <a href={order.repoUrl} target="_blank" rel="noopener noreferrer" className="flex min-h-[44px] items-center justify-center text-sm font-semibold text-emerald-dark hover:underline">
                   Xem repo bàn giao
                 </a>
               )}

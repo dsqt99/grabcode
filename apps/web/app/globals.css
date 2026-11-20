@@ -12,7 +12,7 @@
 }
 
 @layer components {
-  /* brand-strong #4338CA: white text reaches AA (~4.6:1); #4F46E5 does not (UX P1-4). */
+  /* brand-strong #4338CA: white text 7.9:1 (AA); #4F46E5 is 6.3:1 but 2.8:1 on ink (ui-rebrand-spec §2). */
   .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-strong px-6 py-3 font-display text-[15px] font-semibold text-white transition hover:bg-primary active:scale-[0.98] disabled:opacity-50; }
   .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-full bg-emerald-mint px-6 py-3 font-display text-[15px] font-semibold text-emerald-dark transition hover:bg-emerald-mintHover active:scale-[0.98]; }
   .btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 font-display text-sm font-semibold text-ink transition hover:bg-slate-100; }

@@ -5,8 +5,11 @@
  */
 export const BRAND = {
   name: 'FastDemo',
-  /** Placeholder until the CMO supplies the final slogan. */
-  tagline: 'Xem demo rồi mới chốt',
+  /**
+   * TẠM: CMO's recommendation (HON-38), the founder has NOT approved it yet.
+   * A full sentence with its own punctuation: never append to it in components.
+   */
+  tagline: 'Giao demo nhanh, tận nơi. Ưng rồi mới chốt.',
   /** Org line used in the footer. */
   company: 'Hoàng Hải Tech',
 } as const;

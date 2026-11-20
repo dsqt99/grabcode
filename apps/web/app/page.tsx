@@ -29,9 +29,13 @@ export default function Page() {
               <span className="material-symbols-outlined !text-[14px]" aria-hidden>storefront</span>
               Dành cho chủ shop & SME Việt Nam
             </span>
-            <h1 className="font-display text-[30px] font-extrabold leading-9 tracking-tight text-ink md:text-5xl md:leading-[1.1]">
-              {BRAND.tagline}. <span className="text-emerald-dark">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
+            {/* tagline is a full sentence with its own punctuation: never append to it (docs/BRAND.md). */}
+            <h1 className="text-balance font-display text-[30px] font-extrabold leading-9 tracking-tight text-ink md:text-5xl md:leading-[1.1]">
+              {BRAND.tagline}
             </h1>
+            <p className="mt-3 font-display text-xl font-bold text-ink md:text-2xl">
+              <span className="text-emerald-dark">Freelancer vibe code làm</span>, bạn duyệt từng mốc mới trả tiền.
+            </p>
             <p className="mt-4 max-w-xl text-lg text-slate-600">
               Mô tả ý tưởng, AI soạn thành đặc tả và các mốc bàn giao, tiền được giữ ký quỹ và freelancer làm app bằng công cụ AI nhận đơn.
             </p>

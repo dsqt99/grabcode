@@ -11,7 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/coder',
     display: 'standalone',
     background_color: '#f8fafc',
-    theme_color: '#4F46E5',
-    icons: [{ src: '/coder/icon.png', sizes: '256x256', type: 'image/png', purpose: 'any' }],
+    theme_color: '#4338CA',
+    // public/ is served under basePath /coder.
+    icons: [
+      { src: '/coder/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/coder/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/coder/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
   };
 }
