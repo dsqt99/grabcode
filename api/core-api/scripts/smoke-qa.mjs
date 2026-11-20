@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const API = process.env.API_URL ?? 'http://localhost:4000';
+const DEV_KEY = process.env.DEV_LOGIN_KEY ? { 'x-dev-login-key': process.env.DEV_LOGIN_KEY } : {}; // staging: dev-login needs this key (docs/STAGING.md)
 const REPOS = process.env.REPOS;
 if (!REPOS) throw new Error('set REPOS (same dir as GIT_CLONE_BASE of the workers)');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,7 +20,7 @@ const psql = (q) => execFileSync('docker', ['compose', 'exec', '-T', 'postgres',
 async function client(login, role) {
   let cookie = '';
   const call = async (method, path, body) => {
-    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', cookie }, body: body && JSON.stringify(body) });
+    const r = await fetch(API + path, { method, headers: { 'content-type': 'application/json', ...DEV_KEY, cookie }, body: body && JSON.stringify(body) });
     const sc = r.headers.get('set-cookie');
     if (sc) cookie = sc.split(';')[0];
     const t = await r.text();

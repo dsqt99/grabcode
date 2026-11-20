@@ -10,7 +10,8 @@ name: grabcode
 
 x-node-service: &node-service
   restart: unless-stopped
-  env_file: ../../.env.production
+  # GC_ENV_FILE lets staging reuse this file with .env.staging (staging-up.sh); production keeps the default.
+  env_file: ${GC_ENV_FILE:-../../.env.production}
   environment:
     NODE_ENV: production
     DATABASE_URL: postgres://grabcode:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}@postgres:5432/grabcode

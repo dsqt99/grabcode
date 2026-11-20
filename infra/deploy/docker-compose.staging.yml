@@ -1,0 +1,26 @@
+# STAGING overlay for the production stack (docs/STAGING.md). Never use it on the production server.
+# staging-up.sh runs:
+#   GC_ENV_FILE=<repo>/.env.staging docker compose -p grabcode-staging --env-file .env.staging \
+#     -f infra/deploy/docker-compose.prod.yml -f infra/deploy/docker-compose.staging.yml up -d --build
+# The images are the production ones (NODE_ENV=production). What makes it staging is APP_ENV=staging in .env.staging:
+# core-api then accepts dev-login with STAGING_DEV_LOGIN_KEY (smoke / E2E), and the seed script is allowed to run.
+services:
+  core-api:
+    environment:
+      # Fail loudly if someone points this overlay at a production env file.
+      APP_ENV: ${APP_ENV:?APP_ENV=staging is required for the staging overlay}
+
+  # One-off, profile "seed": `docker compose ... run --rm seed`. Demo accounts + orders in every state, through the real API.
+  seed:
+    profiles: ['seed']
+    restart: 'no'
+    image: grabcode/core-api
+    working_dir: /app/api/core-api
+    env_file: ${GC_ENV_FILE:?GC_ENV_FILE is required}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://grabcode:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.staging}@postgres:5432/grabcode
+      API_URL: http://core-api:4000
+    command: ['node', 'scripts/seed-staging.mjs']
+    depends_on:
+      core-api: { condition: service_started }

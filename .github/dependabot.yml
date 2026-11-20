@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # @nestjs/platform-express must stay on the same major as @nestjs/core/common (11): a 12.x bump broke core-api at boot.
+      - dependency-name: '@nestjs/*'
+        update-types: ['version-update:semver-major']
     groups:
       npm-minor-patch:
         update-types: [minor, patch]

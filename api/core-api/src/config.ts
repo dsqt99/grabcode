@@ -9,7 +9,20 @@ export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET ?? '';
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? '';
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? '';
 export const GITHUB_APP_WEBHOOK_SECRET = process.env.GITHUB_APP_WEBHOOK_SECRET ?? '';
-export const DEV_LOGIN_ENABLED = process.env.AUTH_DEV_LOGIN === 'true' && !IS_PROD;
+/** APP_ENV=staging marks the demo server: it runs NODE_ENV=production images but may offer dev-login. Unset on real production. */
+/**
+ * Dev-login (any user, any role incl. ADMIN) exists only outside production, or on staging. Production never sets APP_ENV=staging,
+ * so AUTH_DEV_LOGIN=true there is ignored. On staging it additionally needs STAGING_DEV_LOGIN_KEY (sent as header x-dev-login-key):
+ * the staging URL is public, an open dev-login would hand out admin to anyone.
+ */
+export function devLoginState(env: Record<string, string | undefined>) {
+  const staging = env.APP_ENV === 'staging';
+  const key = staging ? (env.STAGING_DEV_LOGIN_KEY ?? '') : '';
+  const prod = env.NODE_ENV === 'production';
+  return { enabled: env.AUTH_DEV_LOGIN === 'true' && (!prod || (staging && key.length >= 16)), key };
+}
+export const DEV_LOGIN_KEY = devLoginState(process.env).key;
+export const DEV_LOGIN_ENABLED = devLoginState(process.env).enabled;
 // Receiving bank account shown to customers with a VietQR code. PAYMENT_BANK_ID = VietQR bank code or BIN (MB, VCB, 970422...).
 // Unset = the payment page says the account is not configured. SEPAY_* names are still read for older .env files.
 export const PAYMENT_BANK_ID = process.env.PAYMENT_BANK_ID || process.env.SEPAY_BANK || '';
