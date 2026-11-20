@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { and, asc, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
@@ -33,6 +33,9 @@ import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
 import { dispatchEvent } from '../dispatch/events';
 import { freshBrief, isDenied, planTransition, reopenForRevision, reviewMilestone, submitMilestone, type Denied, type HandIn } from './transition';
+
+/** Hours after delivery before the system accepts for a silent customer (HON-23). 0 turns it off. */
+const AUTO_ACCEPT_HOURS = Number(process.env.AUTO_ACCEPT_HOURS ?? 72);
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orders.$inferSelect;
@@ -85,6 +88,19 @@ async function releaseMilestone(tx: Tx, row: Row, index: number): Promise<number
   if ((await balanceOf(tx, escrowOf(row.id))) < amount) throw new ConflictException({ message: 'Escrow does not hold this milestone share' });
   await postTx(tx, txId, 'RELEASE', row.id, entries);
   return amount;
+}
+
+/** Pays every milestone share still held: the last one always (Q2), all of them for orders delivered before S4. Then the repo goes to the customer. */
+async function payOutAndHandOver(tx: Tx, row: Row) {
+  for (let i = 0; i < row.brief.milestones.length; i++) await releaseMilestone(tx, row, i);
+  await requestHandover(tx, row);
+}
+
+/** DELIVERED -> ACCEPTED by the system (72h without an answer). `row` is locked by the caller. */
+async function acceptRow(tx: Tx, row: Row) {
+  await payOutAndHandOver(tx, row);
+  const [next] = await tx.update(orders).set({ status: 'ACCEPTED', updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+  await emit(tx, next, 'DELIVERED');
 }
 
 /** Milestone actions need an assigned coder (transition.ts denies them otherwise). */
@@ -147,8 +163,37 @@ export const chatOf = (r: Pick<Row, 'customerUserId'>, m: typeof orderMessages.$
 });
 
 @Injectable()
-export class OrdersService {
+export class OrdersService implements OnModuleInit, OnModuleDestroy {
+  private sweeper?: NodeJS.Timeout;
+
   constructor(@Inject(DB) private readonly db: Db) {}
+
+  onModuleInit() {
+    if (AUTO_ACCEPT_HOURS > 0) this.sweeper = setInterval(() => void this.acceptStale().catch((e) => console.error('auto accept failed', e)), 10 * 60_000);
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.sweeper);
+  }
+
+  /** DELIVERED orders the customer left alone for `hours`: accepted by the system, same money path as the customer's button. Returns ids accepted. */
+  async acceptStale(hours = AUTO_ACCEPT_HOURS): Promise<string[]> {
+    const rows = await this.db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(and(eq(orders.status, 'DELIVERED'), sql`${orders.deliveredAt} < now() - make_interval(hours => ${hours})`));
+    const done: string[] = [];
+    for (const { id } of rows) {
+      await this.db.transaction(async (tx) => {
+        const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
+        // The customer may have accepted, asked for changes or disputed between the select and this lock.
+        if (row?.status !== 'DELIVERED' || !row.deliveredAt || row.deliveredAt.getTime() > Date.now() - hours * 3_600_000) return;
+        await acceptRow(tx, row);
+        done.push(id);
+      }).catch((e) => console.warn(`auto accept ${id} skipped:`, e.message));
+    }
+    return done;
+  }
 
   async create(user: UserRow, input: z.output<typeof OrderCreateSchema>): Promise<OrderDto> {
     if (!user.roles.includes('CUSTOMER')) throw new ForbiddenException({ message: 'Missing CUSTOMER role' });
@@ -270,11 +315,7 @@ export class OrdersService {
       const { coderUserId } = plan as { coderUserId: string | null };
       // Revision after delivery: the coder resubmits the last milestone with the customer's note.
       const brief = row.status === 'DELIVERED' && to === 'IN_PROGRESS' ? reopenForRevision(row.brief, reason!.trim()) : null;
-      if (to === 'ACCEPTED') {
-        // Pays every milestone share still held: the last one always (Q2), all of them for orders delivered before S4.
-        for (let i = 0; i < row.brief.milestones.length; i++) await releaseMilestone(tx, row, i);
-        await requestHandover(tx, row);
-      }
+      if (to === 'ACCEPTED') await payOutAndHandOver(tx, row);
       // DELIVERED: deploy-worker builds the last submitted commit (default branch when none) as a preview.
       const sandbox = to === 'DELIVERED' ? await requestSandbox(tx, row) : null;
       const [next] = await tx
@@ -285,6 +326,7 @@ export class OrdersService {
           ...(to === 'DISPUTED' ? { disputeReason: reason ?? null } : {}),
           ...(brief ? { brief } : {}),
           ...(sandbox ? { sandbox } : {}),
+          ...(to === 'DELIVERED' ? { deliveredAt: sql`now()` } : {}),
           updatedAt: sql`now()`,
         })
         .where(eq(orders.id, id))
