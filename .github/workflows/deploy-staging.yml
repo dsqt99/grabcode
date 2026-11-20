@@ -42,8 +42,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # The STAGING_* secrets live in the GitHub Environment `uat` (Settings -> Environments), not in Repository secrets.
-    environment: uat
     steps:
       - name: Check out the source
         uses: actions/checkout@v4
