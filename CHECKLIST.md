@@ -175,6 +175,16 @@
 - [ ] Upload file bàn giao trực tiếp (hiện dùng link Drive)
 - [ ] Đánh giá sau nghiệm thu (rating thật thay cho `null`)
 
+## Ra mắt VN — P0-A an toàn tiền (HON-19) — branch `feat/p0a-money-safety`
+
+- [x] B1: tự hoàn 24h + danh sách chờ 30 phút tính từ `orders.funded_at` (không phải `created_at`); test PGlite AC1 — b51e2ce
+- [x] B2: mọi bút toán hoàn cho khách mở dòng `core.refunds` (PENDING); tab admin "Chờ chuyển trả", "Đã chuyển" + mã GD (unique); khách nhập STK nhận hoàn ở trang đơn — b51e2ce
+- [x] P0-10: `GET /v1/admin/orders/:id` chỉ đọc (prompt, brief, mốc, chat, sổ cái, STK); non-admin 403 — b51e2ce
+- [x] Trang đơn theo `OrderDto.status` gốc, stepper có "Thanh toán", ConfirmSheet trước khi trả tiền, chỉ VND ở màn tiền, bỏ số tiền trả coder khỏi chat khách — c7538c7
+- [x] Admin: bắt buộc nhập số tiền đã nhận / số hoàn khi chốt tranh chấp, confirm ghi rõ hai bên
+- [ ] 👤 Vận hành xác nhận câu chữ trạng thái CANCELLED/RESOLVED và quy trình chuyển trả
+- [ ] Q2 (founder): giữ mốc cuối tới khi nghiệm thu hay nhả theo mốc như hiện tại
+
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`
