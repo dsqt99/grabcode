@@ -1,11 +1,11 @@
-// Consumes order.*, dispatch.offered and chat.posted, sends WebPush to the users the event concerns (noticesFor) whose
+// Consumes order.*, milestone.*, dispatch.offered and chat.posted, sends WebPush to the users the event concerns (noticesFor) whose
 // notifications.push is on, to every browser they subscribed (core.push_subscriptions, written by core-api).
 // Needs VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY (npx web-push generate-vapid-keys); without them it acks and skips.
 // Idempotent via notifier.processed_events. Zalo ZNS / FCM / email are not wired yet.
 import { AckPolicy, connect, type JsMsg } from 'nats';
 import postgres from 'postgres';
 import webpush from 'web-push';
-import { ChatPostedEventSchema, DispatchEventSchema, OrderEventSchema, STREAM_NAME, STREAM_SUBJECTS, SUBJECTS } from '@grabcode/contracts/schemas';
+import { ChatPostedEventSchema, DispatchEventSchema, MilestoneEventSchema, OrderEventSchema, STREAM_NAME, STREAM_SUBJECTS, SUBJECTS } from '@grabcode/contracts/schemas';
 import { noticesFor } from './messages';
 
 const DURABLE = 'notifier';
@@ -24,7 +24,7 @@ const jsm = await nc.jetstreamManager();
 await jsm.streams
   .add({ name: STREAM_NAME, subjects: STREAM_SUBJECTS })
   .catch(() => jsm.streams.update(STREAM_NAME, { subjects: STREAM_SUBJECTS }));
-const filter_subjects = ['order.>', SUBJECTS.DISPATCH_OFFERED, SUBJECTS.CHAT_POSTED];
+const filter_subjects = ['order.>', 'milestone.>', SUBJECTS.DISPATCH_OFFERED, SUBJECTS.CHAT_POSTED];
 await jsm.consumers
   // New consumer starts at new events: no push storm for history.
   .add(STREAM_NAME, { durable_name: DURABLE, ack_policy: AckPolicy.Explicit, filter_subjects, max_deliver: MAX_DELIVER, deliver_policy: 'new' as never })
@@ -56,6 +56,7 @@ async function handle(m: JsMsg) {
   const event =
     raw.type === SUBJECTS.DISPATCH_OFFERED ? DispatchEventSchema.parse(raw)
     : raw.type === SUBJECTS.CHAT_POSTED ? ChatPostedEventSchema.parse(raw)
+    : raw.type.startsWith('milestone.') ? MilestoneEventSchema.parse(raw)
     : OrderEventSchema.parse(raw);
   const [seen] = await sql`select 1 from notifier.processed_events where event_id = ${event.event_id}`;
   if (seen) return m.ack();
