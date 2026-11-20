@@ -1,9 +1,10 @@
 name: deploy-staging
 
 # Deploys the staging demo (docs/STAGING.md) to the VPS over SSH.
-#   - Manual: Actions -> deploy-staging -> Run workflow (pick the branch/commit to show).
-#   - Automatic: every push to main, but only once the secrets below exist. Without them the run succeeds
-#     with a notice and does nothing, so CI never goes red just because staging has not been set up yet.
+# MANUAL ONLY: Actions -> deploy-staging -> Run workflow (pick the branch, or type a branch/tag/SHA in `ref`).
+# There is deliberately no push trigger: on the shared VPS every build takes ~3 GB RAM next to production.
+# Source is pushed from the runner (`git archive | ssh tar -x`); the VPS needs no git, no clone, no deploy key.
+# Without the secrets below the run succeeds with a notice and does nothing.
 #
 # Secrets (Settings -> Secrets and variables -> Actions). None of them live in the repo:
 #   STAGING_SSH_HOST    VPS IP or host name
@@ -14,7 +15,8 @@ name: deploy-staging
 #   STAGING_SSH_PORT         default 22
 #   STAGING_SSH_KNOWN_HOSTS  output of `ssh-keyscan -H <host>` taken from a trusted machine; without it the host key
 #                            is fetched during the run (trust on first use)
-#   STAGING_APP_DIR          checkout folder on the VPS, default ~/grabcode
+#   STAGING_APP_DIR          source folder on the VPS, default ~/grabcode-staging (keep it fixed: staging-up.sh compares the
+#                            working_dir of the grabcode-staging project). .env.staging and data inside it are kept.
 #   STAGING_HTTP_PORT        SHARED-VPS mode (production already on that VPS): Caddy runs plain HTTP on 127.0.0.1:<port>, no 80/443,
 #                            and your own reverse proxy maps the domain to it. The final check then curls that port over SSH
 #                            instead of https://<domain> (which may not be mapped yet). Unset = standalone staging on 80/443.
@@ -22,10 +24,13 @@ name: deploy-staging
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+    inputs:
+      ref:
+        description: Branch, tag or commit to deploy (empty = the branch selected above)
+        required: false
+        default: ''
 
-# One deploy at a time; a newer push waits instead of killing a running deploy halfway through a build.
+# One deploy at a time; a newer run waits instead of killing a running deploy halfway through a build.
 concurrency:
   group: deploy-staging
   cancel-in-progress: false
@@ -38,6 +43,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
       - name: Check staging secrets
         id: cfg
         env:
@@ -73,22 +84,23 @@ jobs:
           APP_DIR: ${{ secrets.STAGING_APP_DIR }}
           HTTP_PORT: ${{ secrets.STAGING_HTTP_PORT }}
           BIND_PUBLIC: ${{ secrets.STAGING_BIND_PUBLIC }}
-          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           umask 077
+          SHA="$(git rev-parse HEAD)"
           mkdir -p ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/staging_key
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           else ssh-keyscan -H -p "${PORT:-22}" "$HOST" > ~/.ssh/known_hosts 2>/dev/null; fi
-          ssh -i ~/.ssh/staging_key -p "${PORT:-22}" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$USER_NAME@$HOST" bash -s -- "$SHA" "$DOMAIN" "${APP_DIR:-}" "${HTTP_PORT:-}" "${BIND_PUBLIC:-}" <<'REMOTE'
+          ssh_opts=(-i ~/.ssh/staging_key -p "${PORT:-22}" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          dir="${APP_DIR:-grabcode-staging}"; dir="${dir#\~/}"   # relative paths resolve from the login user's $HOME
+          qdir="$(printf '%q' "$dir")"
+          # Push the exact commit as a tarball. No rm: .env.staging and data already in the folder stay.
+          git archive "$SHA" | ssh "${ssh_opts[@]}" "$USER_NAME@$HOST" "mkdir -p $qdir && tar -x -C $qdir"
+          ssh "${ssh_opts[@]}" "$USER_NAME@$HOST" bash -s -- "$SHA" "$DOMAIN" "$dir" "${HTTP_PORT:-}" "${BIND_PUBLIC:-}" <<'REMOTE'
           set -euo pipefail
-          sha="$1"; domain="$2"; dir="${3:-$HOME/grabcode}"; port="${4:-}"; public="${5:-}"
-          [ -d "$dir/.git" ] || { echo "No checkout in $dir: do the one-time setup in docs/STAGING.md (section 3)."; exit 1; }
+          sha="$1"; domain="$2"; dir="$3"; port="${4:-}"; public="${5:-}"
           cd "$dir"
-          git fetch --prune origin
-          git checkout --force --detach "$sha"
           args=()
           [ -z "$port" ] || args+=(--port "$port")
           [ "$public" != "true" ] || args+=(--public)
