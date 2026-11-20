@@ -153,6 +153,8 @@ export const orders = core.table(
     disputeReason: text('dispute_reason'),
     /** DRAFT -> FUNDED time: the 30 min "no coder yet" and AUTO_REFUND_HOURS clocks start here (not createdAt). */
     fundedAt: timestamp('funded_at', { withTimezone: true }),
+    /** Last move to DELIVERED (set again after a revision): the AUTO_ACCEPT_HOURS clock. updatedAt moves on every sandbox update, so it cannot be used. */
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     /** Customer's bank account for refunds of this order (shown to admins on pending refunds, never to the coder). */
     refundAccount: jsonb('refund_account').$type<RefundAccount>(),
     /** Customer pressed "Tôi đã chuyển khoản" (first time only); an admin still confirms the transfer. */

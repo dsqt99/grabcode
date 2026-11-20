@@ -154,3 +154,37 @@ test('P0-4: a payout request emits payout.requested for the admin notifier', asy
   const [e] = await db.select().from(outbox).where(eq(outbox.subject, SUBJECTS.PAYOUT_REQUESTED));
   assert.deepEqual((e.payload as { data: unknown }).data, { payoutId: p.id, coderUserId: coder.id, amountVnd: 300_000 });
 });
+
+test('HON-23: a DELIVERED order the customer ignored for 72h is accepted by the system and pays the coder', async () => {
+  const ctx = await setup();
+  const { db, svc, coder } = ctx;
+  const o = await inProgress(ctx);
+  await approveAll(ctx, o.id);
+  await svc.transition(coder, o.id, 'DELIVERED');
+  assert.deepEqual(await svc.acceptStale(72), [], 'just delivered: not yet');
+  await db.update(orders).set({ deliveredAt: new Date(Date.now() - 73 * 3_600_000) }).where(eq(orders.id, o.id));
+  assert.deepEqual(await svc.acceptStale(72), [o.id]);
+  const [row] = await db.select().from(orders).where(eq(orders.id, o.id));
+  assert.equal(row.status, 'ACCEPTED');
+  assert.equal(await balanceOf(db, coderOf(coder.id)), o.payoutVnd);
+  assert.deepEqual(await svc.acceptStale(72), [], 'second sweep is a no-op');
+});
+
+test('HON-23: a revision request restarts the 72h clock and a dispute stops it', async () => {
+  const ctx = await setup();
+  const { db, svc, customer, coder } = ctx;
+  const o = await inProgress(ctx);
+  await approveAll(ctx, o.id);
+  await svc.transition(coder, o.id, 'DELIVERED');
+  const old = new Date(Date.now() - 73 * 3_600_000);
+  await db.update(orders).set({ deliveredAt: old }).where(eq(orders.id, o.id));
+  await svc.transition(customer, o.id, 'IN_PROGRESS', 'Please change the logo colour');
+  assert.deepEqual(await svc.acceptStale(72), [], 'not DELIVERED any more');
+  await svc.submitMilestone(coder, o.id, 'M3', link(2));
+  await svc.reviewMilestone(customer, o.id, 'M3', true, null);
+  await svc.transition(coder, o.id, 'DELIVERED');
+  assert.deepEqual(await svc.acceptStale(72), [], 'clock restarted at the second delivery');
+  await svc.transition(customer, o.id, 'DISPUTED', 'Not what I asked');
+  await db.update(orders).set({ deliveredAt: old }).where(eq(orders.id, o.id));
+  assert.deepEqual(await svc.acceptStale(72), [], 'disputed orders are never auto-accepted');
+});

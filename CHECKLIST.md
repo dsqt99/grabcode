@@ -209,7 +209,10 @@
 - [x] `/profile` chỉ hiện kênh push; mobile: sticky CTA, input 16px, nút primary #00873D, header 56px, 0 lỗi contrast axe ở các màn đã sửa — 294cc89
 - [ ] 👤 Founder: nội dung pháp lý thật cho 2 trang điều khoản; số Zalo/hotline thật (`SUPPORT_ZALO` / `SUPPORT_HOTLINE`); giờ đối soát
 - [ ] 👤 Founder: danh sách coder được duyệt (migration đang duyệt toàn bộ coder hiện có)
-- [ ] P0-C: kênh báo admin (Telegram) tiêu thụ `payment.reported`
+- [x] P0-C: kênh báo admin (Telegram) tiêu thụ `payment.reported` — 20895cb
+- [x] HON-23: tự nghiệm thu sau `AUTO_ACCEPT_HOURS` (72h) khi khách không phản hồi; cột `orders.delivered_at` (migration 0021); DEPLOY.md 5.1
+- [ ] HON-23: cảnh báo khách trước khi tự nghiệm thu (chưa làm)
+- [ ] 👤 Founder: chốt `CODER_PAYOUT_RATE` (70% hiện tại, HON-9 đề xuất 75%)
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 

@@ -239,3 +239,12 @@ Mọi con số nằm ở **một file**: `packages/contracts/src/schemas/pricing
 - `DEFAULT_MILESTONE_WEIGHTS`: trọng số mốc mặc định 20/50/30. Mốc cuối được giữ tới khi nghiệm thu (`releasesOnApproval` trong `order.ts`).
 
 Web và API đều đọc từ file này. Khi đổi tỷ lệ, chỉ **đơn tạo hoặc báo giá sau đó** áp dụng tỷ lệ mới. Đơn cũ giữ `payout_vnd` đã chốt. Đơn tạo trước khi có menu được coi là đã báo giá (migration `0019_menu_quote`) và giữ nguyên giá.
+
+### 5.1 Tự nghiệm thu sau 72 giờ
+
+Khi freelancer bàn giao (đơn sang DELIVERED), khách có `AUTO_ACCEPT_HOURS` giờ (mặc định 72) để nghiệm thu, yêu cầu sửa hoặc khiếu nại. Quá hạn mà khách không làm gì, core-api tự nghiệm thu: giải ngân phần còn giữ cho freelancer và bàn giao repo, giống hệt khi khách bấm "Nghiệm thu". Quét mỗi 10 phút.
+
+- Yêu cầu sửa đưa đơn về IN_PROGRESS; lần bàn giao tiếp theo tính lại 72 giờ. Đơn đang khiếu nại (DISPUTED) không bao giờ tự nghiệm thu.
+- Đặt `AUTO_ACCEPT_HOURS=0` để tắt, khi đó chỉ khách bấm mới nghiệm thu.
+- Migration `0021_delivered_at` thêm cột `orders.delivered_at`; đơn đang DELIVERED lúc nâng cấp lấy `updated_at` làm mốc, nên có thể tự nghiệm thu ngay ở lần quét đầu nếu đã quá 72 giờ.
+- Hệ thống chưa gửi cảnh báo "còn X giờ sẽ tự nghiệm thu" cho khách (chưa làm).
