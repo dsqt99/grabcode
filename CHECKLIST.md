@@ -55,7 +55,7 @@
 - [x] Coder: tier/rating lấy từ hồ sơ Coder trong core-api — hết shortcut `DriverHeader.tsx:28` — `cdcb2f2`
 - [x] Test state machine (chuyển hợp lệ / bị chặn) — `f8665de`
 - [x] Nợ S1: `core.order_repos` FK sang `core.orders` — `b73486c`
-- [x] Nợ S1: checkout web bỏ phí 5% tự bịa, tổng = giá server (nền tảng giữ 30% qua `payoutVnd`) — `c686c0a`
+- [x] Nợ S1: checkout web bỏ phí 5% tự bịa, tổng = giá server (nền tảng giữ 30%, nay 25% từ HON-27 qua `payoutVnd`) — `c686c0a`
 - [x] Nợ S1: `OrderDto.coder.stats` (tier, số đơn, rating null tới S4) — `dcfa2a6`, `b73486c`, `c686c0a`
 - [x] Nợ S1: `POST /v1/orders` bắt brief có ≥1 milestone (400); `GENERIC_MILESTONES` chỉ còn cho đơn mock cũ — `dcfa2a6`
 
@@ -69,7 +69,7 @@
 - [x] API: ledger double-entry `core.ledger_txs` / `core.ledger_entries` (migration 0007), tx id = idempotency key (`sepay:<id>`, `release:<orderId>`, `dev:<uuid>`) — `1ff520b`
 - [x] API: webhook SePay (`Authorization: Apikey`, so sánh constant-time, bỏ qua `out` / sai tài khoản, mã không khớp → `suspense`) — `1ff520b`
 - [x] API: FUNDED chỉ khi escrow ≥ giá → tự DISPATCHED; bỏ shortcut client tự FUNDED (`orders.service.ts`, `viewOrder.ts` escrowStatus) — `1ff520b`, `27d94c1`
-- [x] API: ACCEPTED nhả tiền: 70% vào `coder:<id>`, còn lại `platform:revenue`; `GET /v1/me/wallet` — `1ff520b`
+- [x] API: ACCEPTED nhả tiền: 70% (nay 75%, HON-27) vào `coder:<id>`, còn lại `platform:revenue`; `GET /v1/me/wallet` — `1ff520b`
 - [x] API: `GET /v1/orders/:id/payment` (QR `qr.sepay.vn`), `POST /v1/payments/dev-deposit` (chỉ khi `AUTH_DEV_LOGIN`) — `1ff520b`
 - [x] Web: panel chuyển khoản (QR, STK, nội dung, số còn thiếu, nút giả lập dev) thay ký quỹ giả — `27d94c1`
 - [x] Coder: ví + thu nhập hôm nay lấy từ ledger thay ví local — `27d94c1`
@@ -195,7 +195,7 @@
 - [ ] P0-4: phát `payment.reported` từ nút "Tôi đã chuyển khoản" (HON-20 / P0-B; contract đã có)
 - [ ] Báo khách khi admin báo giá xong (hiện khách thấy khi mở lại trang đơn; admin gọi theo SĐT)
 - [ ] `tier` (4 gói cũ) còn trong DB/contract làm trường kế thừa mặc định `STANDARD`: gỡ hẳn khi dọn brief-worker
-- [ ] 👤 Founder duyệt `CODER_PAYOUT_RATE` (HON-9 đề xuất 75%, đang 70%)
+- [x] 👤 Founder duyệt `CODER_PAYOUT_RATE` = 75% (HON-1); đổi ở HON-27
 
 ## Ra mắt VN — P0-B luồng khách/freelancer (HON-20) — branch `feat/p0b-launch-flows`
 
@@ -212,7 +212,7 @@
 - [x] P0-C: kênh báo admin (Telegram) tiêu thụ `payment.reported` — 20895cb
 - [x] HON-23: tự nghiệm thu sau `AUTO_ACCEPT_HOURS` (72h) khi khách không phản hồi; cột `orders.delivered_at` (migration 0021); DEPLOY.md 5.1
 - [ ] HON-23: cảnh báo khách trước khi tự nghiệm thu (chưa làm)
-- [ ] 👤 Founder: chốt `CODER_PAYOUT_RATE` (70% hiện tại, HON-9 đề xuất 75%)
+- [x] 👤 Founder: chốt `CODER_PAYOUT_RATE` = 75% (HON-1); đổi ở HON-27
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
