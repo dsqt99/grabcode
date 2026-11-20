@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
+import { payoutOf } from '@grabcode/contracts/schemas';
 import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/contracts';
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
@@ -102,7 +103,7 @@ function NewOrder() {
       title: order.title,
       tier,
       customerName: order.customerName,
-      netPayoutVnd: Math.round((est.priceVnd * 0.7) / 1000) * 1000,
+      netPayoutVnd: payoutOf(est.priceVnd),
       deadlineHours: est.etaHours,
       summary: brief.scopeSummary,
       expiresInSeconds: 30,

@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { payoutOf } from '@grabcode/contracts/schemas';
 import { INITIAL_DEMO_ORDER, eventBus, pollDelay, toViewOrder, type ChatMessage, type Order } from '@grabcode/contracts';
 import GitTerminalLog from '../../../components/GitTerminalLog';
 import LiveStepper from '../../../components/LiveStepper';
@@ -54,7 +55,6 @@ export default function OrderPage() {
   const { money } = useCurrency();
   const [order, setOrder] = useState<Order | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [revisions, setRevisions] = useState(2);
   const [missing, setMissing] = useState(false);
   const orderRef = useRef<Order | null>(null);
   const chatRef = useRef<ChatMessage[]>([]);
@@ -237,7 +237,7 @@ export default function OrderPage() {
 
   const delivered = order.status === 'DELIVERED' || order.status === 'COMPLETED';
   const completed = order.status === 'COMPLETED';
-  const payout = Math.round((order.priceVnd * 0.7) / 1000) * 1000;
+  const payout = order.payoutVnd ?? payoutOf(order.priceVnd);
   const percent = progressPercent(order);
 
   const sendChat = (text: string) => {
@@ -275,7 +275,6 @@ export default function OrderPage() {
   };
 
   const requestRevision = async () => {
-    if (revisions <= 0) return;
     if (ordersApiEnabled) {
       try {
         // Sends the order back to the coder (DELIVERED -> IN_PROGRESS).
@@ -285,7 +284,6 @@ export default function OrderPage() {
         return;
       }
     }
-    setRevisions((r) => r - 1);
     sendChat('Mình muốn yêu cầu chỉnh sửa một số điểm trên bản demo, bạn xem giúp nhé.');
   };
 
@@ -397,8 +395,8 @@ export default function OrderPage() {
                 <span className="material-symbols-outlined !text-[20px]" aria-hidden>paid</span>
                 {completed ? 'Đã giải ngân' : 'Nghiệm thu & Giải ngân'}
               </button>
-              <button type="button" className="btn-secondary w-full" disabled={order.status !== 'DELIVERED' || revisions <= 0} onClick={requestRevision}>
-                Yêu cầu sửa (Còn {revisions} lượt)
+              <button type="button" className="btn-secondary w-full" disabled={order.status !== 'DELIVERED'} onClick={requestRevision}>
+                Yêu cầu sửa
               </button>
               {canDispute && (
                 <button type="button" className="w-full text-center text-sm font-semibold text-red-600 hover:underline" onClick={dispute}>
