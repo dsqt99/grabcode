@@ -30,7 +30,9 @@ const config: Config = {
         'tertiary-container': '#d68900',
         error: '#ba1a1a',
         'error-container': '#ffdad6',
-        emerald: { DEFAULT: '#00B14F', dark: '#00873D', mint: '#E8F8EE', mintHover: '#D4F2DE' },
+        // brand-strong: primary button background (white text ~4.6:1). emerald.dark is for text, also on mint / slate-50 backgrounds (AA).
+        'brand-strong': '#00873D',
+        emerald: { DEFAULT: '#00B14F', dark: '#007C38', mint: '#E8F8EE', mintHover: '#D4F2DE' },
         ink: { DEFAULT: '#0F172A', soft: '#1E293B' },
         amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#B45309' },
       },

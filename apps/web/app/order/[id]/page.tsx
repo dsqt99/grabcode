@@ -453,7 +453,7 @@ export default function OrderPage() {
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div className="min-w-0 space-y-6">
             {/* Real orders: a live preview when one is READY, otherwise the freelancer's links (never a generated demo). */}
-            {ordersApiEnabled && !order.demoUrl ? <DeliveryLinks order={order} /> : <SandboxFrame order={order} delivered={delivered} />}
+            {ordersApiEnabled && !order.demoUrl ? order.assignedCoder && <DeliveryLinks order={order} /> : <SandboxFrame order={order} delivered={delivered} />}
             <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />
           </div>
           <div className="min-w-0 space-y-6">

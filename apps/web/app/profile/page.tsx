@@ -18,7 +18,7 @@ import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
 import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
 
-const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-50 disabled:text-slate-500';
+const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-normal md:text-sm disabled:bg-slate-50 disabled:text-slate-500';
 const LABEL = 'block text-sm font-semibold text-ink';
 
 const SECTIONS = [
@@ -575,7 +575,7 @@ function Settings() {
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[220px_1fr] md:px-8">
-      <aside className="md:sticky md:top-20 md:self-start">
+      <aside className="min-w-0 md:sticky md:top-20 md:self-start">
         <h1 className="font-display text-2xl font-extrabold text-ink">Cài đặt</h1>
         <nav className="mt-4 flex gap-1 overflow-x-auto md:flex-col" aria-label="Mục cài đặt">
           {SECTIONS.map((s) => (
