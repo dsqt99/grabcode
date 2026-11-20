@@ -120,6 +120,13 @@
       "when": 1794476171552,
       "tag": "0016_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795110552945,
+      "tag": "0017_order_payout",
+      "breakpoints": true
     }
   ]
 }

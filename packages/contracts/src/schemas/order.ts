@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { SEED_TEMPLATES } from '../mock/seedData';
 import { AIBriefSchema, OrderTierSchema } from './brief';
 
 // Order core (S1). Postgres core.orders is the source of truth; every status change also writes an outbox event.
@@ -16,11 +15,12 @@ export type OrderActor = 'CUSTOMER' | 'CODER' | 'SYSTEM';
  * -> DISPUTED (customer, with a reason) freezes the escrow still held: no milestone can be approved or paid until an admin resolves it.
  * DRAFT -> FUNDED happens when the escrow ledger holds the full price (SePay webhook), never by request.
  * DRAFT -> CANCELLED (unpaid or part-paid order, deposit refunded) and DISPUTED -> RESOLVED (escrow split) are taken by an admin (S7).
- * FUNDED -> DISPATCHED (first wave sent) and DISPATCHED -> IN_PROGRESS (a coder accepts an offer) are taken by dispatch.
+ * FUNDED -> DISPATCHED (first wave sent) and FUNDED|DISPATCHED -> IN_PROGRESS (a coder accepts an offer or claims the job
+ * from the board, POST /v1/jobs/{id}/claim) are taken by dispatch.
  */
 export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, OrderActor>>> = {
   DRAFT: { FUNDED: 'SYSTEM', CANCELLED: 'SYSTEM' },
-  FUNDED: { DISPATCHED: 'SYSTEM' },
+  FUNDED: { DISPATCHED: 'SYSTEM', IN_PROGRESS: 'SYSTEM' },
   DISPATCHED: { IN_PROGRESS: 'SYSTEM' },
   IN_PROGRESS: { DELIVERED: 'CODER', DISPUTED: 'CUSTOMER' },
   DELIVERED: { ACCEPTED: 'CUSTOMER', DISPUTED: 'CUSTOMER', IN_PROGRESS: 'CUSTOMER' },
@@ -31,35 +31,6 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, Partial<Record<OrderStatus, 
 };
 
 export const transitionActor = (from: OrderStatus, to: OrderStatus): OrderActor | undefined => ORDER_TRANSITIONS[from][to];
-
-// ---- Pricing (server computes the price; the web shows the same estimate before checkout) ----
-
-export const TIER_PRICING: Record<z.infer<typeof OrderTierSchema>, { basePriceVnd: number; hours: number }> = {
-  EXPRESS: { basePriceVnd: 2_800_000, hours: 3 },
-  STANDARD: { basePriceVnd: 2_000_000, hours: 8 },
-  PRO: { basePriceVnd: 6_500_000, hours: 24 },
-  TEMPLATE: { basePriceVnd: 2_200_000, hours: 2 },
-};
-
-/** Share of the order price paid out to the coder (per approved milestone). */
-export const CODER_PAYOUT_RATE = 0.7;
-export const payoutOf = (priceVnd: number) => Math.round((priceVnd * CODER_PAYOUT_RATE) / 1000) * 1000;
-
-export function estimateOrder(tier: z.infer<typeof OrderTierSchema>, prompt: string, templateId?: string | null) {
-  const tpl = SEED_TEMPLATES.find((t) => t.id === templateId);
-  let price = TIER_PRICING[tier].basePriceVnd;
-  let eta = TIER_PRICING[tier].hours;
-  if (tier === 'TEMPLATE' && tpl) {
-    price = tpl.basePriceVnd;
-    eta = tpl.etaHours;
-  } else if (tpl) {
-    price = Math.round(price * 0.85);
-  }
-  // Longer prompts imply more scope: +100k per 80 chars beyond 120, capped.
-  const extra = Math.min(Math.max(0, prompt.length - 120) / 80, 10);
-  price += Math.round(extra) * 100000;
-  return { priceVnd: Math.round(price / 10000) * 10000, etaHours: eta };
-}
 
 // ---- Coder stats (shown in the coder app header) ----
 
@@ -92,11 +63,30 @@ export const OrderTransitionSchema = z
   .object({ status: OrderStatusSchema, reason: z.string().trim().max(2000).optional() })
   .refine((b) => b.status !== 'DISPUTED' || !!b.reason, { message: 'A reason is required to dispute', path: ['reason'] });
 
-/** Body of POST /v1/orders/{id}/milestones/{milestoneId}/submit. commitHash must be a commit pushed to the order repo. */
-export const MilestoneSubmitSchema = z.object({
-  commitHash: z.string().regex(/^[0-9a-f]{7,40}$/).nullish(),
-  note: z.string().trim().max(2000).optional(),
-});
+/** Absolute http(s) link (delivery links are rendered as <a href>, so no javascript: / data:). */
+export const HttpUrlSchema = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine((u) => {
+    try {
+      return ['http:', 'https:'].includes(new URL(u).protocol);
+    } catch {
+      return false;
+    }
+  }, 'Must be an http(s) link');
+
+/**
+ * Body of POST /v1/orders/{id}/milestones/{milestoneId}/submit. The coder hands in a link (demo, repo, Drive file),
+ * and/or a commit pushed to the order repo (GitHub App), and/or a note: at least one of them.
+ */
+export const MilestoneSubmitSchema = z
+  .object({
+    commitHash: z.string().regex(/^[0-9a-f]{7,40}$/).nullish(),
+    deliveryUrl: HttpUrlSchema.nullish(),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .refine((b) => !!(b.commitHash || b.deliveryUrl || b.note), { message: 'Add a delivery link, a commit or a note', path: ['deliveryUrl'] });
 
 /** Body of POST /v1/orders/{id}/milestones/{milestoneId}/reject (customer asks for changes). */
 export const MilestoneRejectSchema = z.object({ note: z.string().trim().min(1).max(2000) });
@@ -113,7 +103,7 @@ export function milestoneShare(total: number, weights: number[], index: number) 
 }
 
 export const OrderListQuerySchema = z.object({
-  /** mine: customer's own + coder's assigned orders. Coders get new orders as offers (GET /v1/me/offers). */
+  /** mine: customer's own + coder's assigned orders. Coders find new orders in offers (GET /v1/me/offers) or the job board (GET /v1/jobs). */
   scope: z.enum(['mine']).default('mine'),
 });
 
@@ -139,7 +129,7 @@ export const OrderSchema = z.object({
   framework: z.string(),
   brief: AIBriefSchema,
   priceVnd: z.number().int(),
-  /** What the coder receives on ACCEPTED. */
+  /** What the coder receives in total, fixed when the order is created (CODER_PAYOUT_RATE at that time). */
   payoutVnd: z.number().int(),
   etaHours: z.number().int(),
   /** Set when the customer disputes; read by admins (S7). */

@@ -141,6 +141,8 @@ export const orders = core.table(
     framework: text('framework').notNull(),
     brief: jsonb('brief').$type<AIBrief>().notNull(),
     priceVnd: integer('price_vnd').notNull(),
+    /** Coder's total share, fixed at creation (CODER_PAYOUT_RATE then), so a rate change only affects new orders. */
+    payoutVnd: integer('payout_vnd').notNull(),
     etaHours: integer('eta_hours').notNull(),
     disputeReason: text('dispute_reason'),
     // Cloud Run preview (S5), written from deploy-worker results.

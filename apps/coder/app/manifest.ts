@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'GrabCode Coder',
     short_name: 'GrabCode Coder',
-    description: 'Nhận cuốc đơn, build POC, nhận tiền ngay.',
+    description: 'Nhận đơn, làm app bằng công cụ AI, rút tiền về ngân hàng.',
     start_url: '/coder',
     scope: '/coder',
     display: 'standalone',

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-// Escrow ledger (S2). Customers pay by bank transfer; SePay posts a webhook per incoming transfer.
+// Escrow ledger (S2). Customers pay by bank transfer (VietQR). An admin confirms the money arrived
+// (POST /v1/admin/orders/{id}/confirm-payment); optionally a SePay webhook does it automatically.
 // Double-entry: every ledger tx is a set of entries summing to 0. Accounts:
-//   bank:sepay         money that arrived in the receiving bank account (goes negative = what we hold for others)
+//   bank:sepay         money that arrived in the receiving bank account, whoever confirmed it (goes negative = what we hold for others)
 //   escrow:<orderId>   held for an order until acceptance
 //   coder:<userId>     coder earnings (wallet)
 //   platform:revenue   platform share of accepted orders
@@ -40,8 +41,10 @@ export const PaymentInstructionsSchema = z.object({
   dueVnd: z.number().int(),
   /** Exact transfer content (payment code). */
   content: z.string(),
-  /** null when the receiving account is not configured (SEPAY_* env). */
+  /** null when the receiving account is not configured (PAYMENT_* env). qrUrl: VietQR image with amount + content filled in. */
   bank: z.object({ name: z.string(), accountNumber: z.string(), accountName: z.string(), qrUrl: z.string() }).nullable(),
+  /** true: a SePay webhook confirms transfers automatically; false: an admin confirms them by hand. */
+  autoConfirm: z.boolean(),
   /** Dev only: POST /v1/payments/dev-deposit is available. */
   devDeposit: z.boolean(),
 });
@@ -62,3 +65,14 @@ export const WalletSchema = z.object({
   ),
 });
 export type Wallet = z.infer<typeof WalletSchema>;
+
+/**
+ * VietQR image (img.vietqr.io) prefilled with amount + transfer content; scanned by any Vietnamese banking app.
+ * bankId: VietQR bank code or BIN (e.g. MB / 970422, VCB / 970436, TCB / 970407).
+ */
+export const vietQrUrl = (bankId: string, accountNumber: string, accountName: string, amountVnd: number, content: string) =>
+  `https://img.vietqr.io/image/${encodeURIComponent(bankId)}-${encodeURIComponent(accountNumber)}-compact2.png?${new URLSearchParams({
+    amount: String(amountVnd),
+    addInfo: content,
+    accountName,
+  })}`;

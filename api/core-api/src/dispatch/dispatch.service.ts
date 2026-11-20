@@ -156,6 +156,42 @@ export class DispatchService implements OnModuleInit, OnModuleDestroy {
     return (await this.orders.load(eq(orders.id, orderId)))[0];
   }
 
+  /** Job board: paid orders nobody took yet, oldest first. A coder never sees (or claims) their own order. */
+  async jobs(user: UserRow) {
+    this.requireCoder(user);
+    return this.orders.load(
+      and(inArray(orders.status, ['FUNDED', 'DISPATCHED']), isNull(orders.coderUserId), ne(orders.customerUserId, user.id)),
+      50,
+      'oldest',
+    );
+  }
+
+  /**
+   * Coder takes a job from the board. Same rules as a wave accept (row lock, first wins, one active order per coder),
+   * so a board claim and an offer accept on the same order serialize on the order row.
+   */
+  async claim(user: UserRow, orderId: string) {
+    this.requireCoder(user);
+    await this.db.transaction(async (tx) => {
+      // Lock the coder row first: two claims by one coder must not both pass the busy check.
+      await tx.select({ id: users.id }).from(users).where(eq(users.id, user.id)).for('update');
+      const [row] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
+      if (!row || row.customerUserId === user.id) throw new NotFoundException({ message: 'Job not found' });
+      if (!['FUNDED', 'DISPATCHED'].includes(row.status) || row.coderUserId) throw new ConflictException({ message: 'Order already taken or not paid yet' });
+      const [busy] = await tx.select({ id: orders.id }).from(orders).where(and(eq(orders.coderUserId, user.id), eq(orders.status, 'IN_PROGRESS'))).limit(1);
+      if (busy) throw new ConflictException({ message: `Finish order ${busy.id} first` });
+      const [next] = await tx.update(orders).set({ status: 'IN_PROGRESS', coderUserId: user.id, updatedAt: sql`now()` }).where(eq(orders.id, row.id)).returning();
+      await emit(tx, next, row.status);
+      const lost = await tx
+        .update(dispatchOffers)
+        .set({ status: 'LOST' })
+        .where(and(eq(dispatchOffers.orderId, row.id), eq(dispatchOffers.status, 'PENDING')))
+        .returning({ wave: dispatchOffers.wave });
+      await dispatchEvent(tx, SUBJECTS.DISPATCH_ACCEPTED, { orderId: row.id, wave: lost[0]?.wave ?? 0, coderUserIds: [user.id] });
+    });
+    return (await this.orders.load(eq(orders.id, orderId)))[0];
+  }
+
   /** The next sweep sends a new wave once no offer for the order is pending. */
   async decline(user: UserRow, offerId: string) {
     const [mine] = await this.db.select({ id: dispatchOffers.id }).from(dispatchOffers).where(and(eq(dispatchOffers.id, offerId), eq(dispatchOffers.coderUserId, user.id)));

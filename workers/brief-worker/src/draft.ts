@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { AIBrief } from '@grabcode/contracts';
 import type { BriefRequestedEvent } from '@grabcode/contracts/schemas';
 
-/** What Claude fills in. Ids, weights, statuses and CLAUDE.md are set by code, not the model. */
+/** What the LLM fills in. Ids, weights, statuses and CLAUDE.md are set by code, not the model. */
 export const BriefDraftSchema = z.object({
   title: z.string().describe('Tên ngắn gọn của dự án POC, không có tiền tố'),
   scopeSummary: z.string().describe('1-2 câu tóm tắt phạm vi'),

@@ -31,8 +31,8 @@ export default function AIBriefViewer({ brief, analyzing }: Props) {
           <span className="absolute h-16 w-16 animate-sonar rounded-full bg-emerald/40" />
           <span className="material-symbols-outlined relative text-4xl text-emerald" aria-hidden>auto_awesome</span>
         </div>
-        <p className="font-display text-lg font-bold text-ink">Claude Sonnet 3.5 đang chuẩn hóa yêu cầu...</p>
-        <p className="text-sm text-slate-500">Phân tích phạm vi, chia mốc thanh toán và soạn CLAUDE.md cho Coder</p>
+        <p className="font-display text-lg font-bold text-ink">AI đang soạn đặc tả từ yêu cầu của bạn...</p>
+        <p className="text-sm text-slate-500">Phân tích phạm vi, chia mốc bàn giao và soạn hướng dẫn cho freelancer</p>
         <div className="h-1.5 w-56 overflow-hidden rounded-full bg-slate-100">
           <div className="h-full w-full origin-left rounded-full bg-emerald" style={{ animation: 'grow 2s linear forwards' }} />
         </div>
@@ -45,7 +45,7 @@ export default function AIBriefViewer({ brief, analyzing }: Props) {
     <div className="card !p-0 shadow-l2 animate-pop">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-5">
         <div>
-          <span className="chip-ok mb-2"><span className="material-symbols-outlined !text-[14px]" aria-hidden>verified</span>AI đã chuẩn hóa</span>
+          <span className="chip-ok mb-2"><span className="material-symbols-outlined !text-[14px]" aria-hidden>verified</span>Đặc tả đã soạn</span>
           <h2 className="font-display text-xl font-bold text-ink">{brief.title}</h2>
           <p className="mt-1 text-sm text-slate-600">{brief.scopeSummary}</p>
         </div>

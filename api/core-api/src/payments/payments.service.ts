@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { paymentCodeOf, type PaymentInstructions, type Wallet } from '@grabcode/contracts/schemas';
-import { DEV_LOGIN_ENABLED, SEPAY_ACCOUNT_NAME, SEPAY_ACCOUNT_NUMBER, SEPAY_BANK } from '../config';
+import { paymentCodeOf, vietQrUrl, type PaymentInstructions, type Wallet } from '@grabcode/contracts/schemas';
+import { DEV_LOGIN_ENABLED, PAYMENT_ACCOUNT_NAME, PAYMENT_ACCOUNT_NUMBER, PAYMENT_BANK_ID, PAYMENT_BANK_NAME, SEPAY_WEBHOOK_API_KEY } from '../config';
 import { DB, type Db } from '../db/client';
 import { ledgerEntries, ledgerTxs, orders, users } from '../db/schema';
 import { fundIfCovered } from '../orders/orders.service';
@@ -16,7 +16,7 @@ export class PaymentsService {
   constructor(@Inject(DB) private readonly db: Db) {}
 
   /**
-   * Books an incoming transfer. `txId` is the idempotency key (SePay id): a repeat returns false.
+   * Books an incoming transfer. `txId` is the idempotency key (SePay id, or admin reference): a repeat returns false.
    * Unknown order -> suspense (manual reconciliation). Full price in escrow -> order funded + dispatched.
    */
   recordDeposit(txId: string, orderId: string | null, amountVnd: number, meta?: unknown): Promise<boolean> {
@@ -40,15 +40,15 @@ export class PaymentsService {
     const dueVnd = Math.max(0, row.priceVnd - paidVnd);
     const content = paymentCodeOf(row.id);
     const bank =
-      SEPAY_BANK && SEPAY_ACCOUNT_NUMBER
+      PAYMENT_BANK_ID && PAYMENT_ACCOUNT_NUMBER
         ? {
-            name: SEPAY_BANK,
-            accountNumber: SEPAY_ACCOUNT_NUMBER,
-            accountName: SEPAY_ACCOUNT_NAME,
-            qrUrl: `https://qr.sepay.vn/img?${new URLSearchParams({ acc: SEPAY_ACCOUNT_NUMBER, bank: SEPAY_BANK, amount: String(dueVnd), des: content })}`,
+            name: PAYMENT_BANK_NAME,
+            accountNumber: PAYMENT_ACCOUNT_NUMBER,
+            accountName: PAYMENT_ACCOUNT_NAME,
+            qrUrl: vietQrUrl(PAYMENT_BANK_ID, PAYMENT_ACCOUNT_NUMBER, PAYMENT_ACCOUNT_NAME, dueVnd, content),
           }
         : null;
-    return { orderId: row.id, priceVnd: row.priceVnd, paidVnd, dueVnd, content, bank, devDeposit: DEV_LOGIN_ENABLED };
+    return { orderId: row.id, priceVnd: row.priceVnd, paidVnd, dueVnd, content, bank, autoConfirm: !!SEPAY_WEBHOOK_API_KEY, devDeposit: DEV_LOGIN_ENABLED };
   }
 
   /** Dev only: pretend the customer transferred the remaining amount. */

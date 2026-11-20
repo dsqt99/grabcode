@@ -7,6 +7,7 @@ export * from './events';
 export * from './auth';
 export * from './repo';
 export * from './order';
+export * from './pricing';
 export * from './payment';
 export * from './dispatch';
 export * from './realtime';

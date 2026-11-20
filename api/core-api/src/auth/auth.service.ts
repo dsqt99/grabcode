@@ -182,19 +182,18 @@ export class AuthService {
 
   /**
    * Same 401 for unknown email and wrong password, so the response does not reveal which emails exist.
-   * 10 failures per email or 30 per IP in 15 minutes -> 429 until the window ends (checked before the password).
+   * 10 failures per email or 30 per IP in 15 minutes -> 429 until the window ends. The attempt is counted atomically
+   * before the password is checked (parallel guesses cannot all slip past), and given back on success.
    */
   async passwordLogin(input: PasswordLogin, ip = ''): Promise<{ token: string; user: UserRow }> {
     const keys = [`e:${input.email}`, `i:${ip}`];
-    if ((await this.emailFails.blocked(keys[0])) || (await this.ipFails.blocked(keys[1])))
-      throw new HttpException({ message: 'Too many failed attempts, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
+    const [emailOver, ipOver] = await Promise.all([this.emailFails.hit(keys[0]), this.ipFails.hit(keys[1])]);
+    if (emailOver || ipOver) throw new HttpException({ message: 'Too many failed attempts, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
     const [row] = await this.db.select().from(users).where(eq(users.providerKey, `email:${input.email}`));
     const ok = await verifyPassword(input.password, row?.passwordHash ?? (await DUMMY_HASH));
-    if (!row || !ok) {
-      await Promise.all([this.emailFails.fail(keys[0]), this.ipFails.fail(keys[1])]);
-      throw new UnauthorizedException({ message: 'Wrong email or password' });
-    }
-    await this.emailFails.reset(keys[0]);
+    if (!row || !ok) throw new UnauthorizedException({ message: 'Wrong email or password' });
+    if (row.suspended) throw new ForbiddenException({ message: 'Account suspended' });
+    await Promise.all([this.emailFails.reset(keys[0]), this.ipFails.undo(keys[1])]);
     const { email, githubLogin, name, avatarUrl, providerKey } = row;
     return this.login({ providerKey, email, githubLogin, name, avatarUrl });
   }
@@ -222,6 +221,8 @@ export class AuthService {
   async requireUser(token: string | undefined): Promise<UserRow> {
     const user = await this.userForToken(token);
     if (!user) throw new UnauthorizedException({ message: 'Not signed in' });
+    // Suspended by an admin: no API access at all (their sessions are also deleted on suspension).
+    if (user.suspended) throw new ForbiddenException({ message: 'Account suspended' });
     return user;
   }
 

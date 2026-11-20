@@ -10,8 +10,8 @@ export default function TemplateShowcase() {
     <section id="templates" aria-labelledby="tpl-title" className="mx-auto max-w-7xl px-4 py-16 md:px-8">
       <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="tpl-title" className="font-display text-2xl font-bold text-ink md:text-3xl">Template bàn đạp, có sẵn giá và thời gian</h2>
-          <p className="mt-1 text-slate-500">Chọn mẫu gần nhất với ý tưởng, Coder tuỳ biến phần còn lại.</p>
+          <h2 id="tpl-title" className="font-display text-2xl font-bold text-ink md:text-3xl">Template bàn đạp, có sẵn giá và thời gian dự kiến</h2>
+          <p className="mt-1 text-slate-500">Chọn mẫu gần nhất với ý tưởng, freelancer tuỳ biến phần còn lại.</p>
         </div>
       </div>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -19,7 +19,6 @@ export default function TemplateShowcase() {
           <article key={t.id} className="card card-hover flex flex-col overflow-hidden !p-0">
             <div className="relative aspect-[16/10] bg-slate-100">
               <img src={t.thumbnail} alt={`Ảnh minh hoạ ${t.title}`} loading="lazy" className="h-full w-full object-cover" />
-              {t.popular && <span className="chip-ok absolute left-3 top-3">Phổ biến</span>}
             </div>
             <div className="flex flex-1 flex-col p-4">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.category}</span>
@@ -33,7 +32,7 @@ export default function TemplateShowcase() {
               <div className="mt-auto flex items-end justify-between pt-4">
                 <div>
                   <div className="font-display text-lg font-extrabold text-emerald-dark">{money(t.basePriceVnd)}</div>
-                  <div className="text-xs text-slate-500">Giao trong ~{t.etaHours}h</div>
+                  <div className="text-xs text-slate-500">Dự kiến ~{t.etaHours}h</div>
                 </div>
                 <Link
                   href={`/order/new?tier=TEMPLATE&template=${t.id}&prompt=${encodeURIComponent(t.tagline)}`}

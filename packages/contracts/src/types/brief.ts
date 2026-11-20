@@ -22,6 +22,7 @@ export interface Milestone {
   submittedAt?: string;
   completedAt?: string;
   commitHash?: string;
+  deliveryUrl?: string; // demo / repo / file link handed in on submit
   note?: string; // coder's submit note or the customer's revision request
   qa?: QaResult; // QA Gate of the last submit
 }

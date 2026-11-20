@@ -1,0 +1,18 @@
+# One domain, automatic Let's Encrypt certificate. DOMAIN comes from .env.production (docker-compose.prod.yml).
+{$DOMAIN} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	handle /v1/* {
+		reverse_proxy core-api:4000
+	}
+	handle /coder* {
+		reverse_proxy coder:3001
+	}
+	handle /admin* {
+		reverse_proxy admin:3002
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

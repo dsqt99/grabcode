@@ -154,6 +154,13 @@ Khi giao nhiệm vụ cho AI (Claude Code, Codex, Antigravity), **phải chia th
 - Gate: web `/order/*` (role CUSTOMER), `/profile` (mọi user đã login); coder toàn app (role CODER). Chưa login → redirect `/login?next=...` (coder phải mở qua web `:3100/coder`, không mở trực tiếp `:3001`). Thiếu role → thẻ "Kích hoạt" gọi `POST /v1/me/roles`.
 - `/profile` (kiểu Upwork): thông tin liên hệ (`PATCH /v1/me`), hồ sơ Coder (`PUT /v1/me/coder-profile`), hồ sơ doanh nghiệp (`PUT /v1/me/customer-profile`), thông báo + tiền tệ, đổi mật khẩu (`POST /v1/me/password`, đăng xuất các phiên khác).
 
+### MVP VN: thu tiền tay, bảng việc, bàn giao link (HON-8)
+- Bảng giá + `CODER_PAYOUT_RATE`: chỉ sửa `packages/contracts/src/schemas/pricing.ts`. Tiền trả coder chốt vào `orders.payout_vnd` lúc tạo đơn.
+- Thanh toán: `PAYMENT_BANK_ID` (mã VietQR/BIN), `PAYMENT_BANK_NAME`, `PAYMENT_ACCOUNT_NUMBER`, `PAYMENT_ACCOUNT_NAME` → QR `img.vietqr.io`. Admin xác nhận: `POST /v1/admin/orders/:id/confirm-payment {amountVnd, reference}` (tx `manual:<order>:<REF>`, chỉ đơn DRAFT). SePay webhook vẫn dùng được (`SEPAY_WEBHOOK_API_KEY` → `autoConfirm`).
+- Bảng việc: `GET /v1/jobs`, `POST /v1/jobs/:id/claim` (FUNDED|DISPATCHED → IN_PROGRESS, 1 đơn đang làm / coder). Nộp mốc: `{deliveryUrl?, commitHash?, note?}` ít nhất 1.
+- Id mốc luôn do server đặt (`M1..Mn`, `freshBrief`). Coder bị khoá: mất phiên, mọi API 403.
+- Deploy: `docs/DEPLOY.md` (1 VPS, `infra/deploy/docker-compose.prod.yml` + Caddy). Smoke: `node api/core-api/scripts/smoke-mvp.mjs`.
+
 ### Admin portal (S7)
 - Chạy: `pnpm --filter @grabcode/admin dev` (`:3002`, basePath `/admin`), mở qua web `:3100/admin` (rewrite `ADMIN_ORIGIN`, chung cookie `gc_session`).
 - Cấp quyền: `update core.users set roles = array_append(roles, 'ADMIN') where email = '...'`; dev: `POST /v1/auth/dev-login {login, role: 'ADMIN'}`. Không có role ADMIN → `/v1/admin/*` trả 403.

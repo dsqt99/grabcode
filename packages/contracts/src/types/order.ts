@@ -33,6 +33,8 @@ export interface Order {
   templateName?: string;
   framework?: string;
   priceVnd: number;
+  /** Freelancer share fixed on the order (API mode); mock orders derive it from the current rate. */
+  payoutVnd?: number;
   escrowStatus: EscrowStatus;
   status: OrderStatus;
   brief: AIBrief;

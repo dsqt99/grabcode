@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'node:crypto';
 import {
@@ -27,7 +27,7 @@ import { ledgerTxs, orderMessages, orderRepos, orders, outbox, repoCommits, user
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { escrowOf, releaseEntries } from '../payments/ledger';
 import { dispatchEvent } from '../dispatch/events';
-import { isDenied, planTransition, reviewMilestone, submitMilestone, type Denied } from './transition';
+import { freshBrief, isDenied, planTransition, reviewMilestone, submitMilestone, type Denied, type HandIn } from './transition';
 
 type UserRow = typeof users.$inferSelect;
 type Row = typeof orders.$inferSelect;
@@ -71,7 +71,7 @@ export async function fundIfCovered(tx: Tx, row: Row) {
  */
 async function releaseMilestone(tx: Tx, row: Row, index: number): Promise<number> {
   const ms = row.brief.milestones;
-  const entries = releaseEntries(row.id, row.priceVnd, ms.map((m) => m.weightPercent), index, row.coderUserId!);
+  const entries = releaseEntries(row.id, row.priceVnd, row.payoutVnd, ms.map((m) => m.weightPercent), index, row.coderUserId!);
   const amount = -entries[0].amountVnd;
   const txId = `release:${row.id}:${ms[index].id}`;
   const [done] = await tx.select({ id: ledgerTxs.id }).from(ledgerTxs).where(eq(ledgerTxs.id, txId));
@@ -140,8 +140,8 @@ export class OrdersService {
   async create(user: UserRow, input: z.output<typeof OrderCreateSchema>): Promise<OrderDto> {
     if (!user.roles.includes('CUSTOMER')) throw new ForbiddenException({ message: 'Missing CUSTOMER role' });
     const est = estimateOrder(input.tier, input.prompt, input.templateId);
-    // The customer only reviewed the plan: progress always starts from scratch.
-    const brief = { ...input.brief, milestones: input.brief.milestones.map(({ completedAt, commitHash, submittedAt, note, ...m }) => ({ ...m, status: 'PENDING' as const })) };
+    // The customer only reviewed the plan: progress always starts from scratch, milestone ids come from the server.
+    const brief = freshBrief(input.brief);
     const id = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(orders)
@@ -154,6 +154,7 @@ export class OrdersService {
           framework: input.framework,
           brief,
           priceVnd: est.priceVnd,
+          payoutVnd: payoutOf(est.priceVnd),
           etaHours: est.etaHours,
         })
         .returning();
@@ -246,7 +247,8 @@ export class OrdersService {
     return (await this.load(eq(orders.id, id)))[0];
   }
 
-  async submitMilestone(user: UserRow, id: string, milestoneId: string, commitHash: string | null, note: string | null): Promise<OrderDto> {
+  async submitMilestone(user: UserRow, id: string, milestoneId: string, handIn: HandIn): Promise<OrderDto> {
+    const { commitHash, deliveryUrl, note } = handIn;
     await this.db.transaction(async (tx) => {
       const [row] = await tx.select().from(orders).where(eq(orders.id, id)).for('update');
       if (!row || !canRead(row, user)) throw new NotFoundException({ message: 'Order not found' });
@@ -261,7 +263,7 @@ export class OrdersService {
         if (!c) throw new BadRequestException({ message: 'Commit not found in the order repo' });
         sha = c.sha;
       }
-      const brief = submitMilestone(row, user, milestoneId, sha, note, new Date().toISOString());
+      const brief = submitMilestone(row, user, milestoneId, { commitHash: sha, deliveryUrl, note }, new Date().toISOString());
       if (isDenied(brief)) fail(brief);
       // QA Gate on every submit with a repo; the previous result is dropped so the customer never sees a stale one.
       const m = (brief as Row['brief']).milestones.find((x) => x.id === milestoneId)!;
@@ -319,7 +321,7 @@ export class OrdersService {
     await this.db.update(orders).set({ sandbox, updatedAt: sql`now()` }).where(eq(orders.id, orderId));
   }
 
-  async load(where: SQL | undefined, limit = 1): Promise<OrderDto[]> {
+  async load(where: SQL | undefined, limit = 1, order: 'newest' | 'oldest' = 'newest'): Promise<OrderDto[]> {
     const rows = await this.db
       .select({
         o: orders,
@@ -331,7 +333,7 @@ export class OrdersService {
       .innerJoin(customer, eq(customer.id, orders.customerUserId))
       .leftJoin(coder, eq(coder.id, orders.coderUserId))
       .where(where)
-      .orderBy(desc(orders.createdAt))
+      .orderBy(order === 'newest' ? desc(orders.createdAt) : asc(orders.createdAt))
       .limit(limit);
     return rows.map(({ o, customer: c, coder: k, coderAccepted }) => ({
       id: o.id,
@@ -345,7 +347,7 @@ export class OrdersService {
       priceVnd: o.priceVnd,
       disputeReason: o.disputeReason,
       sandbox: o.sandbox,
-      payoutVnd: payoutOf(o.priceVnd),
+      payoutVnd: o.payoutVnd,
       etaHours: o.etaHours,
       customer: party(c),
       // rating stays null until customer reviews exist (S4), same as /v1/me.

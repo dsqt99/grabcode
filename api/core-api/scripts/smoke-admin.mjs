@@ -49,9 +49,11 @@ const list = (await admin('GET', '/v1/admin/coders')).body.coders;
 ok(list.some((c) => c.id === coderId && c.online && !c.suspended), 'coder listed, online');
 const sus = await admin('PATCH', `/v1/admin/coders/${coderId}`, { suspended: true });
 ok(sus.status === 200 && sus.body.suspended && !sus.body.online, 'suspend -> offline');
+ok((await coder('GET', '/v1/me')).status === 401, 'suspend -> signed out');
 ok((await admin('PATCH', `/v1/admin/coders/${coderId}`, {})).status === 400, 'empty patch 400');
 const gold = await admin('PATCH', `/v1/admin/coders/${coderId}`, { tierOverride: 'GOLD', suspended: false });
 ok(gold.body.tier === 'GOLD' && !gold.body.suspended, 'tier override GOLD, unsuspended');
+await coder('POST', '/v1/auth/dev-login', { login: `s7k-${run}`, role: 'CODER' }); // sessions were dropped on suspension
 ok((await coder('GET', '/v1/me')).body.coderStats.tier === 'GOLD', 'override visible in /v1/me');
 await admin('PATCH', `/v1/admin/coders/${coderId}`, { tierOverride: null });
 await coder('PUT', '/v1/me/presence', { online: false }); // no offers for this run's funded orders

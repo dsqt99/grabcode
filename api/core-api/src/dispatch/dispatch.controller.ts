@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Put, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import { PresenceSchema, type OfferList, type OrderDto, type Presence } from '@grabcode/contracts/schemas';
+import { OrderIdSchema, PresenceSchema, type JobList, type OfferList, type OrderDto, type Presence } from '@grabcode/contracts/schemas';
 import { readCookie } from '../auth/auth.controller';
 import { AuthService, SESSION_COOKIE } from '../auth/auth.service';
 import { DispatchService } from './dispatch.service';
@@ -38,6 +38,19 @@ export class DispatchController {
   @HttpCode(200)
   async accept(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string): Promise<OrderDto> {
     return this.dispatch.accept(await this.user(req), id);
+  }
+
+  @Get('jobs')
+  async jobs(@Req() req: Request): Promise<JobList> {
+    return { jobs: await this.dispatch.jobs(await this.user(req)) };
+  }
+
+  @Post('jobs/:id/claim')
+  @HttpCode(200)
+  async claim(@Req() req: Request, @Param('id') id: string): Promise<OrderDto> {
+    const parsed = OrderIdSchema.safeParse(id);
+    if (!parsed.success) throw new BadRequestException({ message: 'Invalid order id' });
+    return this.dispatch.claim(await this.user(req), parsed.data);
   }
 
   @Post('offers/:id/decline')

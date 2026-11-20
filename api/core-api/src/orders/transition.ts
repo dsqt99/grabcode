@@ -39,18 +39,37 @@ const setAt = (b: AIBrief, i: number, patch: (m: AIBrief['milestones'][number]) 
   milestones: b.milestones.map((m, j) => (j === i ? patch(m) : m)),
 });
 
+/**
+ * The customer's reviewed brief as stored on a new order: progress reset to PENDING and milestone ids assigned by the
+ * server (M1..Mn). Ids key the escrow release (`release:<order>:<id>`), so client-chosen duplicates must never reach the DB.
+ */
+export function freshBrief(b: AIBrief): AIBrief {
+  return {
+    ...b,
+    milestones: b.milestones.map(({ completedAt: _a, commitHash: _c, deliveryUrl: _d, submittedAt: _s, note: _n, qa: _q, ...m }, i) => ({ ...m, id: `M${i + 1}`, status: 'PENDING' as const })),
+  };
+}
+
+/** What the coder hands in with a milestone (at least one is set; the API schema checks that). */
+export interface HandIn {
+  commitHash: string | null;
+  deliveryUrl: string | null;
+  note: string | null;
+}
+
 /** Coder hands in the current milestone for review (only while IN_PROGRESS; one at a time, in order). */
-export function submitMilestone(o: OrderState, user: Actor, milestoneId: string, commitHash: string | null, note: string | null, now: string): Denied | AIBrief {
+export function submitMilestone(o: OrderState, user: Actor, milestoneId: string, { commitHash, deliveryUrl, note }: HandIn, now: string): Denied | AIBrief {
   if (o.coderUserId !== user.id) return { denied: 403, message: 'Only the assigned coder can do this' };
   if (o.status !== 'IN_PROGRESS') return { denied: 409, message: `Order is ${o.status}, not IN_PROGRESS` };
   const idx = current(o.brief);
   if (idx < 0 || o.brief.milestones[idx].id !== milestoneId) return { denied: 409, message: 'Milestones must be submitted in order' };
   if (o.brief.milestones[idx].status === 'SUBMITTED') return { denied: 409, message: 'Milestone already submitted, waiting for review' };
-  return setAt(o.brief, idx, ({ note: _old, commitHash: _c, ...m }) => ({
+  return setAt(o.brief, idx, ({ note: _old, commitHash: _c, deliveryUrl: _d, ...m }) => ({
     ...m,
     status: 'SUBMITTED',
     submittedAt: now,
     ...(commitHash ? { commitHash } : {}),
+    ...(deliveryUrl ? { deliveryUrl } : {}),
     ...(note ? { note } : {}),
   }));
 }

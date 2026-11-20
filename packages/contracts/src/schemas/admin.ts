@@ -32,7 +32,10 @@ export const AdminCoderPatchSchema = z
   .refine((b) => b.tierOverride !== undefined || b.suspended !== undefined, { message: 'Nothing to change' });
 export type AdminCoderPatch = z.infer<typeof AdminCoderPatchSchema>;
 
-// ---- Orders needing an admin: disputes, part-paid drafts, money left in escrow, paid orders no coder took for 30+ minutes ----
+// ---- Orders. view=attention (default): unpaid drafts waiting for a transfer, disputes, money left in escrow,
+// paid orders no coder took for 30+ minutes. view=all: the latest orders in any status. ----
+
+export const AdminOrderQuerySchema = z.object({ view: z.enum(['attention', 'all']).default('attention') });
 
 export const AdminOrderSchema = z.object({
   id: z.string(),
@@ -45,7 +48,10 @@ export const AdminOrderSchema = z.object({
   escrowVnd: z.number().int(),
   disputeReason: z.string().nullable(),
   customerName: z.string(),
+  /** So the admin can reach the customer about a transfer. */
+  customerEmail: z.string().nullable(),
   coderName: z.string().nullable(),
+  createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type AdminOrder = z.infer<typeof AdminOrderSchema>;
@@ -58,6 +64,16 @@ export type AdminOrderList = z.infer<typeof AdminOrderListSchema>;
  */
 export const DisputeResolveSchema = z.object({ refundVnd: z.number().int().min(0), note: z.string().trim().max(2000).optional() });
 export type DisputeResolve = z.infer<typeof DisputeResolveSchema>;
+
+/**
+ * POST /v1/admin/orders/{id}/confirm-payment: the admin saw the transfer in the bank app and books it. Only DRAFT orders.
+ * `reference` = bank transaction code (mã giao dịch); the same reference twice on one order is booked once (409).
+ */
+export const ConfirmPaymentSchema = z.object({
+  amountVnd: z.number().int().min(1000).max(1_000_000_000),
+  reference: z.string().trim().min(3).max(100),
+});
+export type ConfirmPayment = z.infer<typeof ConfirmPaymentSchema>;
 
 // POST /v1/admin/orders/{id}/refund (no body): refunds what escrow still holds. DRAFT -> CANCELLED; on a closed
 // order (ACCEPTED / RESOLVED / CANCELLED) it refunds the overpayment.

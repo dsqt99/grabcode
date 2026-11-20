@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '
 
 export const metadata: Metadata = {
   title: 'GrabCode Coder — Nhận cuốc đơn',
-  description: 'Ứng dụng tài xế Coder: nhận cuốc, build POC, nhận tiền ngay.',
+  description: 'Ứng dụng cho freelancer GrabCode: nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

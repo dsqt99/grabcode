@@ -28,6 +28,8 @@ export function scanSecrets(dir: string): Check {
         if (!SKIP_DIRS.has(e.name)) walk(p);
         continue;
       }
+      // Symlinks (to /dev/zero, /proc/self/environ, /) would be followed on the worker host: only scan regular files.
+      if (!e.isFile()) continue;
       const rel = relative(dir, p).replaceAll('\\', '/');
       if (/^\.env(\..+)?$/.test(e.name) && !/\.(example|sample|template)$/.test(e.name)) hits.push(`${rel}: committed env file`);
       if (statSync(p).size > 1_000_000) continue;

@@ -23,6 +23,8 @@ import { serviceName } from './service';
 const exec = promisify(execFile);
 const PROJECT = process.env.GCP_PROJECT ?? '';
 const REGION = process.env.GCP_REGION ?? 'asia-southeast1';
+/** Runtime identity of sandboxes: a service account with NO roles. Coder code runs there; the default compute SA is often Editor. */
+const SANDBOX_SA = process.env.SANDBOX_SERVICE_ACCOUNT ?? '';
 const TTL_HOURS = Number(process.env.SANDBOX_TTL_HOURS ?? 72);
 const DURABLE = 'deploy-worker';
 const MAX_DELIVER = 4;
@@ -60,10 +62,11 @@ const gcloud = (args: string[]) =>
 
 async function deploy(orderId: string, repoFullName: string, sha: string | null) {
   if (!PROJECT) throw new ConfigError('GCP not configured (GCP_PROJECT, gcloud auth)');
+  if (!SANDBOX_SA) throw new ConfigError('SANDBOX_SERVICE_ACCOUNT not set (a service account with no roles for coder code)');
   const dir = await checkout(gh, repoFullName, sha);
   try {
     const service = serviceName(orderId);
-    const { stdout } = await gcloud(['run', 'deploy', service, '--source', dir, '--allow-unauthenticated', '--max-instances', '1', '--labels', 'grabcode=sandbox', '--format', 'value(status.url)']).catch((err) => {
+    const { stdout } = await gcloud(['run', 'deploy', service, '--source', dir, '--service-account', SANDBOX_SA, '--allow-unauthenticated', '--max-instances', '1', '--labels', 'grabcode=sandbox', '--format', 'value(status.url)']).catch((err) => {
       if (err.code === 'ENOENT' || /not recognized|not found/i.test(String(err.stderr))) throw new ConfigError('gcloud CLI not installed on the deploy-worker host');
       throw new Error(String(err.stderr || err.message).trim().slice(-1500));
     });

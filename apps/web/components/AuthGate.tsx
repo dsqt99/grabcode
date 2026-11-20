@@ -188,9 +188,9 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
 }
 
 const PERKS = [
-  { icon: 'bolt', text: 'Khách hàng: link demo chạy thật trong 2–8 giờ' },
-  { icon: 'shield_lock', text: 'Ký quỹ an toàn, hoàn tiền 100% nếu không đạt' },
-  { icon: 'payments', text: 'Coder: nhận cuốc như tài xế, thanh toán theo mốc' },
+  { icon: 'storefront', text: 'Chủ shop / SME: đăng yêu cầu, duyệt từng mốc rồi mới trả tiền' },
+  { icon: 'shield_lock', text: 'Tiền giữ ký quỹ, tranh chấp có admin xử lý' },
+  { icon: 'payments', text: 'Freelancer vibe code: nhận việc, bàn giao theo mốc, rút tiền về ngân hàng' },
 ];
 
 /** Full-width login banner: brand pitch on the left, sign-in panel on the right (form first on mobile). */

@@ -13,9 +13,9 @@ export interface TierConfig {
 }
 
 export const TIERS: TierConfig[] = [
-  { id: 'EXPRESS', label: 'Express', ...TIER_PRICING.EXPRESS, blurb: 'POC gọn, giao link demo trong 3 giờ', icon: 'bolt' },
-  { id: 'STANDARD', label: 'Standard', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, giao trong 8 giờ', icon: 'schedule' },
-  { id: 'PRO', label: 'Enterprise', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp, QA kỹ, giao trong 24 giờ', icon: 'domain' },
+  { id: 'EXPRESS', label: 'Express', ...TIER_PRICING.EXPRESS, blurb: 'POC gọn, dự kiến ~3 giờ', icon: 'bolt' },
+  { id: 'STANDARD', label: 'Standard', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, dự kiến ~8 giờ', icon: 'schedule' },
+  { id: 'PRO', label: 'Pro', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp hơn, dự kiến ~24 giờ', icon: 'domain' },
   { id: 'TEMPLATE', label: 'Mua Template', ...TIER_PRICING.TEMPLATE, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
 ];
 

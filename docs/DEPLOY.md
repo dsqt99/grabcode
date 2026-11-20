@@ -1,0 +1,209 @@
+# GrabCode — Chạy thử và triển khai MVP
+
+Tài liệu cho bản MVP nhận đơn và thu tiền thật. Luồng chạy như sau:
+
+1. Khách (chủ shop/SME) đăng yêu cầu.
+2. Khách chuyển khoản hoặc quét VietQR.
+3. Admin kiểm tra app ngân hàng rồi bấm "Xác nhận đã nhận tiền".
+4. Freelancer nhận đơn từ "Việc đang chờ nhận".
+5. Freelancer bàn giao từng mốc bằng link (demo, repo GitHub, file Google Drive).
+6. Khách duyệt mốc hoặc yêu cầu sửa, rồi nghiệm thu.
+7. Tiền vào ví freelancer. Freelancer yêu cầu rút, admin chuyển khoản tay rồi bấm duyệt.
+
+## 1. Chạy thử ở máy
+
+Cần Node 22+, pnpm 10 (`corepack enable`) và Docker Desktop.
+
+```bash
+pnpm install
+cp .env.example .env                   # để AUTH_DEV_LOGIN=true khi chạy ở máy
+docker compose up -d                   # Postgres :5433, NATS :4223 (Centrifugo không bắt buộc)
+pnpm --filter @grabcode/core-api db:migrate
+```
+
+Tạo file `.env.local` cho 3 app, mỗi file một dòng `NEXT_PUBLIC_API_URL=http://localhost:4000`:
+
+- `apps/web/.env.local`
+- `apps/coder/.env.local`
+- `apps/admin/.env.local`
+
+Chạy các tiến trình, mỗi lệnh ở một terminal (hoặc `pnpm dev` để chạy tất cả):
+
+```bash
+pnpm --filter @grabcode/core-api dev
+pnpm --filter @grabcode/outbox-relay dev
+pnpm --filter @grabcode/brief-worker dev   # không bắt buộc: thiếu LLM_API_KEY thì web dùng brief mẫu
+pnpm --filter @grabcode/web dev            # http://localhost:3000
+pnpm --filter @grabcode/coder dev          # mở qua http://localhost:3000/coder
+pnpm --filter @grabcode/admin dev          # mở qua http://localhost:3000/admin
+```
+
+Thêm `http://localhost:3000` vào `WEB_ORIGIN` trong `.env`. Giá trị mặc định đã có sẵn.
+
+**Thử cả luồng bằng tay:**
+
+1. Mở `/login`, đăng ký một tài khoản vai trò **Khách hàng**, rồi đặt một đơn ở trang chủ.
+2. Ở cửa sổ ẩn danh, đăng ký một tài khoản vai trò **Coder** và mở `/coder`.
+3. Cấp quyền admin cho một tài khoản (xem mục 3.4). Ở máy có thể đăng nhập nhanh:
+   `curl -X POST localhost:4000/v1/auth/dev-login -H 'content-type: application/json' -d '{"login":"admin","role":"ADMIN"}'`.
+   Cách dễ hơn là cấp ADMIN cho chính tài khoản khách bằng câu SQL ở mục 3.4.
+4. Vào `/admin`, tab "Đơn hàng & thanh toán", nhập số tiền và một mã giao dịch bất kỳ rồi bấm xác nhận. Đơn sẽ hiện ở "Việc đang chờ nhận" của coder.
+5. Coder bấm nhận, nộp mốc kèm link. Khách duyệt mốc hoặc yêu cầu sửa, rồi nghiệm thu.
+
+**Kiểm tra tự động** (cần core-api đang chạy với `AUTH_DEV_LOGIN=true`):
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test
+node api/core-api/scripts/smoke-mvp.mjs        # toàn bộ luồng MVP, 36 kiểm tra
+node api/core-api/scripts/smoke-milestones.mjs
+node api/core-api/scripts/smoke-admin.mjs
+```
+
+## 2. Chọn cách triển khai: 1 VPS + Docker Compose
+
+Đây là cách rẻ và đơn giản nhất cho giai đoạn có vài chục đơn mỗi tháng. Một máy chủ chạy tất cả:
+
+- Postgres và NATS;
+- core-api, outbox-relay, brief-worker;
+- 3 app Next.js (web, coder, admin);
+- Caddy làm reverse proxy, tự cấp HTTPS Let's Encrypt.
+
+Mọi thứ dùng chung một tên miền, nên cookie đăng nhập hoạt động mà không cần cấu hình CORS phức tạp.
+
+- **Cấu hình tối thiểu:** 2 vCPU, 4 GB RAM, 40 GB SSD, Ubuntu 22.04/24.04. Việc build 3 app Next.js cần khoảng 3 GB RAM, nên bật thêm 2–4 GB swap.
+- **Chi phí tham khảo:**
+  - VPS khoảng 150.000–350.000đ/tháng ở các nhà cung cấp trong nước (Vietnix, BizFly Cloud, Viettel IDC...) hoặc khoảng 5–8 USD/tháng ở nước ngoài (Hetzner, DigitalOcean, Vultr Singapore).
+  - Tên miền .vn hoặc .com vài trăm nghìn đồng/năm.
+  - Kiểm tra lại giá hiện tại trước khi mua.
+- **Chưa cần ở giai đoạn này:**
+  - Kubernetes, Cloud Run;
+  - repo-worker (GitHub App), qa-worker (Docker-in-Docker), deploy-worker (GCP sandbox).
+
+  Luồng MVP không phụ thuộc vào các thành phần trên: freelancer bàn giao bằng link.
+- **Khi nào nên tách:** khi có nhiều đơn mỗi ngày, chuyển Postgres sang dịch vụ có backup tự động (Neon, Supabase, hoặc DB managed của nhà cung cấp VPS) và giữ phần còn lại trên VPS.
+
+## 3. Triển khai lần đầu
+
+### 3.1 Tên miền
+
+Tạo bản ghi DNS **A** trỏ tên miền (ví dụ `grabcode.vn`) về IP của VPS. Mở cổng 80 và 443 trên firewall.
+
+### 3.2 Cài Docker và lấy code
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER && newgrp docker
+sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+git clone https://github.com/dsqt99/grabcode.git && cd grabcode
+```
+
+Repo đang private: dùng deploy key (GitHub → Settings → Deploy keys, chỉ quyền đọc) hoặc personal access token để clone.
+
+### 3.3 Điền biến môi trường
+
+```bash
+cp infra/deploy/env.production.example .env.production
+nano .env.production
+```
+
+Biến bắt buộc:
+
+| Biến | Giá trị |
+| --- | --- |
+| `DOMAIN` | `grabcode.vn` (không có https) |
+| `WEB_ORIGIN`, `API_PUBLIC_URL` | `https://grabcode.vn` |
+| `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
+| `PAYMENT_BANK_ID` | Mã ngân hàng VietQR hoặc BIN, ví dụ `MB`, `VCB`, `TCB`, `970422` |
+| `PAYMENT_BANK_NAME` | Tên hiển thị, ví dụ `MB Bank` |
+| `PAYMENT_ACCOUNT_NUMBER` | Số tài khoản nhận tiền |
+| `PAYMENT_ACCOUNT_NAME` | Tên chủ tài khoản, IN HOA không dấu, đúng như ngân hàng hiển thị |
+
+`.env.production` chỉ nằm trên máy chủ: đã có trong `.gitignore` và `.dockerignore`. Không gửi file này qua chat, không commit.
+
+### 3.4 Chạy
+
+```bash
+docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml logs -f core-api
+```
+
+Lần đầu build mất khoảng 10–20 phút. Migration database chạy tự động (service `migrate`) trước khi core-api khởi động.
+
+**Tạo tài khoản admin:**
+
+1. Mở `https://DOMAIN/login` và đăng ký bằng email của nhà sáng lập.
+2. Chạy lệnh sau:
+
+```bash
+docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml exec postgres \
+  psql -U grabcode -c "update core.users set roles = array_append(roles, 'ADMIN') where email = lower('ban@example.com') and not 'ADMIN' = any(roles);"
+```
+
+3. Đăng xuất rồi đăng nhập lại, sau đó mở `https://DOMAIN/admin`.
+
+### 3.5 Kiểm tra sau khi lên
+
+1. `https://DOMAIN` mở được và có ổ khoá HTTPS.
+2. Đăng ký khách, đặt một đơn nhỏ. Trang thanh toán hiện QR VietQR đúng tài khoản, đúng số tiền, đúng nội dung (ví dụ `GC1006`).
+3. Chuyển thử 10.000đ bằng một đơn giá thấp, hoặc xác nhận tay một khoản nhỏ trong `/admin` để thử luồng. Sau đó hoàn tiền bằng nút "Hoàn & huỷ đơn".
+
+### 3.6 Cập nhật phiên bản mới
+
+```bash
+git pull
+docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml up -d --build
+```
+
+### 3.7 Sao lưu database (bắt buộc khi đã có tiền thật)
+
+```bash
+mkdir -p ~/backups
+crontab -e
+# thêm dòng sau (3h sáng mỗi ngày, giữ 14 bản):
+0 3 * * * cd ~/grabcode && docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml exec -T postgres pg_dump -U grabcode grabcode | gzip > ~/backups/grabcode-$(date +\%F).sql.gz && ls -t ~/backups/*.gz | tail -n +15 | xargs -r rm
+```
+
+Nên chép định kỳ thư mục `~/backups` ra ngoài máy chủ (Google Drive, S3...).
+
+## 4. Thu tiền: hiện tại và sau này
+
+**Hiện tại: chuyển khoản / VietQR, admin xác nhận tay.**
+
+- Trang thanh toán hiện QR (`img.vietqr.io`) đã điền sẵn số tiền và nội dung là mã đơn bỏ gạch, ví dụ `GC1006`.
+- Admin mở app ngân hàng, thấy tiền vào, rồi vào `/admin` → "Đơn hàng & thanh toán". Nhập số tiền và **mã giao dịch ngân hàng** (FT...) rồi bấm "Xác nhận đã nhận tiền".
+- Cùng một mã giao dịch không thể ghi nhận hai lần cho một đơn.
+- Nhận đủ tiền thì đơn chuyển FUNDED và hiện cho freelancer.
+- Tiền nằm trong sổ cái kép (`core.ledger_*`):
+  - khách duyệt mốc nào thì nhả phần tiền của mốc đó;
+  - freelancer nhận `payoutVnd`, chốt theo tỷ lệ lúc tạo đơn;
+  - nền tảng giữ phần còn lại.
+- Rút tiền cho freelancer: freelancer gửi yêu cầu trong app, admin chuyển khoản tay rồi bấm duyệt ở tab "Rút tiền".
+
+**Bước tiếp theo, không cần sửa luồng:** bật xác nhận tự động qua **SePay**. Code webhook đã có sẵn.
+
+1. Đăng ký SePay và liên kết tài khoản nhận tiền.
+2. Cấu hình webhook `https://DOMAIN/v1/payments/sepay/webhook`, xác thực bằng API Key.
+3. Điền `SEPAY_WEBHOOK_API_KEY`.
+
+Từ đó, trang thanh toán báo "chờ ngân hàng xác nhận" thay cho "admin xác nhận". Admin vẫn xác nhận tay được.
+
+**Sau này: MoMo / VNPay (chưa làm).**
+
+1. Cần đăng ký merchant (hợp đồng doanh nghiệp, giấy phép kinh doanh) để có `partnerCode`/`accessKey`/`secretKey` (MoMo) hoặc `vnp_TmnCode`/`vnp_HashSecret` (VNPay). Mỗi cổng có môi trường sandbox để thử trước.
+2. Contract: thêm `POST /v1/orders/{id}/checkout {provider}`. API trả URL thanh toán đã ký HMAC.
+3. API: thêm endpoint IPN (`/v1/payments/momo/ipn`, `/v1/payments/vnpay/ipn`):
+   - kiểm chữ ký bằng so sánh constant-time;
+   - kiểm số tiền khớp đơn;
+   - ghi sổ bằng đúng hàm `recordDeposit(txId = 'momo:<transId>' | 'vnpay:<vnp_TransactionNo>', orderId, amount)` mà SePay và admin đang dùng. Idempotent sẵn, không đổi state machine.
+4. Web: nút "Thanh toán MoMo/VNPay" cạnh QR, kèm trang return chỉ để hiển thị. Trạng thái thật luôn lấy từ IPN, không tin tham số trên URL return.
+5. Phí cổng (khoảng 1–2,5%/giao dịch, tuỳ hợp đồng) cần tính vào bảng giá trong `packages/contracts/src/schemas/pricing.ts`.
+
+## 5. Bảng giá và tỷ lệ chia doanh thu
+
+Mọi con số nằm ở **một file**: `packages/contracts/src/schemas/pricing.ts`.
+
+- `TIER_PRICING`, `TEMPLATE_PRICING`: giá theo gói và theo template.
+- `TEMPLATE_BASE_DISCOUNT`, `PROMPT_SURCHARGE`: hệ số giảm khi dựng từ template, và phụ phí theo độ dài mô tả.
+- `CODER_PAYOUT_RATE`: tỷ lệ trả freelancer, hiện là 0,7.
+
+Web và API đều đọc từ file này. Khi đổi tỷ lệ, chỉ **đơn tạo sau đó** áp dụng tỷ lệ mới. Đơn cũ giữ `payout_vnd` đã chốt.

@@ -5,7 +5,7 @@
 > Thứ tự sprint theo phụ thuộc: S1 → S2 → S3 → S4 → S5 / S6 / S7.
 > Mỗi việc làm theo contract-first: `contracts` → `generate` → `api` → `worker` → `app`.
 
-**Đang ở:** S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). S6 realtime + chat xong; `notifier` chờ 👤 Zalo/FCM/VAPID. S7 Admin portal xong (cấu hình AI/bảng giá DB hoãn). **Tiếp theo:** nợ còn lại + việc 👤.
+**Đang ở (HON-8, branch `feat/hon-8-mvp-vn`):** MVP thị trường VN — thu tiền bằng chuyển khoản/VietQR (admin xác nhận tay), bảng việc cho freelancer, bàn giao bằng link, gỡ số liệu marketing giả, bảng giá một chỗ, vá bảo mật, deploy 1 VPS (`docs/DEPLOY.md`). Trước đó: S4 Milestone & nghiệm thu xong (giữ milestones trong jsonb; bàn giao repo chờ GitHub App để test). S3 matching chạy in-process TS, Go service hoãn. S2 chờ 👤 tài khoản SePay để test tiền thật. S0 còn việc 👤 GitHub App → test webhook → PR. S5 xong phần code (QA Gate chạy thật bằng Docker; sandbox chờ 👤 GCP). S6 realtime + chat xong; `notifier` chờ 👤 Zalo/FCM/VAPID. S7 Admin portal xong (cấu hình AI/bảng giá DB hoãn). **Tiếp theo:** nợ còn lại + việc 👤.
 
 ---
 
@@ -157,6 +157,23 @@
 - [x] Dockerfile chung `infra/node-service.Dockerfile` (`PKG` = core-api / worker), non-root, đã build + chạy thử core-api, outbox-relay — `f6a2d0c`
 - [x] Image Next.js web/coder/admin: `infra/next-app.Dockerfile` (đã build + chạy thử web) — 8ca643b
 - [ ] 👤 Deploy thật: Cloud Run service cho core-api/workers/apps, Secret Manager cho secret `.env` (cần project GCP)
+
+## MVP VN (HON-8) — branch `feat/hon-8-mvp-vn`
+
+- [x] Bảng giá + tỷ lệ chia doanh thu một chỗ: `packages/contracts/src/schemas/pricing.ts`; `orders.payout_vnd` chốt theo đơn (migration 0017) — `112b2fd` `1216634`
+- [x] Thu tiền: QR VietQR (`img.vietqr.io`, env `PAYMENT_*`), admin "Xác nhận đã nhận tiền" `POST /v1/admin/orders/:id/confirm-payment` (idempotent theo mã GD), tab Đơn hàng có DRAFT chờ thanh toán + "Tất cả đơn" — `112b2fd` `1216634`
+- [x] Bảng việc freelancer `GET /v1/jobs`, `POST /v1/jobs/:id/claim` (song song với wave offer) — `112b2fd` `1216634`
+- [x] Bàn giao mốc bằng link (`deliveryUrl`, chỉ http/https) — `112b2fd` `1216634`
+- [x] Gỡ số liệu giả (500+ coder, 4.9/5, testimonial, "2–8 giờ", "hoàn 100%", nhãn Claude Sonnet, thẻ quốc tế) — `33e91b2`
+- [x] Bảo mật: id mốc do server đặt (id trùng làm coder mất tiền), throttle login/brief nguyên tử, khoá tài khoản = đăng xuất + chặn, open redirect `?next=`, header chống clickjacking, QA scan bỏ symlink, push endpoint allowlist (SSRF), sandbox bắt buộc service account không quyền — `1216634` `7d2a510` `112b2fd`
+- [x] Smoke `api/core-api/scripts/smoke-mvp.mjs` (36 check) — `1216634`
+- [x] Deploy 1 VPS: `infra/deploy/docker-compose.prod.yml` + Caddy (HTTPS) + `env.production.example`, hướng dẫn `docs/DEPLOY.md`
+- [ ] 👤 VPS + tên miền, điền `.env.production` (tài khoản ngân hàng nhận tiền), tạo tài khoản ADMIN
+- [ ] 👤 (tuỳ chọn) SePay webhook để xác nhận tự động; LLM key cho AI brief
+- [ ] MoMo / VNPay (cần hợp đồng merchant) — cách làm ở `docs/DEPLOY.md` mục 4
+- [ ] Thông báo admin khi có đơn mới / khách báo đã chuyển (Zalo/Telegram/email)
+- [ ] Upload file bàn giao trực tiếp (hiện dùng link Drive)
+- [ ] Đánh giá sau nghiệm thu (rating thật thay cho `null`)
 
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 

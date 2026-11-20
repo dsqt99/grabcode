@@ -29,6 +29,7 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     templateName: SEED_TEMPLATES.find((t) => t.id === o.templateId)?.title,
     framework: o.framework,
     priceVnd: o.priceVnd,
+    payoutVnd: o.payoutVnd,
     // DRAFT = unpaid: the server only leaves DRAFT once the ledger escrow holds the full price.
     escrowStatus: o.status === 'DRAFT' ? 'UNPAID' : o.status === 'ACCEPTED' ? 'RELEASED' : 'ESCROW_LOCKED',
     status: status[o.status],

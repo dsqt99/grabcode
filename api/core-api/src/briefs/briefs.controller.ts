@@ -36,13 +36,12 @@ export class BriefsController {
   @Post()
   @HttpCode(202)
   async create(@Req() req: Request, @Body() body: unknown): Promise<BriefJob> {
-    const ip = req.ip ?? '';
-    if (await this.perIp.blocked(ip)) throw new HttpException({ message: 'Too many briefs, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
     const parsed = BriefJobCreateSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({ message: 'Invalid request body', issues: parsed.error.issues });
     }
-    await this.perIp.fail(ip);
+    // Counted atomically before queueing, so a burst cannot all pass a separate check.
+    if (await this.perIp.hit(req.ip ?? '')) throw new HttpException({ message: 'Too many briefs, retry later' }, HttpStatus.TOO_MANY_REQUESTS);
     return this.briefs.create(parsed.data);
   }
 
