@@ -17,6 +17,7 @@ import { RequireAuth } from '@grabcode/auth-ui';
 import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
 import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
+import { BRAND } from '@grabcode/contracts';
 
 const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-normal md:text-sm disabled:bg-slate-50 disabled:text-slate-500';
 const LABEL = 'block text-sm font-semibold text-ink';
@@ -547,7 +548,7 @@ function SecurityForm({ me }: { me: Me }) {
           </ul>
           {linkError && (
             <p role="alert" className="mt-2 text-sm text-red-700">
-              {linkError === 'link_taken' ? 'Tài khoản này đã gắn với một tài khoản GrabCode khác.' : 'Liên kết chưa thành công, thử lại.'}
+              {linkError === 'link_taken' ? `Tài khoản này đã gắn với một tài khoản ${BRAND.name} khác.` : 'Liên kết chưa thành công, thử lại.'}
             </p>
           )}
         </div>
@@ -589,16 +590,16 @@ function Settings() {
 
       {/* key: remount forms when the server copy changes (e.g. after a role is added). */}
       <div className="grid min-w-0 gap-6" key={me.roles.join()}>
-        <Section id="account" title="Thông tin liên hệ" text="Chỉ GrabCode và đối tác trong đơn hàng thấy số điện thoại của bạn.">
+        <Section id="account" title="Thông tin liên hệ" text={`Chỉ ${BRAND.name} và đối tác trong đơn hàng thấy số điện thoại của bạn.`}>
           <AccountForm me={me} />
         </Section>
         <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao cuốc cho bạn.">
-          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text="Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần GrabCode duyệt trước khi nhận việc." />}
+          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text={`Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần ${BRAND.name} duyệt trước khi nhận việc.`} />}
         </Section>
         <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho freelancer khi nhận đơn của bạn và trên hóa đơn.">
           {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần thuê freelancer làm app? Bật vai trò Khách hàng trên chính tài khoản này." />}
         </Section>
-        <Section id="prefs" title="Thông báo & hiển thị" text="Chọn kênh GrabCode được phép liên hệ bạn.">
+        <Section id="prefs" title="Thông báo & hiển thị" text={`Chọn kênh ${BRAND.name} được phép liên hệ bạn.`}>
           <PrefsForm me={me} />
         </Section>
         <Section id="security" title="Mật khẩu & bảo mật" text="Quản lý cách bạn đăng nhập.">

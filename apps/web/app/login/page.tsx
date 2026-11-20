@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { LoginBanner, LoginPanel, RolePicker } from '../../components/AuthGate';
 import { useAuth } from '@grabcode/auth-ui';
+import { BRAND } from '@grabcode/contracts';
+
 
 /** Only same-origin paths, so ?next= cannot bounce the user to another site ("/\\evil.com", "/\t/evil.com" parse as external). */
 const safeNext = (next: string | null) => {
@@ -47,7 +49,7 @@ function Login() {
     return (
       <LoginBanner>
         <section className="card w-full p-6 sm:p-8">
-          <h1 className="font-display text-2xl font-extrabold text-ink">Chào {me?.name}, bạn dùng GrabCode để làm gì?</h1>
+          <h1 className="font-display text-2xl font-extrabold text-ink">Chào {me?.name}, bạn dùng {BRAND.name} để làm gì?</h1>
           <div className="mt-5">
             <RolePicker value={role} onChange={setRole} />
           </div>

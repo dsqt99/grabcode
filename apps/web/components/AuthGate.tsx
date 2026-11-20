@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { AuthError, useAuth } from '@grabcode/auth-ui';
 import Navbar from './Navbar';
+import Logo from './Logo';
+import { BRAND } from '@grabcode/contracts';
+
 
 const AUTH_ERRORS: Record<string, string> = {
   state: 'Phiên đăng nhập hết hạn hoặc không hợp lệ, vui lòng thử lại.',
@@ -14,7 +17,7 @@ const FORM_ERRORS: Record<number, string> = {
   401: 'Email hoặc mật khẩu không đúng.',
   409: 'Email đã được đăng ký, hãy đăng nhập.',
 };
-const INPUT = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
+const INPUT = 'min-h-[44px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
 const OAUTH_BTN = 'inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 font-display text-[15px] font-semibold text-ink transition hover:bg-slate-50';
 
 const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
@@ -26,7 +29,7 @@ const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
 export function RolePicker({ value, onChange }: { value: UserRole; onChange: (r: UserRole) => void }) {
   return (
     <fieldset className="grid grid-cols-2 gap-2">
-      <legend className="mb-2 text-sm font-semibold text-ink">Bạn tham gia GrabCode với vai trò</legend>
+      <legend className="mb-2 text-sm font-semibold text-ink">Bạn tham gia {BRAND.name} với vai trò</legend>
       {ROLES.map((r) => (
         <label
           key={r.role}
@@ -81,7 +84,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
 
   return (
     <section className={`card w-full p-6 sm:p-8 ${className}`}>
-      <h1 className="font-display text-2xl font-extrabold text-ink">{isRegister ? 'Tạo tài khoản GrabCode' : 'Đăng nhập GrabCode'}</h1>
+      <h1 className="font-display text-2xl font-extrabold text-ink">{isRegister ? `Tạo tài khoản ${BRAND.name}` : `Đăng nhập ${BRAND.name}`}</h1>
       <p className="mt-1 text-sm text-slate-500">
         {isRegister ? 'Một tài khoản dùng cho cả Khách hàng và Coder.' : 'Dùng chung cho cổng Khách hàng và ứng dụng Coder.'}
       </p>
@@ -177,7 +180,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
 
       {providers.password && (
         <p className="mt-6 border-t border-slate-200 pt-5 text-center text-sm text-slate-500">
-          {isRegister ? 'Đã có tài khoản?' : 'Chưa có tài khoản GrabCode?'}{' '}
+          {isRegister ? 'Đã có tài khoản?' : `Chưa có tài khoản ${BRAND.name}?`}{' '}
           <button type="button" onClick={switchMode} className="font-semibold text-emerald-dark hover:underline">
             {isRegister ? 'Đăng nhập' : 'Đăng ký miễn phí'}
           </button>
@@ -202,9 +205,11 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
         <section className="relative overflow-hidden rounded-2xl bg-ink p-8 text-white md:p-10">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald/30 blur-3xl" aria-hidden />
           <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-primary-fixed/10 blur-3xl" aria-hidden />
-          <h2 className="relative font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
-            Đặt làm app như đặt đồ ăn. <span className="text-primary-fixed">Duyệt từng mốc</span> rồi mới trả tiền.
+          <div className="relative"><Logo tone="dark" /></div>
+          <h2 className="relative mt-6 text-balance font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
+            {BRAND.tagline}
           </h2>
+          <p className="relative mt-2 font-display text-xl font-bold text-primary-fixed">Duyệt từng mốc rồi mới trả tiền.</p>
           <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và freelancer nhận đơn.</p>
           <ul className="relative mt-8 space-y-4">
             {PERKS.map((p) => (

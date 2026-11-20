@@ -4,12 +4,14 @@ import './globals.css';
 import { AuthProvider } from '@grabcode/auth-ui';
 import Footer from '../components/Footer';
 import { CurrencyProvider } from '../lib/currency';
+import { BRAND } from '@grabcode/contracts';
+
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'GrabCode — Đặt làm app như đặt đồ ăn',
+  title: `${BRAND.name} — ${BRAND.tagline}`,
   description: 'Đặt làm app cho shop và SME: AI soạn đặc tả, freelancer vibe code làm, tiền giữ ký quỹ và chỉ giải ngân khi bạn duyệt từng mốc.',
 };
 

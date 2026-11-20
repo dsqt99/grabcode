@@ -19,6 +19,7 @@ import {
   type SuspenseItem,
   type SuspenseList,
 } from '@grabcode/contracts/schemas';
+import { BRAND } from '@grabcode/contracts';
 import { ApiError, api, vnd, when } from '../lib/api';
 
 const TABS = { coders: 'Coder', orders: 'Đơn hàng & thanh toán', refunds: 'Chờ chuyển trả', suspense: 'Đối soát suspense', payouts: 'Rút tiền', monitor: 'Worker / Queue' } as const;
@@ -50,7 +51,7 @@ export default function AdminPage() {
   return (
     <main className="mx-auto max-w-6xl p-6">
       <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">GrabCode Admin</h1>
+        <h1 className="text-xl font-bold">{BRAND.name} Admin</h1>
         <span className="text-sm text-slate-500">{me.email ?? me.githubLogin ?? me.name}</span>
       </header>
       <nav className="mb-4 flex flex-wrap gap-2" role="tablist">

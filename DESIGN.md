@@ -18,7 +18,7 @@ colors:
   surface-tint: '#006e2e'
   primary: '#006e2e'
   on-primary: '#ffffff'
-  primary-container: '#00b14f'
+  primary-container: '#4f46e5'
   on-primary-container: '#003a15'
   inverse-primary: '#52e078'
   secondary: '#565e74'
@@ -149,8 +149,8 @@ The style fuses modern consumer tech minimalism with high-utility tactile afford
 
 The palette establishes immediate familiarity using high-visibility emerald tones grounded by dense slate neutrals and functional accent alerts:
 
-- **Primary (`#00B14F` / Dark Hover `#00873D`):** Anchors core actions, conversion paths, and positive states.
-- **Mint Surface (`#E8F8EE`):** Acts as the sub-primary tinted surface for tags, highlight chips, active route markers, and selected states without introducing eye fatigue.
+- **Primary (`#4F46E5` / Dark Hover `#4338CA`):** Anchors core actions, conversion paths, and positive states.
+- **Mint Surface (`#EEF2FF`):** Acts as the sub-primary tinted surface for tags, highlight chips, active route markers, and selected states without introducing eye fatigue.
 - **Neutral Dark (`#0F172A` / `#1E293B`):** Delivers sharp, legible typography and high-contrast structural frame contrast.
 - **Neutral Surface (`#F8FAFC` base, `#FFFFFF` cards, `#E2E8F0` borders):** Clean, crisp backdrop layers that keep content dominant.
 - **Accent Amber (`#F59E0B`):** Reserved for marketplace rating stars, surge notices, and real-time status warnings.
@@ -176,7 +176,7 @@ Visual hierarchy uses clean surface separation combined with emerald-tinted and 
 
 - **Level 0 (Flat / Canvas):** `#F8FAFC` base background.
 - **Level 1 (Cards & Static Containers):** `#FFFFFF` surface bordered by a crisp `1px solid #E2E8F0` border. Zero shadow to prevent clutter across large lists.
-- **Level 2 (Interactive Cards / Floating Controls):** `0px 4px 16px -2px rgba(15, 23, 42, 0.06), 0px 2px 6px -1px rgba(0, 177, 79, 0.04)`.
+- **Level 2 (Interactive Cards / Floating Controls):** `0px 4px 16px -2px rgba(15, 23, 42, 0.06), 0px 2px 6px -1px rgba(79, 70, 229, 0.04)`.
 - **Level 3 (Modals / Sticky Booking Bottom Bar):** `0px 12px 32px -4px rgba(15, 23, 42, 0.12), 0px 4px 12px -2px rgba(15, 23, 42, 0.04)`.
 - **Level 4 (Toasts / Critical Overlays):** `0px 20px 40px -8px rgba(15, 23, 42, 0.16)`.
 
@@ -192,25 +192,25 @@ The roundedness level 2 sets a 8px (0.5rem) baseline curve across interactive co
 ## Components
 
 ### Buttons
-- **Primary:** Background `#00B14F`, text `#FFFFFF`, full pill geometry (`rounded-full`), font `Plus Jakarta Sans` semi-bold. Hover: `#00873D`. Active: slight inset scale (`scale(0.98)`).
-- **Secondary:** Surface `#E8F8EE`, text `#00873D`, zero border, full pill geometry. Hover: `#D4F2DE`.
+- **Primary:** Background `#4F46E5`, text `#FFFFFF`, full pill geometry (`rounded-full`), font `Plus Jakarta Sans` semi-bold. Hover: `#4338CA`. Active: slight inset scale (`scale(0.98)`).
+- **Secondary:** Surface `#EEF2FF`, text `#4338CA`, zero border, full pill geometry. Hover: `#E0E7FF`.
 - **Tertiary / Ghost:** Surface transparent, text `#0F172A`, hover `#F1F5F9`.
 
 ### Chips & Pill Badges
 - **Status Indicators:** Full pill shape, padding `4px 12px`.
-  - *Active / Ready:* `#E8F8EE` background with `#00873D` text.
+  - *Active / Ready:* `#EEF2FF` background with `#4338CA` text.
   - *Pending / Transit:* Amber tinted (`#FEF3C7` background with `#B45309` text).
   - *Dark Neutral:* `#0F172A` background with `#F8FAFC` text.
 
 ### Cards
 - Surface `#FFFFFF`, border `1px solid #E2E8F0`, border-radius 16px, padding 20px.
-- **Hover State:** Translate-Y `-2px` with Level 2 elevation shadow and an optional subtle border tint to `#00B14F`.
+- **Hover State:** Translate-Y `-2px` with Level 2 elevation shadow and an optional subtle border tint to `#4F46E5`.
 
 ### Form Controls & Inputs
-- **Inputs:** Height 48px, background `#F8FAFC`, border `1px solid #CBD5E1`, border-radius 8px. Focus: border `#00B14F` with a soft emerald focus ring (`0 0 0 3px rgba(0, 177, 79, 0.15)`).
-- **Checkboxes & Radios:** Primary `#00B14F` checked state with crisp white glyph. Unchecked: `1.5px solid #94A3B8`.
+- **Inputs:** Height 48px, background `#F8FAFC`, border `1px solid #CBD5E1`, border-radius 8px. Focus: border `#4F46E5` with a soft emerald focus ring (`0 0 0 3px rgba(79, 70, 229, 0.15)`).
+- **Checkboxes & Radios:** Primary `#4F46E5` checked state with crisp white glyph. Unchecked: `1.5px solid #94A3B8`.
 
 ### Specialized Marketplace Elements
 - **Rating Badges:** Compact pill displaying star icon in `#F59E0B`, paired with dark slate numeric score (`13px Plus Jakarta Sans bold`).
-- **Tracking Stepper:** Horizontal & vertical line indicators (`2px solid #E2E8F0`). Completed/active steps display emerald `#00B14F` circular nodes with white icons; incomplete nodes display hollow rings.
+- **Tracking Stepper:** Horizontal & vertical line indicators (`2px solid #E2E8F0`). Completed/active steps display emerald `#4F46E5` circular nodes with white icons; incomplete nodes display hollow rings.
 - **Currency Switcher (VND/USD):** Segmented pill toggle control. Background `#F1F5F9`, active segment `#FFFFFF` with Level 1 shadow and emerald text.

@@ -1,4 +1,4 @@
-# CLAUDE.md — Quy chuẩn kiến trúc & Chỉ dẫn AI Agent cho GrabCode
+# CLAUDE.md — Quy chuẩn kiến trúc & Chỉ dẫn AI Agent cho FastDemo
 
 > **Triết lý cốt lõi**: Phân rã hệ thống thành 4 khối thành phần độc lập (`app`, `admin`, `api`, `worker`) xoay quanh một **Shared Contract** duy nhất. AI Agent khi nhận task chỉ tập trung vào đúng domain của mình, không làm phình context, không phá vỡ logic chéo.
 
@@ -6,7 +6,7 @@
 
 ## 1. Bản đồ 4 thành phần & Trách nhiệm ranh giới
 
-GrabCode tổ chức các module/repo theo 4 thành phần độc lập với ranh giới trách nhiệm nghiêm ngặt:
+FastDemo tổ chức các module/repo theo 4 thành phần độc lập với ranh giới trách nhiệm nghiêm ngặt:
 
 ```
 grabcode / multi-repo

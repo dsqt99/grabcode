@@ -1,4 +1,4 @@
-# GrabCode — Chạy thử và triển khai MVP
+# FastDemo — Chạy thử và triển khai MVP
 
 Tài liệu cho bản MVP nhận đơn và thu tiền thật. Luồng chạy như sau:
 
@@ -88,7 +88,7 @@ Mọi thứ dùng chung một tên miền, nên cookie đăng nhập hoạt đ�
 
 ### 3.1 Tên miền
 
-Tạo bản ghi DNS **A** trỏ tên miền (ví dụ `grabcode.vn`) về IP của VPS. Mở cổng 80 và 443 trên firewall.
+Tạo bản ghi DNS **A** trỏ tên miền (ví dụ `example.com`, thay bằng tên miền thật khi đã mua) về IP của VPS. Mở cổng 80 và 443 trên firewall.
 
 ### 3.2 Cài Docker và lấy code
 
@@ -112,8 +112,8 @@ Biến bắt buộc:
 
 | Biến | Giá trị |
 | --- | --- |
-| `DOMAIN` | `grabcode.vn` (không có https) |
-| `WEB_ORIGIN`, `API_PUBLIC_URL` | `https://grabcode.vn` |
+| `DOMAIN` | `example.com` (không có https) |
+| `WEB_ORIGIN`, `API_PUBLIC_URL` | `https://example.com` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
 | `PAYMENT_BANK_ID` | Mã ngân hàng VietQR hoặc BIN, ví dụ `MB`, `VCB`, `TCB`, `970422` |
 | `PAYMENT_BANK_NAME` | Tên hiển thị, ví dụ `MB Bank` |
@@ -180,7 +180,7 @@ Mỗi tin có mã đơn, số tiền, tên + SĐT khách (hoặc freelancer) và
 
 **Tạo bot (khoảng 5 phút):**
 
-1. Trong Telegram, nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `GrabCode Ops`) và username kết thúc bằng `bot`. BotFather trả về **token** dạng `123456789:AA...`. Token này là bí mật: không gửi qua chat, không commit.
+1. Trong Telegram, nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `FastDemo Ops`) và username kết thúc bằng `bot`. BotFather trả về **token** dạng `123456789:AA...`. Token này là bí mật: không gửi qua chat, không commit.
 2. Tạo một nhóm Telegram cho vận hành và thêm bot vào nhóm. Gửi một tin bất kỳ trong nhóm, ví dụ `/start`.
 3. Lấy **chat id** của nhóm: mở `https://api.telegram.org/bot<TOKEN>/getUpdates` trên trình duyệt, tìm `"chat":{"id":-100...}`. Chat id của nhóm là số âm.
 4. Điền vào `.env.production`:
@@ -188,7 +188,7 @@ Mỗi tin có mã đơn, số tiền, tên + SĐT khách (hoặc freelancer) và
    ```
    TELEGRAM_BOT_TOKEN=123456789:AA...
    TELEGRAM_ADMIN_CHAT_ID=-100...
-   ADMIN_PUBLIC_URL=https://grabcode.vn/admin   # bỏ trống thì dùng {WEB_ORIGIN đầu tiên}/admin
+   ADMIN_PUBLIC_URL=https://example.com/admin   # bỏ trống thì dùng {WEB_ORIGIN đầu tiên}/admin
    ```
 
 5. Khởi động lại notifier: `docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml up -d notifier`. Log phải có dòng `admin notices started (Telegram on)`.

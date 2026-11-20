@@ -51,8 +51,8 @@ export default function PayoutCard() {
     <section className="card">
       <h3 className="font-display text-sm font-bold">Rút tiền về ngân hàng</h3>
       <form onSubmit={submit} className="mt-2 flex flex-col gap-2 text-sm">
-        <input className="rounded border border-slate-200 px-3 py-2" type="number" min={10000} step={1000} required placeholder="Số tiền (₫)" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Số tiền rút" />
-        <input className="rounded border border-slate-200 px-3 py-2" required minLength={5} maxLength={200} placeholder="Ngân hàng, STK, chủ tài khoản" value={bank} onChange={(e) => setBank(e.target.value)} aria-label="Tài khoản ngân hàng" />
+        <input className="min-h-[44px] rounded border border-slate-200 px-3 py-2" type="number" min={10000} step={1000} required placeholder="Số tiền (₫)" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Số tiền rút" />
+        <input className="min-h-[44px] rounded border border-slate-200 px-3 py-2" required minLength={5} maxLength={200} placeholder="Ngân hàng, STK, chủ tài khoản" value={bank} onChange={(e) => setBank(e.target.value)} aria-label="Tài khoản ngân hàng" />
         <button type="submit" disabled={busy} className="btn-secondary min-h-[44px]">
           {busy ? 'Đang gửi…' : 'Gửi yêu cầu rút'}
         </button>

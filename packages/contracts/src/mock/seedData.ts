@@ -102,8 +102,8 @@ export const INITIAL_DEMO_ORDER: Order = {
   etaHours: 3,
   createdAt: new Date().toISOString(),
   assignedCoder: SEED_CODER,
-  demoUrl: "https://grabcode-crm-preview.vercel.app",
-  repoUrl: "https://github.com/grabcode-sandbox/gc-9821-crm-poc",
+  demoUrl: "https://fastdemo-crm-preview.vercel.app",
+  repoUrl: "https://github.com/fastdemo-sandbox/gc-9821-crm-poc",
   brief: {
     title: "Đặc tả kỹ thuật: Mini CRM Bất Động Sản Đô Thị Mới",
     scopeSummary: "Xây dựng Web App CRM tối giản cho sale bất động sản quản lý quỹ căn, đặt chỗ giữ chỗ và thông báo chốt cọc thời gian thực.",
@@ -161,7 +161,7 @@ export const INITIAL_DEMO_ORDER: Order = {
     claudeMdContent: `# HƯỚNG DẪN DÀNH CHO CODER (CLAUDE.md)
 ## Dự án: Mini CRM Bất Động Sản Đô Thị Mới (GC-9821)
 - **Công nghệ yêu cầu:** Next.js 15 (App Router), Tailwind CSS v4/v3, Lucide React icons.
-- **Tiêu chuẩn giao diện:** Tuân thủ Emerald Mobility Design System (#00B14F).
+- **Tiêu chuẩn giao diện:** Tuân thủ FastDemo Design System (#EA580C).
 - **Mốc bàn giao:**
   1. [M1] Khởi tạo dữ liệu và layout cơ bản (20% thù lao)
   2. [M2] Hoàn thành Kanban và bộ lọc (50% thù lao)
