@@ -1,0 +1,110 @@
+# Production on ONE small VPS (see docs/DEPLOY.md). Everything is served from one domain through Caddy (auto HTTPS):
+#   https://DOMAIN/v1/*     -> core-api
+#   https://DOMAIN/coder/*  -> coder app (PWA)
+#   https://DOMAIN/admin/*  -> admin portal
+#   https://DOMAIN/*        -> web (customers)
+# Run from the repo root:
+#   docker compose --env-file .env.production -f infra/deploy/docker-compose.prod.yml up -d --build
+# Secrets live only in .env.production on the server (gitignored, dockerignored). Never commit it.
+name: grabcode
+
+x-node-service: &node-service
+  restart: unless-stopped
+  env_file: ../../.env.production
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://grabcode:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}@postgres:5432/grabcode
+    NATS_URL: nats://nats:4222
+  depends_on:
+    postgres: { condition: service_healthy }
+    nats: { condition: service_started }
+
+x-next-build: &next-build
+  context: ../..
+  dockerfile: infra/next-app.Dockerfile
+  args: &next-args
+    NEXT_PUBLIC_API_URL: https://${DOMAIN:?set DOMAIN in .env.production}
+    CODER_ORIGIN: http://coder:3001
+    ADMIN_ORIGIN: http://admin:3002
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: grabcode
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: grabcode
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U grabcode']
+      interval: 3s
+      retries: 30
+
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: ['-js', '-sd', '/data']
+    volumes: ['natsdata:/data']
+
+  # One-off: applies DB migrations, then exits. core-api starts after it succeeded.
+  migrate:
+    <<: *node-service
+    restart: 'no'
+    image: grabcode/core-api
+    build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/core-api' } }
+    command: ['sh', '-c', 'exec pnpm --filter @grabcode/core-api db:migrate']
+
+  core-api:
+    <<: *node-service
+    image: grabcode/core-api
+    build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/core-api' } }
+    depends_on:
+      postgres: { condition: service_healthy }
+      nats: { condition: service_started }
+      migrate: { condition: service_completed_successfully }
+
+  outbox-relay:
+    <<: *node-service
+    build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/outbox-relay' } }
+
+  # AI brief. Without LLM_API_KEY jobs fail and the web falls back to a template brief: the order flow still works.
+  brief-worker:
+    <<: *node-service
+    build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/brief-worker' } }
+
+  # Optional WebPush (needs VAPID_* in .env.production): docker compose ... --profile push up -d
+  notifier:
+    <<: *node-service
+    profiles: ['push']
+    build: { context: ../.., dockerfile: infra/node-service.Dockerfile, args: { PKG: '@grabcode/notifier' } }
+
+  web:
+    restart: unless-stopped
+    build: { <<: *next-build, args: { <<: *next-args, PKG: '@grabcode/web' } }
+
+  coder:
+    restart: unless-stopped
+    build: { <<: *next-build, args: { <<: *next-args, PKG: '@grabcode/coder' } }
+
+  admin:
+    restart: unless-stopped
+    build: { <<: *next-build, args: { <<: *next-args, PKG: '@grabcode/admin' } }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.production}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, coder, admin, core-api]
+
+volumes:
+  pgdata:
+  natsdata:
+  caddy_data:
+  caddy_config:
