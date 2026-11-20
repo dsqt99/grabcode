@@ -9,7 +9,7 @@ const STEPS = [
   { icon: 'restaurant_menu', title: 'Chọn món, ghi yêu cầu', text: 'Mô tả app bạn cần bằng tiếng Việt, như ghi chú cho quán.' },
   { icon: 'receipt_long', title: 'AI lên bill & mốc giao', text: 'AI chuyển mô tả thành đặc tả, báo giá và các mốc giao từng phần.' },
   { icon: 'qr_code_2', title: 'Thanh toán, tiền được giữ', text: `Quét VietQR, tiền được giữ ký quỹ trên ${BRAND.name}, chưa trả cho ai.` },
-  { icon: 'two_wheeler', title: 'Shipper vibe code giao demo', text: 'Mỗi mốc giao xong, bạn xem demo rồi duyệt mới giải ngân.' },
+  { icon: 'code', title: 'Coder vibe code giao demo', text: 'Mỗi mốc giao xong, bạn xem demo rồi duyệt mới giải ngân.' },
 ];
 
 const BULLETS = [
@@ -34,7 +34,7 @@ export default function Page() {
               {BRAND.tagline}
             </h1>
             <p className="mt-3 font-display text-xl font-bold text-ink md:text-2xl">
-              <span className="text-emerald-dark">Shipper vibe code nấu demo</span>, bạn nhận từng mốc mới trả tiền.
+              <span className="text-emerald-dark">Coder vibe code nấu demo</span>, bạn nhận từng mốc mới trả tiền.
             </p>
             <p className="mt-4 max-w-xl text-lg text-slate-600">
               Mô tả ý tưởng như đặt món: AI lên đặc tả và bill, tiền được giữ ký quỹ, freelancer dùng công cụ AI làm nhanh rồi giao demo tận tay.

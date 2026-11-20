@@ -25,7 +25,7 @@ test('Màn B status table: chip, money line, step and actions per server status'
   const unpaid = { paidVnd: 0, heldVnd: 0, releasedVnd: 0, refundedVnd: 0 };
   const half = { paidVnd: 2_900_000, heldVnd: 2_320_000, releasedVnd: 580_000, refundedVnd: 0 };
   assert.deepEqual(row(input('DRAFT', { money: unpaid })), ['Chờ thanh toán', 'warn', 0, 'Chưa thanh toán', '']);
-  assert.deepEqual(row(input('FUNDED')), ['Đang tìm shipper', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại FastDemo', '']);
+  assert.deepEqual(row(input('FUNDED')), ['Đang tìm coder', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại FastDemo', '']);
   assert.deepEqual(row(input('DISPATCHED')), row(input('FUNDED')));
   assert.deepEqual(row(input('IN_PROGRESS', { money: half, milestones: ms('COMPLETED', 'IN_PROGRESS', 'PENDING') })), [
     'Đang nấu demo',

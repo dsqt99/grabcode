@@ -10,7 +10,7 @@ import { BRAND } from '@grabcode/contracts';
 export type ServerStatus = OrderDto['status'];
 export type Tone = 'warn' | 'info' | 'brand' | 'ok' | 'danger' | 'neutral';
 
-export const STEPS = ['Thanh toán', 'Tìm shipper', 'Đang nấu demo', 'Nhận & duyệt', 'Hoàn tất'] as const;
+export const STEPS = ['Thanh toán', 'Tìm coder', 'Đang nấu demo', 'Nhận & duyệt', 'Hoàn tất'] as const;
 
 export interface StatusInput {
   status: ServerStatus;
@@ -80,7 +80,7 @@ export function statusView(o: StatusInput): StatusView {
       return {
         ...base,
         tone: 'info',
-        label: 'Đang tìm shipper',
+        label: 'Đang tìm coder',
         description: `Đã nhận tiền, đang chờ freelancer nhận đơn. Không ai nhận trong 24 giờ thì ${BRAND.name} hoàn tiền.`,
         money: `Đã nhận ${v(paidVnd)} · đang giữ tại ${BRAND.name}`,
         step: 1,
