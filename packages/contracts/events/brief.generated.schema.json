@@ -106,6 +106,9 @@
                   "commitHash": {
                     "type": "string"
                   },
+                  "deliveryUrl": {
+                    "type": "string"
+                  },
                   "note": {
                     "type": "string"
                   },
