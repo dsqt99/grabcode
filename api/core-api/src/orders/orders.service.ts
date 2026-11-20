@@ -7,6 +7,8 @@ import {
   SUBJECTS,
   coderTierFor,
   estimateOrder,
+  milestoneShare,
+  normalizeVnPhone,
   payoutOf,
   releasesOnApproval,
   REVISION_NOTE_MIN,
@@ -85,6 +87,9 @@ async function releaseMilestone(tx: Tx, row: Row, index: number): Promise<number
   return amount;
 }
 
+/** Milestone actions need an assigned coder (transition.ts denies them otherwise). */
+const partiesOf = (row: Row) => ({ customerUserId: row.customerUserId, coderUserId: row.coderUserId! });
+
 async function emitMilestone(tx: Tx, type: MilestoneEvent['type'], data: MilestoneEvent['data']) {
   const event: MilestoneEvent = { event_id: randomUUID(), type, occurred_at: new Date().toISOString(), data };
   await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
@@ -147,11 +152,15 @@ export class OrdersService {
 
   async create(user: UserRow, input: z.output<typeof OrderCreateSchema>): Promise<OrderDto> {
     if (!user.roles.includes('CUSTOMER')) throw new ForbiddenException({ message: 'Missing CUSTOMER role' });
+    // P0-5: ops must be able to call / Zalo the customer, so the first order asks for a Vietnamese mobile number.
+    const phone = input.phone ?? (user.phone && normalizeVnPhone(user.phone));
+    if (!phone) throw new BadRequestException({ message: 'A Vietnamese mobile number is required', issues: [{ path: ['phone'], message: 'Required' }] });
     // "Giá từ" of the menu item; an admin quotes the real price before the customer can pay (Q3).
     const est = estimateOrder(input.menuItem);
     // The customer only reviewed the plan: progress always starts from scratch, milestone ids come from the server.
     const brief = freshBrief(input.brief);
     const id = await this.db.transaction(async (tx) => {
+      if (phone !== user.phone) await tx.update(users).set({ phone, updatedAt: sql`now()` }).where(eq(users.id, user.id));
       const [row] = await tx
         .insert(orders)
         .values({
@@ -317,7 +326,7 @@ export class OrdersService {
         });
       }
       await tx.update(orders).set({ brief: brief as Row['brief'], updatedAt: sql`now()` }).where(eq(orders.id, id));
-      await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0 });
+      await emitMilestone(tx, SUBJECTS.MILESTONE_SUBMITTED, { ...partiesOf(row), orderId: id, milestoneId, commitHash: sha, note, releasedVnd: 0, payoutVnd: 0 });
     });
     return (await this.load(eq(orders.id, id)))[0];
   }
@@ -331,13 +340,17 @@ export class OrdersService {
       if (isDenied(r)) fail(r);
       const { brief, index } = r as { brief: Row['brief']; index: number };
       const releasedVnd = approve && releasesOnApproval(index, row.brief.milestones.length) ? await releaseMilestone(tx, row, index) : 0;
+      // Same split releaseEntries books: the coder's share of what left escrow.
+      const payoutVnd = releasedVnd ? milestoneShare(row.payoutVnd, row.brief.milestones.map((m) => m.weightPercent), index) : 0;
       await tx.update(orders).set({ brief, updatedAt: sql`now()` }).where(eq(orders.id, id));
       await emitMilestone(tx, approve ? SUBJECTS.MILESTONE_APPROVED : SUBJECTS.MILESTONE_REJECTED, {
+        ...partiesOf(row),
         orderId: id,
         milestoneId,
         commitHash: row.brief.milestones[index].commitHash ?? null,
         note,
         releasedVnd,
+        payoutVnd,
       });
     });
     return (await this.load(eq(orders.id, id)))[0];

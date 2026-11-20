@@ -74,7 +74,7 @@ export function statusView(o: StatusInput): StatusView {
         ...base,
         tone: 'info',
         label: 'Đang tìm freelancer',
-        description: 'Đơn đã lên bảng việc. Freelancer phù hợp sẽ nhận sớm nhất có thể.',
+        description: 'Đã nhận tiền, đang chờ freelancer nhận đơn. Không ai nhận trong 24 giờ thì GrabCode hoàn tiền.',
         money: `Đã nhận ${v(paidVnd)} · đang giữ tại GrabCode`,
         step: 1,
         askRefundAccount: true,
@@ -161,6 +161,31 @@ export function statusView(o: StatusInput): StatusView {
         askRefundAccount: refundedVnd > 0,
       };
   }
+}
+
+// ---- "Đơn của tôi" (UX spec Màn D, BA P0-6) ----
+
+export type OrderTab = 'action' | 'active' | 'done' | 'cancelled';
+export const ORDER_TABS: { id: OrderTab; label: string }[] = [
+  { id: 'action', label: 'Cần bạn xử lý' },
+  { id: 'active', label: 'Đang làm' },
+  { id: 'done', label: 'Hoàn tất' },
+  { id: 'cancelled', label: 'Đã huỷ' },
+];
+
+/** What the customer has to do on the order now; null = nothing (waiting on the freelancer or GrabCode). */
+export function customerTodo(o: Pick<StatusInput, 'status' | 'priceQuoted' | 'milestones'>): string | null {
+  // Unquoted DRAFT: GrabCode owes the quote, there is no QR to pay yet (P0-7).
+  if (o.status === 'DRAFT') return o.priceQuoted ? 'Chờ bạn chuyển khoản' : null;
+  if (o.status === 'DELIVERED') return 'Chờ bạn nghiệm thu';
+  const submitted = o.status === 'IN_PROGRESS' && o.milestones.find((m) => m.status === 'SUBMITTED');
+  return submitted ? `Chờ bạn duyệt ${submitted.id}` : null;
+}
+
+export function orderTab(o: Pick<StatusInput, 'status' | 'priceQuoted' | 'milestones'>): OrderTab {
+  if (customerTodo(o)) return 'action';
+  if (o.status === 'ACCEPTED' || o.status === 'RESOLVED') return 'done';
+  return o.status === 'CANCELLED' ? 'cancelled' : 'active';
 }
 
 const MOCK_STATUS: Record<Order['status'], ServerStatus> = {

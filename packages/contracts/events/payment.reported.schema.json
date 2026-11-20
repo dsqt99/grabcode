@@ -15,8 +15,7 @@
       "type": "object",
       "properties": {
         "orderId": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9-]{1,40}$"
+          "type": "string"
         },
         "customerUserId": {
           "type": "string",
@@ -27,12 +26,16 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "content": {
+          "type": "string"
         }
       },
       "required": [
         "orderId",
         "customerUserId",
-        "dueVnd"
+        "dueVnd",
+        "content"
       ],
       "additionalProperties": false
     }

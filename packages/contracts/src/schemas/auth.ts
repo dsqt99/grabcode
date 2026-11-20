@@ -12,6 +12,9 @@ export const ExperienceLevelSchema = z.enum(['ENTRY', 'INTERMEDIATE', 'EXPERT'])
 export const HoursPerWeekSchema = z.enum(['LT_10', 'H10_30', 'GT_30']);
 export const LanguageLevelSchema = z.enum(['BASIC', 'CONVERSATIONAL', 'FLUENT', 'NATIVE']);
 export const CompanySizeSchema = z.enum(['SOLO', 'S2_10', 'S11_50', 'S51_200', 'S200_PLUS']);
+/** New coders wait for an admin (P0-8): only APPROVED coders see the job board, get offers, claim or accept. */
+export const CoderApprovalSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
+
 const UrlSchema = z.string().trim().url().max(300);
 
 export const NotificationPrefsSchema = z.object({
@@ -70,6 +73,8 @@ export const MeSchema = z.object({
   customerProfile: CustomerProfileSchema.nullable(),
   /** Set when the user has the CODER role. */
   coderStats: CoderStatsSchema.nullable(),
+  /** Set when the user has the CODER role; jobs, offers, claim and accept need APPROVED (403 otherwise). */
+  coderApproval: CoderApprovalSchema.nullable(),
   createdAt: z.string(),
 });
 
@@ -155,6 +160,7 @@ export const DevLoginSchema = z.object({
 });
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
+export type CoderApproval = z.infer<typeof CoderApprovalSchema>;
 export type AccountRole = z.infer<typeof AccountRoleSchema>;
 export type Me = z.infer<typeof MeSchema>;
 export type UpdateMe = z.infer<typeof UpdateMeSchema>;

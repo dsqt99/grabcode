@@ -3,7 +3,7 @@ import { daysLabel, getMenuItem, type MenuItemCode } from './pricing';
 
 function titleFrom(prompt: string): string {
   const clean = prompt.trim().replace(/\s+/g, ' ');
-  if (!clean) return 'Dự án POC mới';
+  if (!clean) return 'Dự án app mới';
   const first = clean.split(/[.,;\n]/)[0];
   return first.length > 70 ? `${first.slice(0, 67)}...` : first;
 }

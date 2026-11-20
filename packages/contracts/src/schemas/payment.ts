@@ -49,6 +49,8 @@ export const PaymentInstructionsSchema = z.object({
   autoConfirm: z.boolean(),
   /** Dev only: POST /v1/payments/dev-deposit is available. */
   devDeposit: z.boolean(),
+  /** When the customer pressed "Tôi đã chuyển khoản" (POST /v1/orders/{id}/payment/reported); null = not yet. */
+  reportedAt: z.string().nullable(),
 });
 export type PaymentInstructions = z.infer<typeof PaymentInstructionsSchema>;
 

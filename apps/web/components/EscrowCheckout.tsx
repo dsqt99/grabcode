@@ -1,24 +1,30 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useCurrency } from '../lib/currency';
 import { daysLabel, formatVnd } from '../lib/pricing';
+import StickyActionBar from './StickyActionBar';
 
 interface Props {
   itemName: string;
   fromPriceVnd: number;
   days: readonly [number, number];
   disabled?: boolean;
+  /** Why the order cannot be created yet (shown next to the button). */
+  hint?: string | null;
   submitting?: boolean;
   onConfirm: () => void;
+  /** Fields the customer fills before ordering (phone, terms). */
+  children?: ReactNode;
 }
 
 /** Order summary before creating the DRAFT: menu "giá từ"; the final price comes from GrabCode's quote (HON-10 Q3). */
-export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled, submitting, onConfirm }: Props) {
+export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled, hint, submitting, onConfirm, children }: Props) {
   // Paid in VND (bank transfer); USD is only a reference.
   const { usd } = useCurrency();
 
   return (
-    <aside className="card sticky top-24 space-y-5 shadow-l3" aria-label="Đặt đơn">
+    <aside className="card min-w-0 space-y-5 shadow-l3 lg:sticky lg:top-24" aria-label="Đặt đơn">
       <h2 className="font-display text-lg font-bold text-ink">Đặt đơn & nhận báo giá</h2>
 
       <dl className="space-y-2 text-sm">
@@ -43,9 +49,14 @@ export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled,
         <p>Tiền được GrabCode giữ. Freelancer nhận tiền khi bạn duyệt từng mốc; mốc cuối chỉ được trả khi bạn nghiệm thu cả đơn.</p>
       </div>
 
-      <button type="button" onClick={onConfirm} disabled={disabled || submitting} className="btn-primary w-full">
-        {submitting ? 'Đang tạo đơn...' : 'Tạo đơn & chờ báo giá'}
-      </button>
+      {children}
+
+      <StickyActionBar>
+        {hint && <p className="text-center text-xs font-semibold text-amber-text lg:text-left">{hint}</p>}
+        <button type="button" onClick={onConfirm} disabled={disabled || submitting} className="btn-primary w-full">
+          {submitting ? 'Đang tạo đơn...' : 'Tạo đơn & chờ báo giá'}
+        </button>
+      </StickyActionBar>
     </aside>
   );
 }

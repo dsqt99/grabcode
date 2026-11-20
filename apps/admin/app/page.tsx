@@ -24,6 +24,11 @@ import { ApiError, api, vnd, when } from '../lib/api';
 const TABS = { coders: 'Coder', orders: 'Đơn hàng & thanh toán', refunds: 'Chờ chuyển trả', suspense: 'Đối soát suspense', payouts: 'Rút tiền', monitor: 'Worker / Queue' } as const;
 type Tab = keyof typeof TABS;
 const TIERS: NonNullable<AdminCoder['tierOverride']>[] = ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'];
+const APPROVAL: Record<AdminCoder['approval'], ReactNode> = {
+  PENDING: <b className="text-amber-700">Chờ duyệt</b>,
+  APPROVED: 'Đã duyệt',
+  REJECTED: <b className="text-red-700">Đã từ chối</b>,
+};
 
 export default function AdminPage() {
   const [me, setMe] = useState<Me | null | 'denied'>(null);
@@ -102,16 +107,49 @@ function Table({ head, children, empty, error }: { head: string[]; children: Rea
   );
 }
 
+/** P0-8: new coders wait here (listed first) until approved; only approved coders get jobs and offers. */
 function Coders() {
   const { data, error, busy, act } = useList<AdminCoderList>('/v1/admin/coders');
   const patch = (c: AdminCoder, body: object) => act(() => api(`/v1/admin/coders/${c.id}`, 'PATCH', body));
+  const decide = (c: AdminCoder, approval: 'APPROVED' | 'REJECTED') => {
+    if (confirm(approval === 'APPROVED' ? `Duyệt ${c.name}? Freelancer này sẽ thấy bảng việc và nhận được đơn đã thanh toán.` : `Từ chối ${c.name}?`))
+      void patch(c, { approval });
+  };
   return (
-    <Table head={['Coder', 'Tier', 'Đơn xong', 'Ví', 'Trạng thái', '']} empty="Chưa có coder." error={error}>
+    <Table head={['Coder', 'Hồ sơ', 'Duyệt', 'Tier', 'Đơn xong', 'Ví', 'Trạng thái', '']} empty="Chưa có coder." error={error}>
       {(data?.coders ?? []).map((c) => (
         <tr key={c.id}>
           <td>
             {c.name}
             <div className="text-xs text-slate-500">{c.githubLogin ?? c.email}</div>
+            {c.phone && <div className="text-xs text-slate-500">{c.phone}</div>}
+          </td>
+          <td className="max-w-xs text-xs">
+            {c.profile ? (
+              <details>
+                <summary className="cursor-pointer font-semibold">{c.profile.headline || '(chưa có tiêu đề)'}</summary>
+                <p className="mt-1">{c.profile.experienceLevel} · {c.profile.skills.join(', ') || 'chưa ghi kỹ năng'}</p>
+                {c.profile.bio && <p className="mt-1 whitespace-pre-wrap">{c.profile.bio}</p>}
+                {[c.profile.githubUrl, ...c.profile.portfolioUrls].filter(Boolean).map((u) => (
+                  <a key={u} className="block break-all text-blue-700 underline" href={u!} target="_blank" rel="noopener noreferrer nofollow">
+                    {u}
+                  </a>
+                ))}
+              </details>
+            ) : (
+              <i>Chưa điền hồ sơ</i>
+            )}
+          </td>
+          <td>
+            {APPROVAL[c.approval]}
+            <div className="mt-1 flex gap-1">
+              {c.approval !== 'APPROVED' && (
+                <button className="btn" disabled={busy} onClick={() => decide(c, 'APPROVED')}>Duyệt</button>
+              )}
+              {c.approval !== 'REJECTED' && (
+                <button className="btn-alt" disabled={busy} onClick={() => decide(c, 'REJECTED')}>Từ chối</button>
+              )}
+            </div>
           </td>
           <td>
             <select
@@ -203,10 +241,14 @@ function Orders() {
                 {menuItemOf(o.menuItem)?.name && `${menuItemOf(o.menuItem)?.name} · `}
                 {o.customerName}
                 {o.customerEmail && ` (${o.customerEmail})`}
+                {o.customerPhone && ` · ${o.customerPhone}`}
                 {o.coderName && ` → ${o.coderName}`} · tạo {when(o.createdAt)}
                 {o.fundedAt && ` · đủ tiền ${when(o.fundedAt)}`}
               </div>
               {o.disputeReason && <div className="mt-1 text-xs text-red-700">Lý do: {o.disputeReason}</div>}
+              {o.status === 'DRAFT' && o.paymentReportedAt && (
+                <div className="mt-1 text-xs font-bold text-amber-700">Khách báo đã chuyển khoản lúc {when(o.paymentReportedAt)}: kiểm tra app ngân hàng</div>
+              )}
             </td>
             <td>{o.status}</td>
             <td>
@@ -321,6 +363,7 @@ function OrderDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <p>
             <b>{d.order.status}</b> · giá {vnd(d.order.priceVnd)} · đã nạp {vnd(d.order.paidVnd)} · escrow {vnd(d.order.escrowVnd)} · khách {d.order.customerName}
             {d.order.customerEmail && ` (${d.order.customerEmail})`}
+            {d.order.customerPhone && ` · ${d.order.customerPhone}`}
             {d.order.coderName && ` · coder ${d.order.coderName}`}
           </p>
           {d.order.disputeReason && <p className="text-red-700">Lý do tranh chấp: {d.order.disputeReason}</p>}

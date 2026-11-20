@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AIBriefSchema, OrderTierSchema } from './brief';
+import { VnPhoneSchema } from './phone';
 import { MenuItemCodeSchema } from './pricing';
 
 // Order core (S1). Postgres core.orders is the source of truth; every status change also writes an outbox event.
@@ -61,6 +62,13 @@ export const OrderCreateSchema = z.object({
   framework: z.string().max(200).default('Next.js 15 + Tailwind CSS'),
   /** Brief the customer reviewed (AI or fallback). Milestone statuses are reset to PENDING by the server. */
   brief: AIBriefSchema.extend({ milestones: AIBriefSchema.shape.milestones.min(1) }),
+  /**
+   * Saved on the customer's profile (P0-5). Required (400) while the profile has no valid Vietnamese mobile number,
+   * i.e. on the first order; optional afterwards.
+   */
+  phone: VnPhoneSchema.optional(),
+  /** The customer ticked "I agree to the terms and the refund policy" (P0-9). */
+  acceptTerms: z.literal(true),
 });
 
 /** Minimum length of the customer's note when asking for changes after delivery. */

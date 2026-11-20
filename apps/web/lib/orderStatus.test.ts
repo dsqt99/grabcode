@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Order } from '@grabcode/contracts';
-import { milestoneAmount, paysOnApproval, statusInput, statusView, type ServerStatus, type StatusInput } from './orderStatus';
+import { customerTodo, milestoneAmount, orderTab, paysOnApproval, statusInput, statusView, type ServerStatus, type StatusInput } from './orderStatus';
 
 const ms = (...st: Order['brief']['milestones'][number]['status'][]) =>
   st.map((status, i) => ({ id: `M${i + 1}`, title: '', description: '', weightPercent: [20, 50, 30][i], status }));
@@ -91,6 +91,26 @@ test('mock orders map onto server statuses; milestone amount matches the server 
   assert.equal(i.status, 'IN_PROGRESS');
   assert.deepEqual(i.money, { paidVnd: 2_900_000, heldVnd: 2_320_000, releasedVnd: 580_000, refundedVnd: 0 });
   assert.deepEqual(['M1', 'M2', 'M3'].map((id) => milestoneAmount(order, id)), [580_000, 1_450_000, 870_000]);
+});
+
+test('Màn D: what the customer must do and which tab each order lands in', () => {
+  const todo = (status: ServerStatus, milestones = ms('PENDING', 'PENDING', 'PENDING'), priceQuoted = true) =>
+    [customerTodo({ status, priceQuoted, milestones }), orderTab({ status, priceQuoted, milestones })];
+  assert.deepEqual(todo('DRAFT'), ['Chờ bạn chuyển khoản', 'action']);
+  assert.deepEqual(todo('DRAFT', undefined, false), [null, 'active'], 'waiting for the quote is not on the customer');
+  assert.deepEqual(todo('IN_PROGRESS', ms('COMPLETED', 'SUBMITTED', 'PENDING')), ['Chờ bạn duyệt M2', 'action']);
+  assert.deepEqual(todo('DELIVERED', ms('COMPLETED', 'COMPLETED', 'COMPLETED')), ['Chờ bạn nghiệm thu', 'action']);
+  assert.deepEqual(todo('FUNDED'), [null, 'active']);
+  assert.deepEqual(todo('DISPATCHED'), [null, 'active']);
+  assert.deepEqual(todo('IN_PROGRESS', ms('COMPLETED', 'IN_PROGRESS', 'PENDING')), [null, 'active']);
+  assert.deepEqual(todo('DISPUTED'), [null, 'active']);
+  assert.deepEqual(todo('ACCEPTED'), [null, 'done']);
+  assert.deepEqual(todo('RESOLVED'), [null, 'done']);
+  assert.deepEqual(todo('CANCELLED'), [null, 'cancelled']);
+});
+
+test('P0-11: waiting for a freelancer says the money arrived and the 24h refund', () => {
+  assert.match(statusView(input('FUNDED')).description, /^Đã nhận tiền, đang chờ freelancer nhận đơn\. Không ai nhận trong 24 giờ thì GrabCode hoàn tiền\.$/);
 });
 
 test('P0-7: an unquoted DRAFT waits for the quote (no payment step text), a quoted one asks for the transfer', () => {

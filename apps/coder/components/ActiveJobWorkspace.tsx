@@ -219,7 +219,7 @@ export default function ActiveJobWorkspace({
         ) : state.delivered || allDone ? (
           <button type="button" disabled={state.delivered} onClick={onDeliver} className="btn-primary min-h-[52px] w-full">
             <span className="material-symbols-outlined" aria-hidden>rocket_launch</span>
-            {state.delivered ? 'Đã nộp — chờ khách nghiệm thu' : 'Nộp bài & Bàn giao POC'}
+            {state.delivered ? 'Đã nộp — chờ khách nghiệm thu' : 'Nộp bài & bàn giao'}
           </button>
         ) : (
           <div className="flex items-center gap-3">

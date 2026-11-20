@@ -91,7 +91,7 @@ export default function InstantDispatch() {
           </div>
         </dl>
         <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full sm:w-auto">
-          Chuẩn hóa yêu cầu bằng AI
+          Xem đặc tả & báo giá
           <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
         </button>
       </div>

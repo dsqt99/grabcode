@@ -18,7 +18,7 @@ import { AuthError, useAuth } from '@grabcode/auth-ui';
 import { useCurrency } from '../../lib/currency';
 import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
 
-const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-50 disabled:text-slate-500';
+const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-normal md:text-sm disabled:bg-slate-50 disabled:text-slate-500';
 const LABEL = 'block text-sm font-semibold text-ink';
 
 const SECTIONS = [
@@ -30,7 +30,7 @@ const SECTIONS = [
 ];
 
 const EXPERIENCE: { v: ExperienceLevel; title: string; text: string }[] = [
-  { v: 'ENTRY', title: 'Mới vào nghề', text: 'Dưới 2 năm, làm POC nhỏ' },
+  { v: 'ENTRY', title: 'Mới vào nghề', text: 'Dưới 2 năm, làm app nhỏ' },
   { v: 'INTERMEDIATE', title: 'Trung cấp', text: '2–5 năm, tự build full-stack' },
   { v: 'EXPERT', title: 'Chuyên gia', text: 'Trên 5 năm, kiến trúc & AI' },
 ];
@@ -52,10 +52,9 @@ const COMPANY_SIZE: Record<CompanySize, string> = {
   S51_200: '51–200 người',
   S200_PLUS: 'Trên 200 người',
 };
+/** Only channels the notifier really sends (P0-14): WebPush. Email / Zalo ZNS come back here once they are wired. */
 const NOTIFY: { k: keyof NotificationPrefs; label: string; text: string }[] = [
-  { k: 'email', label: 'Email', text: 'Biên nhận ký quỹ, bàn giao mốc, tranh chấp' },
-  { k: 'zalo', label: 'Zalo ZNS', text: 'Tin nhắn trạng thái đơn hàng' },
-  { k: 'push', label: 'Thông báo đẩy', text: 'Cuốc đơn mới, chat realtime' },
+  { k: 'push', label: 'Thông báo đẩy', text: 'Mốc chờ duyệt, bàn giao, tin nhắn mới, việc mới (freelancer)' },
 ];
 const LOGIN_METHOD: Record<Me['loginMethod'], string> = {
   email: 'Email & mật khẩu',
@@ -576,7 +575,7 @@ function Settings() {
 
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[220px_1fr] md:px-8">
-      <aside className="md:sticky md:top-20 md:self-start">
+      <aside className="min-w-0 md:sticky md:top-20 md:self-start">
         <h1 className="font-display text-2xl font-extrabold text-ink">Cài đặt</h1>
         <nav className="mt-4 flex gap-1 overflow-x-auto md:flex-col" aria-label="Mục cài đặt">
           {SECTIONS.map((s) => (
@@ -594,10 +593,10 @@ function Settings() {
           <AccountForm me={me} />
         </Section>
         <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao cuốc cho bạn.">
-          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text="Muốn nhận cuốc đơn POC và kiếm thêm thu nhập? Bật vai trò Coder trên chính tài khoản này." />}
+          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text="Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần GrabCode duyệt trước khi nhận việc." />}
         </Section>
         <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho Coder khi nhận đơn của bạn và trên hóa đơn.">
-          {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần thuê Coder làm POC? Bật vai trò Khách hàng trên chính tài khoản này." />}
+          {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần thuê freelancer làm app? Bật vai trò Khách hàng trên chính tài khoản này." />}
         </Section>
         <Section id="prefs" title="Thông báo & hiển thị" text="Chọn kênh GrabCode được phép liên hệ bạn.">
           <PrefsForm me={me} />

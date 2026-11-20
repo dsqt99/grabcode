@@ -27,7 +27,7 @@ async function client(login, role) {
 async function startOrder(cust, coder, weights) {
   const milestones = weights.map((w, i) => ({ id: `M${i + 1}`, title: `m${i + 1}`, description: '', weightPercent: w, status: 'PENDING' }));
   const brief = { title: 'S4 smoke', scopeSummary: '', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones };
-  const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief })).body;
+  const o = (await cust('POST', '/v1/orders', { prompt: 'smoke', tier: 'EXPRESS', brief, phone: '0912345678', acceptTerms: true })).body;
   await cust('POST', '/v1/payments/dev-deposit', { orderId: o.id });
   for (let i = 0; i < 40; i++) {
     const { offers } = (await coder('GET', '/v1/me/offers')).body;

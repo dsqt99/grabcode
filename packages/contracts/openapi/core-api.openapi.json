@@ -3667,6 +3667,21 @@
               }
             ]
           },
+          "coderApproval": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "APPROVED",
+                  "REJECTED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string"
           }
@@ -3689,6 +3704,7 @@
           "coderProfile",
           "customerProfile",
           "coderStats",
+          "coderApproval",
           "createdAt"
         ],
         "additionalProperties": false
@@ -4949,12 +4965,21 @@
               "milestones",
               "claudeMdContent"
             ]
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "acceptTerms": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
           "prompt",
           "menuItem",
-          "brief"
+          "brief",
+          "acceptTerms"
         ]
       },
       "Order": {
@@ -6125,6 +6150,12 @@
           },
           "devDeposit": {
             "type": "boolean"
+          },
+          "reportedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -6136,7 +6167,8 @@
           "priceQuoted",
           "bank",
           "autoConfirm",
-          "devDeposit"
+          "devDeposit",
+          "reportedAt"
         ],
         "additionalProperties": false
       },
@@ -7493,6 +7525,87 @@
               }
             ]
           },
+          "approval": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "headline": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "bio": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "skills": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40
+                    }
+                  },
+                  "experienceLevel": {
+                    "type": "string",
+                    "enum": [
+                      "ENTRY",
+                      "INTERMEDIATE",
+                      "EXPERT"
+                    ]
+                  },
+                  "githubUrl": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 300,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "portfolioUrls": {
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 300,
+                      "format": "uri"
+                    }
+                  }
+                },
+                "required": [
+                  "headline",
+                  "bio",
+                  "skills",
+                  "experienceLevel",
+                  "githubUrl",
+                  "portfolioUrls"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "suspended": {
             "type": "boolean"
           },
@@ -7520,6 +7633,9 @@
           "email",
           "tier",
           "tierOverride",
+          "approval",
+          "profile",
+          "phone",
           "suspended",
           "online",
           "completedOrders",
@@ -7581,6 +7697,87 @@
                     }
                   ]
                 },
+                "approval": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "APPROVED",
+                    "REJECTED"
+                  ]
+                },
+                "profile": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "headline": {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        "bio": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "skills": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40
+                          }
+                        },
+                        "experienceLevel": {
+                          "type": "string",
+                          "enum": [
+                            "ENTRY",
+                            "INTERMEDIATE",
+                            "EXPERT"
+                          ]
+                        },
+                        "githubUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 300,
+                              "format": "uri"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "portfolioUrls": {
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 300,
+                            "format": "uri"
+                          }
+                        }
+                      },
+                      "required": [
+                        "headline",
+                        "bio",
+                        "skills",
+                        "experienceLevel",
+                        "githubUrl",
+                        "portfolioUrls"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "suspended": {
                   "type": "boolean"
                 },
@@ -7608,6 +7805,9 @@
                 "email",
                 "tier",
                 "tierOverride",
+                "approval",
+                "profile",
+                "phone",
                 "suspended",
                 "online",
                 "completedOrders",
@@ -7644,6 +7844,13 @@
           },
           "suspended": {
             "type": "boolean"
+          },
+          "approval": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ]
           }
         }
       },
@@ -7741,6 +7948,18 @@
               "null"
             ]
           },
+          "customerPhone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paymentReportedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "coderName": {
             "type": [
               "string",
@@ -7774,6 +7993,8 @@
           "disputeReason",
           "customerName",
           "customerEmail",
+          "customerPhone",
+          "paymentReportedAt",
           "coderName",
           "fundedAt",
           "createdAt",
@@ -7880,6 +8101,18 @@
                     "null"
                   ]
                 },
+                "customerPhone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "paymentReportedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "coderName": {
                   "type": [
                     "string",
@@ -7913,6 +8146,8 @@
                 "disputeReason",
                 "customerName",
                 "customerEmail",
+                "customerPhone",
+                "paymentReportedAt",
                 "coderName",
                 "fundedAt",
                 "createdAt",
@@ -8024,6 +8259,18 @@
                   "null"
                 ]
               },
+              "customerPhone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "paymentReportedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "coderName": {
                 "type": [
                   "string",
@@ -8057,6 +8304,8 @@
               "disputeReason",
               "customerName",
               "customerEmail",
+              "customerPhone",
+              "paymentReportedAt",
               "coderName",
               "fundedAt",
               "createdAt",

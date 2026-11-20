@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { RequireAuth } from '@grabcode/auth-ui';
 import { AuthProvider } from '@grabcode/auth-ui';
+import ApprovalGate from '../components/ApprovalGate';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <RequireAuth role="CODER">{children}</RequireAuth>
+          <RequireAuth role="CODER">
+            <ApprovalGate>{children}</ApprovalGate>
+          </RequireAuth>
         </AuthProvider>
       </body>
     </html>

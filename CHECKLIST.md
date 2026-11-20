@@ -197,6 +197,20 @@
 - [ ] `tier` (4 gói cũ) còn trong DB/contract làm trường kế thừa mặc định `STANDARD`: gỡ hẳn khi dọn brief-worker
 - [ ] 👤 Founder duyệt `CODER_PAYOUT_RATE` (HON-9 đề xuất 75%, đang 70%)
 
+## Ra mắt VN — P0-B luồng khách/freelancer (HON-20) — branch `feat/p0b-launch-flows`
+
+- [x] Màn A thanh toán: sao chép số tiền/STK/nội dung, QR 240px + lưu ảnh, cảnh báo nội dung, "Tôi đã chuyển khoản" → `POST /v1/orders/:id/payment/reported` (1 lần, event `payment.reported`), liên hệ hỗ trợ khi chưa cấu hình ngân hàng — 09b69e7
+- [x] `/orders` "Đơn của tôi" + việc khách cần làm + link Navbar — 09b69e7
+- [x] P0-5: SĐT di động VN bắt buộc ở đơn đầu (lưu hồ sơ, chuẩn hoá 0xxxxxxxxx); admin thấy SĐT — e7bf992
+- [x] P0-2/B5: notifier push `milestone.submitted` (khách), `rejected`/`approved` (coder, kèm tiền vào ví) — ebb47e1
+- [x] P0-8: coder mới `coder_approval=PENDING`, jobs/offers/presence/claim/accept 403; admin Duyệt/Từ chối + xem hồ sơ; migration 0019 duyệt toàn bộ coder hiện có — e7bf992 3994979
+- [x] Gỡ copy demo (POC / Instant Dispatch / vài giờ), API mode không render preview giả, AI brief lỗi → "Thử lại", sửa prompt → khoá CTA; build prod fail nếu thiếu `NEXT_PUBLIC_API_URL` / kênh hỗ trợ — 09b69e7 dd94f52
+- [x] `/dieu-khoan`, `/chinh-sach-hoan-tien` (BẢN NHÁP), footer, checkbox đồng ý (server bắt `acceptTerms`) — 09b69e7
+- [x] `/profile` chỉ hiện kênh push; mobile: sticky CTA, input 16px, nút primary #00873D, header 56px, 0 lỗi contrast axe ở các màn đã sửa — 294cc89
+- [ ] 👤 Founder: nội dung pháp lý thật cho 2 trang điều khoản; số Zalo/hotline thật (`SUPPORT_ZALO` / `SUPPORT_HOTLINE`); giờ đối soát
+- [ ] 👤 Founder: danh sách coder được duyệt (migration đang duyệt toàn bộ coder hiện có)
+- [ ] P0-C: kênh báo admin (Telegram) tiêu thụ `payment.reported`
+
 ## Nợ kỹ thuật (từ comment `shortcut:` trong code)
 
 - [x] Rate limit login: 10 lần sai / email, 30 / IP trong 15 phút → 429 — `91e898b` `a83414c`

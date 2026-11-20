@@ -2,13 +2,14 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@grabcode/auth-ui';
+import Footer from '../components/Footer';
 import { CurrencyProvider } from '../lib/currency';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'GrabCode — Đặt POC như đặt đồ ăn',
+  title: 'GrabCode — Đặt làm app như đặt đồ ăn',
   description: 'Đặt làm app cho shop và SME: AI soạn đặc tả, freelancer vibe code làm, tiền giữ ký quỹ và chỉ giải ngân khi bạn duyệt từng mốc.',
 };
 
@@ -23,7 +24,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <CurrencyProvider>{children}</CurrencyProvider>
+          <CurrencyProvider>
+            {children}
+            <Footer />
+          </CurrencyProvider>
         </AuthProvider>
       </body>
     </html>

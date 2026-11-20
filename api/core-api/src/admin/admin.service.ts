@@ -25,7 +25,7 @@ import {
   type SuspenseItem,
 } from '@grabcode/contracts/schemas';
 import { DB, type Db } from '../db/client';
-import { briefJobs, dispatchOffers, ledgerEntries, ledgerTxs, orderMessages, orderRepos, orders, outbox, payoutRequests, refunds, sessions, users } from '../db/schema';
+import { briefJobs, coderProfiles, dispatchOffers, ledgerEntries, ledgerTxs, orderMessages, orderRepos, orders, outbox, payoutRequests, refunds, sessions, users } from '../db/schema';
 import { chatOf, emit, fundIfCovered, requestSandbox, type Tx } from '../orders/orders.service';
 import { balanceOf, postTx } from '../payments/ledger.db';
 import { SUSPENSE, coderOf, depositEntries, escrowOf, moveEntries, payoutEntries, resolveEntries } from '../payments/ledger';
@@ -79,15 +79,20 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
 
   async coders(id?: string): Promise<AdminCoder[]> {
     const rows = await this.db
-      .select({ u: users, accepted: acceptedCount, balance: walletOf })
+      .select({ u: users, p: coderProfiles, accepted: acceptedCount, balance: walletOf })
       .from(users)
+      .leftJoin(coderProfiles, eq(coderProfiles.userId, users.id))
       .where(and(sql`'CODER' = any(${users.roles})`, id ? eq(users.id, id) : undefined))
-      .orderBy(asc(users.createdAt));
-    return rows.map(({ u, accepted, balance }) => ({
+      // Applications waiting for a decision first.
+      .orderBy(sql`${users.coderApproval} is distinct from 'PENDING'`, asc(users.createdAt));
+    return rows.map(({ u, p, accepted, balance }) => ({
       id: u.id,
       name: u.name,
       githubLogin: u.githubLogin,
       email: u.email,
+      approval: u.coderApproval ?? 'PENDING',
+      profile: p && { headline: p.headline, bio: p.bio, skills: p.skills, experienceLevel: p.experienceLevel, githubUrl: p.githubUrl, portfolioUrls: p.portfolioUrls },
+      phone: u.phone,
       tier: u.tierOverride ?? coderTierFor(accepted),
       tierOverride: u.tierOverride,
       suspended: u.suspended,
@@ -102,8 +107,9 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     const set: Partial<typeof users.$inferInsert> = {};
     if (patch.tierOverride !== undefined) set.tierOverride = patch.tierOverride;
     if (patch.suspended !== undefined) set.suspended = patch.suspended;
-    // A suspended coder also drops off the online pool right away.
-    if (patch.suspended) set.online = false;
+    if (patch.approval !== undefined) set.coderApproval = patch.approval;
+    // A suspended (or rejected) coder also drops off the online pool right away.
+    if (patch.suspended || patch.approval === 'REJECTED') set.online = false;
     const [row] = await this.db
       .update(users)
       .set(set)
@@ -119,7 +125,7 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
   /** attention: what an admin must act on (unpaid drafts first of all: confirm the transfer). all: latest orders. */
   async orders(id?: string, view: 'attention' | 'all' = 'attention'): Promise<AdminOrder[]> {
     const rows = await this.db
-      .select({ o: orders, customerName: customer.name, customerEmail: customer.email, coderName: coder.name, escrow: escrowSql, paid: paidSql })
+      .select({ o: orders, customerName: customer.name, customerEmail: customer.email, customerPhone: customer.phone, coderName: coder.name, escrow: escrowSql, paid: paidSql })
       .from(orders)
       .innerJoin(customer, eq(customer.id, orders.customerUserId))
       .leftJoin(coder, eq(coder.id, orders.coderUserId))
@@ -139,7 +145,7 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       )
       .orderBy(desc(orders.updatedAt))
       .limit(200);
-    return rows.map(({ o, customerName, customerEmail, coderName, escrow, paid }) => ({
+    return rows.map(({ o, customerName, customerEmail, customerPhone, coderName, escrow, paid }) => ({
       id: o.id,
       status: o.status,
       title: o.title,
@@ -153,6 +159,8 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       disputeReason: o.disputeReason,
       customerName,
       customerEmail,
+      customerPhone,
+      paymentReportedAt: o.paymentReportedAt ? iso(o.paymentReportedAt) : null,
       coderName,
       fundedAt: o.fundedAt ? iso(o.fundedAt) : null,
       createdAt: iso(o.createdAt),

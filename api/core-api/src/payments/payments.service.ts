@@ -1,10 +1,10 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { paymentCodeOf, vietQrUrl, type PaymentInstructions, type Wallet } from '@grabcode/contracts/schemas';
+import { SUBJECTS, paymentCodeOf, vietQrUrl, type PaymentInstructions, type PaymentReportedEvent, type Wallet } from '@grabcode/contracts/schemas';
 import { DEV_LOGIN_ENABLED, PAYMENT_ACCOUNT_NAME, PAYMENT_ACCOUNT_NUMBER, PAYMENT_BANK_ID, PAYMENT_BANK_NAME, SEPAY_WEBHOOK_API_KEY } from '../config';
 import { DB, type Db } from '../db/client';
-import { ledgerEntries, ledgerTxs, orders, users } from '../db/schema';
+import { ledgerEntries, ledgerTxs, orders, outbox, users } from '../db/schema';
 import { fundIfCovered } from '../orders/orders.service';
 import { coderOf, depositEntries } from './ledger';
 import { balanceOf, paidFor, postTx } from './ledger.db';
@@ -50,7 +50,46 @@ export class PaymentsService {
             qrUrl: vietQrUrl(PAYMENT_BANK_ID, PAYMENT_ACCOUNT_NUMBER, PAYMENT_ACCOUNT_NAME, dueVnd, content),
           }
         : null;
-    return { orderId: row.id, priceVnd: row.priceVnd, paidVnd, dueVnd, content, priceQuoted, bank, autoConfirm: !!SEPAY_WEBHOOK_API_KEY, devDeposit: DEV_LOGIN_ENABLED };
+    return {
+      orderId: row.id,
+      priceVnd: row.priceVnd,
+      paidVnd,
+      dueVnd,
+      content,
+      priceQuoted,
+      bank,
+      autoConfirm: !!SEPAY_WEBHOOK_API_KEY,
+      devDeposit: DEV_LOGIN_ENABLED,
+      reportedAt: row.paymentReportedAt?.toISOString() ?? null,
+    };
+  }
+
+  /**
+   * "Tôi đã chuyển khoản" (P0-4): stamps the order and emits payment.reported for the admin alert, once per order (a repeat is
+   * a no-op, so double taps do not spam ops). Books nothing: an admin still checks the bank and confirms the payment.
+   */
+  async reportTransfer(user: UserRow, orderId: string): Promise<PaymentInstructions> {
+    const row = await this.ownOrder(user, orderId);
+    if (row.status !== 'DRAFT') throw new ConflictException({ message: `Order is ${row.status}, not waiting for payment` });
+    // No QR before the admin quotes the price (Q3), so there is no transfer to report yet.
+    if (!row.priceQuotedAt) throw new ConflictException({ message: 'The price is not quoted yet' });
+    const dueVnd = Math.max(0, row.priceVnd - (await paidFor(this.db, row.id)));
+    await this.db.transaction(async (tx) => {
+      const [stamped] = await tx
+        .update(orders)
+        .set({ paymentReportedAt: sql`now()` })
+        .where(and(eq(orders.id, row.id), eq(orders.status, 'DRAFT'), isNull(orders.paymentReportedAt)))
+        .returning({ id: orders.id });
+      if (!stamped) return;
+      const event: PaymentReportedEvent = {
+        event_id: randomUUID(),
+        type: SUBJECTS.PAYMENT_REPORTED,
+        occurred_at: new Date().toISOString(),
+        data: { orderId: row.id, customerUserId: row.customerUserId, dueVnd, content: paymentCodeOf(row.id) },
+      };
+      await tx.insert(outbox).values({ eventId: event.event_id, subject: event.type, payload: event });
+    });
+    return this.instructions(user, orderId);
   }
 
   /** Dev only: pretend the customer transferred the remaining amount. */

@@ -35,7 +35,7 @@ await admin('POST', '/v1/auth/dev-login', { login: `mvp-admin-${run}`, role: 'AD
 // 1. Customer posts. Client-chosen milestone ids are replaced (duplicates would merge two escrow releases).
 const milestones = [20, 80].map((w) => ({ id: 'dup', title: `m${w}`, description: '', weightPercent: w, status: 'COMPLETED' }));
 const brief = { title: 'MVP smoke', scopeSummary: 'shop', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones };
-const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', tier: 'STANDARD', brief });
+const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', tier: 'STANDARD', brief, phone: '0912345678', acceptTerms: true });
 ok(created.status === 201 && created.body.status === 'DRAFT', `order ${created.body.id} DRAFT`);
 const o = created.body;
 ok(o.brief.milestones.map((m) => `${m.id}:${m.status}`).join() === 'M1:PENDING,M2:PENDING', 'server-assigned milestone ids, progress reset');

@@ -117,11 +117,15 @@ test('P0-7: a new order starts at the menu "giá từ", unquoted: no QR, a trans
     prompt: 'Landing page bán khoá học',
     menuItem: 'LANDING',
     brief: { ...brief(), milestones: brief().milestones },
+    acceptTerms: true,
+    phone: '0912345678',
   });
   const o = await svc.create(customer, input);
   assert.deepEqual([o.menuItem, o.priceVnd, o.priceQuotedAt, o.etaHours], ['LANDING', landing.fromPriceVnd, null, landing.days[1] * 24]);
   const pay = await payments.instructions(customer, o.id);
   assert.deepEqual([pay.priceQuoted, pay.bank], [false, null]);
+  // No QR yet, so there is no transfer to report (P0-4 needs the quote first).
+  await rejects(payments.reportTransfer(customer, o.id), ConflictException);
 
   // The customer transferred anyway: booked on escrow, order stays DRAFT.
   await adminSvc.confirmPayment(admin, o.id, { amountVnd: 3_000_000, reference: 'FT100' });
