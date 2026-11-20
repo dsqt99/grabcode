@@ -15,6 +15,10 @@ name: deploy-staging
 #   STAGING_SSH_KNOWN_HOSTS  output of `ssh-keyscan -H <host>` taken from a trusted machine; without it the host key
 #                            is fetched during the run (trust on first use)
 #   STAGING_APP_DIR          checkout folder on the VPS, default ~/grabcode
+#   STAGING_HTTP_PORT        SHARED-VPS mode (production already on that VPS): Caddy runs plain HTTP on 127.0.0.1:<port>, no 80/443,
+#                            and your own reverse proxy maps the domain to it. The final check then curls that port over SSH
+#                            instead of https://<domain> (which may not be mapped yet). Unset = standalone staging on 80/443.
+#   STAGING_BIND_PUBLIC      "true" binds 0.0.0.0 instead of 127.0.0.1 (shared mode only; firewall the port)
 
 on:
   workflow_dispatch:
@@ -41,7 +45,9 @@ jobs:
           USER_NAME: ${{ secrets.STAGING_SSH_USER }}
           KEY: ${{ secrets.STAGING_SSH_KEY }}
           DOMAIN: ${{ secrets.STAGING_DOMAIN }}
+          HTTP_PORT: ${{ secrets.STAGING_HTTP_PORT }}
         run: |
+          [ -z "$HTTP_PORT" ] || echo "shared=true" >> "$GITHUB_OUTPUT"
           missing=""
           [ -n "$HOST" ] || missing="$missing STAGING_SSH_HOST"
           [ -n "$USER_NAME" ] || missing="$missing STAGING_SSH_USER"
@@ -65,6 +71,8 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
           DOMAIN: ${{ secrets.STAGING_DOMAIN }}
           APP_DIR: ${{ secrets.STAGING_APP_DIR }}
+          HTTP_PORT: ${{ secrets.STAGING_HTTP_PORT }}
+          BIND_PUBLIC: ${{ secrets.STAGING_BIND_PUBLIC }}
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -74,19 +82,31 @@ jobs:
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           else ssh-keyscan -H -p "${PORT:-22}" "$HOST" > ~/.ssh/known_hosts 2>/dev/null; fi
           ssh -i ~/.ssh/staging_key -p "${PORT:-22}" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$USER_NAME@$HOST" bash -s -- "$SHA" "$DOMAIN" "${APP_DIR:-}" <<'REMOTE'
+            "$USER_NAME@$HOST" bash -s -- "$SHA" "$DOMAIN" "${APP_DIR:-}" "${HTTP_PORT:-}" "${BIND_PUBLIC:-}" <<'REMOTE'
           set -euo pipefail
-          sha="$1"; domain="$2"; dir="${3:-$HOME/grabcode}"
+          sha="$1"; domain="$2"; dir="${3:-$HOME/grabcode}"; port="${4:-}"; public="${5:-}"
           [ -d "$dir/.git" ] || { echo "No checkout in $dir: do the one-time setup in docs/STAGING.md (section 3)."; exit 1; }
           cd "$dir"
           git fetch --prune origin
           git checkout --force --detach "$sha"
-          ./infra/deploy/staging-up.sh "$domain"
+          args=()
+          [ -z "$port" ] || args+=(--port "$port")
+          [ "$public" != "true" ] || args+=(--public)
+          ./infra/deploy/staging-up.sh ${args[@]+"${args[@]}"} "$domain"
+          if [ -n "$port" ]; then
+            ok=0
+            for _ in $(seq 1 20); do
+              if curl -fsS --max-time 10 "http://127.0.0.1:$port/v1/auth/providers" >/dev/null; then ok=1; break; fi
+              sleep 6
+            done
+            [ "$ok" = 1 ] || { echo "::error::http://127.0.0.1:$port/v1/auth/providers did not answer on the VPS"; exit 1; }
+            echo "Staging answers on 127.0.0.1:$port of the VPS (map your domain to it)."
+          fi
           REMOTE
           rm -f ~/.ssh/staging_key
 
       - name: Check the site answers
-        if: steps.cfg.outputs.configured == 'true'
+        if: steps.cfg.outputs.configured == 'true' && steps.cfg.outputs.shared != 'true'
         env:
           DOMAIN: ${{ secrets.STAGING_DOMAIN }}
         run: |

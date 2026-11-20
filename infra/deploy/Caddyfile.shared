@@ -1,0 +1,27 @@
+# SHARED-VPS staging (docs/STAGING.md): plain HTTP behind the operator's own reverse proxy, which terminates TLS.
+# Used only via docker-compose.staging-shared.yml. Never listens on 80/443 of the host (compose publishes 127.0.0.1:<port> only).
+{
+	auto_https off
+	servers {
+		# Believe X-Forwarded-Proto/For from these sources (the operator's proxy, seen through Docker NAT as a private IP).
+		# Caddy then keeps X-Forwarded-Proto=https and appends to X-Forwarded-For; core-api uses TRUST_PROXY=2 (proxy + Caddy).
+		trusted_proxies static {$STAGING_TRUSTED_PROXIES:private_ranges}
+	}
+}
+
+:80 {
+	encode gzip
+
+	handle /v1/* {
+		reverse_proxy core-api:4000
+	}
+	handle /coder* {
+		reverse_proxy coder:3001
+	}
+	handle /admin* {
+		reverse_proxy admin:3002
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
