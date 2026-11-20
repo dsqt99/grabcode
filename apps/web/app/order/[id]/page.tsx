@@ -15,10 +15,10 @@ import RefundAccountCard from '../../../components/RefundAccountCard';
 import SandboxFrame from '../../../components/SandboxFrame';
 import { getMessages, getOrder, getOrderRepo, handoverRepo, onHint, ordersApiEnabled, sendMessage, reviewMilestone, transitionOrder } from '../../../lib/api';
 import { useCurrency } from '../../../lib/currency';
-import { milestoneAmount, statusInput, statusView, type Tone } from '../../../lib/orderStatus';
+import { milestoneAmount, paysOnApproval, statusInput, statusView, type Tone } from '../../../lib/orderStatus';
 import { ORDERS_KEY, loadChat, loadOrder, saveChat, saveOrder } from '../../../lib/orderStore';
 import { progressPercent } from '../../../lib/orderView';
-import { formatVnd } from '../../../lib/pricing';
+import { etaLabel, formatVnd, menuItemOf } from '../../../lib/pricing';
 
 const POLL_MS = 3000;
 const LONG_WAIT_MS = 30 * 60_000;
@@ -275,8 +275,9 @@ export default function OrderPage() {
   const percent = progressPercent(order);
   const delivered = input.status === 'DELIVERED' || input.status === 'ACCEPTED';
   const amountOf = (milestoneId: string) => milestoneAmount(order, milestoneId);
-  /** What accepting the whole order pays now: the shares of milestones not approved yet (same as the server sweep). */
-  const acceptVnd = order.brief.milestones.reduce((s, m) => s + (m.status === 'COMPLETED' ? 0 : amountOf(m.id)), 0);
+  /** What accepting the whole order pays now: every share still held, incl. the last milestone (same as the server sweep). */
+  const acceptVnd = heldVnd;
+  const item = menuItemOf(order.menuItem);
 
   const openSheet = (next: Sheet) => {
     setSheet(next);
@@ -330,13 +331,14 @@ export default function OrderPage() {
       pushChat(systemMsg(order.id, 'Đã nghiệm thu đơn. Cảm ơn bạn!'));
     });
 
-  // Order-level revision (DELIVERED -> IN_PROGRESS): the note goes to the coder as a real chat message first.
+  // Order-level revision (DELIVERED -> IN_PROGRESS): the server reopens the last milestone with the note (the coder sees it
+  // there and hands in again); the same note also goes into the chat.
   const requestRevision = () =>
     run(async () => {
       const text = `Yêu cầu sửa: ${note.trim()}`;
       if (ordersApiEnabled) {
-        pushChat(await sendMessage(order.id, text));
-        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS'), await getOrderRepo(order.id)));
+        showOrder(toViewOrder(await transitionOrder(order.id, 'IN_PROGRESS', note.trim()), await getOrderRepo(order.id)));
+        await sendMessage(order.id, text).then(pushChat, console.warn);
       } else {
         sendChat(text);
       }
@@ -408,21 +410,21 @@ export default function OrderPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="chip-dark">{order.id}</span>
               <span className={CHIP[sv.tone]}>{sv.label}</span>
-              <span className="chip bg-slate-100 text-slate-600">{order.tier}</span>
+              {item && <span className="chip bg-slate-100 text-slate-600">{item.name}</span>}
             </div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">{order.title}</h1>
             <p className="mt-1 text-sm text-slate-600">{sv.description}</p>
           </div>
           <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             <div>
-              <dt className="text-slate-500">Giá đơn</dt>
+              <dt className="text-slate-500">{input.priceQuoted ? 'Giá đơn' : 'Giá từ (chờ báo giá)'}</dt>
               <dd className="font-display font-extrabold text-emerald-dark">
                 {formatVnd(order.priceVnd)}
                 {usd(order.priceVnd) && <span className="ml-2 text-xs font-normal text-slate-500">{usd(order.priceVnd)}</span>}
               </dd>
             </div>
             <div><dt className="text-slate-500">Tiền của đơn</dt><dd className="font-semibold">{sv.money}</dd></div>
-            <div><dt className="text-slate-500">Dự kiến xong</dt><dd className="font-semibold">~{order.etaHours} giờ</dd></div>
+            <div><dt className="text-slate-500">Thời gian</dt><dd className="font-semibold">{etaLabel(order.etaHours)}</dd></div>
           </dl>
         </header>
 
@@ -501,6 +503,7 @@ export default function OrderPage() {
               milestones={order.brief.milestones}
               onReview={ordersApiEnabled && sv.canReview ? (id, approve) => openSheet({ kind: approve ? 'approve' : 'reject', milestoneId: id }) : undefined}
               amountOf={amountOf}
+              paysOnApproval={(id) => paysOnApproval(order, id)}
             />
             <OrderChatBox messages={chat} onSend={sendChat} coderName={order.assignedCoder?.name} />
           </div>
@@ -511,7 +514,7 @@ export default function OrderPage() {
         <ConfirmSheet
           {...sheetProps}
           title={`Duyệt mốc ${sheetMilestone.id} · ${sheetMilestone.title}`}
-          confirmLabel={`Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}`}
+          confirmLabel={paysOnApproval(order, sheetMilestone.id) ? `Duyệt & trả ${formatVnd(amountOf(sheetMilestone.id))}` : 'Duyệt mốc cuối'}
           canConfirm={ticked && sheetMilestone.qa?.status !== 'FAILED'}
           onConfirm={() => review(sheetMilestone.id, true)}
         >
@@ -527,13 +530,23 @@ export default function OrderPage() {
           )}
           {sheetMilestone.note && <p>Ghi chú của freelancer: “{sheetMilestone.note}”</p>}
           {sheetMilestone.qa && <p>Kiểm tra tự động: {sheetMilestone.qa.status === 'PASSED' ? 'Đạt ✓' : sheetMilestone.qa.status === 'FAILED' ? 'Không đạt ✗ — hãy yêu cầu sửa' : 'Chưa có kết quả'}</p>}
-          <div className="rounded-md bg-amber-50 p-3">
-            <p className="flex justify-between gap-3 font-semibold text-ink">
-              <span>Bạn sẽ trả cho mốc này</span>
-              <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
-            </p>
-            <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
-          </div>
+          {paysOnApproval(order, sheetMilestone.id) ? (
+            <div className="rounded-md bg-amber-50 p-3">
+              <p className="flex justify-between gap-3 font-semibold text-ink">
+                <span>Bạn sẽ trả cho mốc này</span>
+                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
+              </p>
+              <p className="mt-1 text-amber-900">Sau khi duyệt, khoản này được chuyển cho freelancer và không hoàn lại được.</p>
+            </div>
+          ) : (
+            <div className="rounded-md bg-slate-50 p-3">
+              <p className="flex justify-between gap-3 font-semibold text-ink">
+                <span>Tiền mốc cuối</span>
+                <span className="font-display tabular-nums">{formatVnd(amountOf(sheetMilestone.id))}</span>
+              </p>
+              <p className="mt-1 text-slate-700">Duyệt mốc cuối chưa trả tiền: khoản này được GrabCode giữ tới khi bạn nghiệm thu cả đơn.</p>
+            </div>
+          )}
           {tick('Tôi đã mở link và kiểm tra mốc này')}
         </ConfirmSheet>
       )}
@@ -562,13 +575,14 @@ export default function OrderPage() {
           <ul className="space-y-1">
             {order.brief.milestones.map((m) => (
               <li key={m.id}>
-                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title} {m.status === 'COMPLETED' ? '(đã duyệt)' : '(chưa duyệt, sẽ được trả cùng lúc)'}
+                {m.status === 'COMPLETED' ? '✓' : '◻'} {m.id} · {m.title}{' '}
+                {m.status !== 'COMPLETED' ? '(chưa duyệt, sẽ được trả cùng lúc)' : paysOnApproval(order, m.id) ? '(đã duyệt, đã trả)' : '(đã duyệt, trả khi nghiệm thu)'}
               </li>
             ))}
           </ul>
           <div className="rounded-md bg-amber-50 p-3">
             <p className="flex justify-between gap-3 font-semibold text-ink">
-              <span>Số tiền sẽ trả freelancer ngay</span>
+              <span>Số tiền sẽ giải ngân ngay</span>
               <span className="font-display tabular-nums">{formatVnd(acceptVnd)}</span>
             </p>
             <p className="mt-1 text-amber-900">Sau khi nghiệm thu: đơn hoàn tất, không mở tranh chấp được nữa, tiền đã trả không hoàn lại được.</p>
@@ -586,7 +600,7 @@ export default function OrderPage() {
           onConfirm={requestRevision}
         >
           {noteField('Cần freelancer sửa gì?', REVISION_HINTS)}
-          <p className="text-slate-600">Nội dung này được gửi vào chat của đơn và đơn quay lại trạng thái đang làm.</p>
+          <p className="text-slate-600">Freelancer thấy nội dung này ở mốc cuối và nộp lại bản sửa để bạn duyệt. Nội dung cũng được gửi vào chat của đơn.</p>
         </ConfirmSheet>
       )}
 

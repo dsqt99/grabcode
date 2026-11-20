@@ -29,6 +29,8 @@ export function toViewOrder(o: OrderDto, repo?: OrderRepo | null): Order {
     templateName: SEED_TEMPLATES.find((t) => t.id === o.templateId)?.title,
     framework: o.framework,
     priceVnd: o.priceVnd,
+    menuItem: o.menuItem ?? undefined,
+    priceQuoted: !!o.priceQuotedAt,
     payoutVnd: o.payoutVnd,
     serverStatus: o.status,
     money: o.money,
