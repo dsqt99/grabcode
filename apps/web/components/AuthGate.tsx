@@ -205,7 +205,7 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
           <h2 className="relative font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
             Đặt làm app như đặt đồ ăn. <span className="text-primary-fixed">Duyệt từng mốc</span> rồi mới trả tiền.
           </h2>
-          <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và Coder nhận đơn.</p>
+          <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và freelancer nhận đơn.</p>
           <ul className="relative mt-8 space-y-4">
             {PERKS.map((p) => (
               <li key={p.icon} className="flex items-center gap-3">

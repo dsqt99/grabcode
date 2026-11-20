@@ -38,6 +38,9 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
     }
   }, [open]);
 
+  // The order page unmounts the sheet instead of passing open=false: give focus back to the opener then too (Màn C AC4).
+  useEffect(() => () => (opener.current as HTMLElement | null)?.focus?.(), []);
+
   const close = () => !busy && onClose();
 
   return (

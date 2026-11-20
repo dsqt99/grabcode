@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { payoutOf } from '@grabcode/contracts/schemas';
@@ -259,7 +260,17 @@ export default function OrderPage() {
     return (
       <>
         <Navbar />
-        <p className="p-10 text-center text-slate-500">{missing ? 'Không tìm thấy đơn này hoặc bạn không có quyền xem.' : 'Đang tải đơn hàng...'}</p>
+        {missing ? (
+          <section className="mx-auto max-w-md space-y-4 px-4 py-12 text-center">
+            <p className="font-display text-lg font-bold text-ink">Không tìm thấy đơn này hoặc bạn không có quyền xem.</p>
+            <Link href="/orders" className="btn-primary">Về Đơn của tôi</Link>
+          </section>
+        ) : (
+          <div className="mx-auto max-w-7xl space-y-4 px-4 py-8 md:px-8" aria-busy="true" aria-label="Đang tải đơn hàng">
+            <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+            {[0, 1, 2].map((i) => <div key={i} className="h-32 animate-pulse rounded-lg bg-slate-100" />)}
+          </div>
+        )}
       </>
     );
   }
@@ -370,19 +381,21 @@ export default function OrderPage() {
 
   const sheetMilestone = sheet && 'milestoneId' in sheet ? order.brief.milestones.find((m) => m.id === sheet.milestoneId) : undefined;
   const minNote = sheet && sheet.kind in MIN_NOTE ? MIN_NOTE[sheet.kind as keyof typeof MIN_NOTE] : 0;
+  // A <div>, not a <label>: a label around the hint buttons would name the first button instead of the textarea.
   const noteField = (label: string, hints?: string[]) => (
-    <label className="block">
-      <span className="font-semibold text-ink">{label}</span>
+    <div>
+      <label htmlFor="sheet-note" className="block font-semibold text-ink">{label}</label>
       {hints && (
         <span className="mt-2 flex flex-wrap gap-2">
           {hints.map((h) => (
-            <button key={h} type="button" className="chip min-h-[32px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
+            <button key={h} type="button" className="chip min-h-[44px] bg-slate-100 text-slate-700" onClick={() => setNote(note ? `${note.trim()}. ${h}` : h)}>
               {h}
             </button>
           ))}
         </span>
       )}
       <textarea
+        id="sheet-note"
         className="mt-2 w-full p-3 !text-base"
         rows={4}
         maxLength={2000}
@@ -394,7 +407,7 @@ export default function OrderPage() {
         {note.trim().length < minNote ? `Tối thiểu ${minNote} ký tự · ` : ''}
         {note.length}/2000
       </span>
-    </label>
+    </div>
   );
   const tick = (label: string) => (
     <label className="flex min-h-[44px] items-center gap-3 rounded-md border border-slate-200 p-3 font-semibold text-ink">
@@ -431,6 +444,9 @@ export default function OrderPage() {
           </dl>
         </header>
 
+        {/* Unpaid: the amount and QR come first on mobile (Màn A), the stepper only says "step 1" anyway. */}
+        {ordersApiEnabled && input.status === 'DRAFT' && <PaymentPanel orderId={order.id} />}
+
         <LiveStepper step={sv.step} percent={percent} />
 
         {input.status === 'DISPUTED' && (
@@ -439,8 +455,6 @@ export default function OrderPage() {
             {order.disputeReason && <p className="mt-1">Lý do: {order.disputeReason}</p>}
           </div>
         )}
-
-        {ordersApiEnabled && input.status === 'DRAFT' && <PaymentPanel orderId={order.id} />}
 
         {(input.status === 'FUNDED' || input.status === 'DISPATCHED') && (
           <div className="card flex items-center gap-4 border-emerald/40 bg-emerald-mint/50 shadow-l2" role="status">
@@ -462,7 +476,8 @@ export default function OrderPage() {
           <div className="min-w-0 space-y-6">
             {/* Real orders: a live preview when one is READY, otherwise the freelancer's links (never a generated demo). */}
             {ordersApiEnabled && !order.demoUrl ? order.assignedCoder && <DeliveryLinks order={order} /> : <SandboxFrame order={order} delivered={delivered} />}
-            <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />
+            {/* Real orders: no empty terminal ("chờ commit…") on unpaid, cancelled or link-only orders. */}
+            {(!ordersApiEnabled || (order.commits?.length ?? 0) > 0) && <GitTerminalLog commits={order.commits ?? []} repoUrl={order.repoUrl} />}
           </div>
           <div className="min-w-0 space-y-6">
             <div className="card space-y-3 shadow-l3">

@@ -22,56 +22,64 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Home only and not sticky: keeps the mobile header at 56px everywhere else (UX P1-14). */}
-      {pathname === '/' && (
-        <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-slate-100 sm:text-sm">
-          <span className="material-symbols-outlined mr-1 !text-[16px] text-amber" aria-hidden>shield</span>
-          Tiền giữ tại GrabCode, chỉ trả cho freelancer khi bạn duyệt từng mốc <span className="mx-1 hidden sm:inline">•</span>
-          <span className="hidden sm:inline">Thanh toán bằng chuyển khoản / VietQR</span>
-        </div>
-      )}
-      <header className="sticky top-0 z-40">
-        <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:h-16 md:px-8">
-            <Link href="/" className="flex shrink-0 items-center">
-              <img src="/logo.png" alt="GrabCode" width={240} height={47} className="h-8 w-auto md:h-9" />
-            </Link>
-
-            <ul className="hidden items-center gap-1 md:flex">
-              {links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="btn-ghost">{l.label}</Link>
+        {/* Home only and not sticky: keeps the mobile header at 56px everywhere else (UX P1-14). */}
+        {pathname === '/' && (
+          <div className="bg-ink px-4 py-2 text-center text-xs font-medium text-slate-100 sm:text-sm">
+            <span className="material-symbols-outlined mr-1 !text-[16px] text-amber" aria-hidden>shield</span>
+            Tiền giữ tại GrabCode, chỉ trả cho freelancer khi bạn duyệt từng mốc <span className="mx-1 hidden sm:inline">•</span>
+            <span className="hidden sm:inline">Thanh toán bằng chuyển khoản / VietQR</span>
+          </div>
+        )}
+        <header className="sticky top-0 z-40">
+          <nav aria-label="Điều hướng chính" className="border-b border-slate-200 bg-white/90 backdrop-blur">
+            <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 md:h-16 md:px-8">
+              <Link href="/" className="flex shrink-0 items-center">
+                <img src="/logo.png" alt="GrabCode" width={240} height={47} className="h-8 w-auto md:h-9" />
+              </Link>
+  
+              <ul className="hidden items-center gap-1 md:flex">
+                {links.map((l) => (
+                  <li key={l.href}>
+                    <Link href={l.href} className="btn-ghost">{l.label}</Link>
+                  </li>
+                ))}
+                <li>
+                  <a href={CODER_LINK.href} className="btn-ghost">{CODER_LINK.label}</a>
                 </li>
-              ))}
-              <li>
-                <a href={CODER_LINK.href} className="btn-ghost">{CODER_LINK.label}</a>
-              </li>
-            </ul>
-
-            <div className="flex items-center gap-2">
-              {status === 'anon' ? (
-                pathname !== '/login' && (
-                  <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-secondary !px-4 !py-2 text-sm">
-                    <span className="material-symbols-outlined !text-[18px]" aria-hidden>login</span> Đăng nhập
-                  </Link>
-                )
-              ) : (
-                <Link href="/profile" className="btn-ghost !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
-                  {me?.avatarUrl ? (
-                    <img src={me.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
-                  ) : me ? (
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald font-display text-sm font-bold uppercase text-white" aria-hidden>
-                      {me.name.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="material-symbols-outlined" aria-hidden>account_circle</span>
+              </ul>
+  
+              <div className="flex items-center gap-2">
+                {status === 'anon' ? (
+                  pathname !== '/login' && (
+                    <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="btn-secondary !px-4 !py-2 text-sm">
+                      <span className="material-symbols-outlined !text-[18px]" aria-hidden>login</span> Đăng nhập
+                    </Link>
+                  )
+                ) : (
+                  <>
+                  {/* Mobile: one tap to "Đơn của tôi" from any page (Màn D AC1: reopen an order in ≤2 taps from home). */}
+                  {pathname !== '/orders' && (
+                    <Link href="/orders" className="btn-ghost min-h-[44px] min-w-[44px] !p-2 md:hidden" aria-label="Đơn của tôi">
+                      <span className="material-symbols-outlined" aria-hidden>receipt_long</span>
+                    </Link>
                   )}
-                </Link>
+                  <Link href="/profile" className="btn-ghost min-h-[44px] min-w-[44px] !p-2" aria-label={me ? `Hồ sơ của ${me.name}` : 'Hồ sơ & cài đặt'}>
+                    {me?.avatarUrl ? (
+                      <img src={me.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                    ) : me ? (
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-emerald font-display text-sm font-bold uppercase text-white" aria-hidden>
+                        {me.name.charAt(0)}
+                      </span>
+                    ) : (
+                      <span className="material-symbols-outlined" aria-hidden>account_circle</span>
+                    )}
+                  </Link>
+                </>
               )}
               <Link href="/#dispatch" className="btn-primary hidden !py-2 sm:inline-flex">Đặt làm app</Link>
               <button
                 type="button"
-                className="btn-ghost md:hidden"
+                className="btn-ghost min-h-[44px] min-w-[44px] md:hidden"
                 aria-expanded={open}
                 aria-label="Mở menu"
                 onClick={() => setOpen((v) => !v)}
