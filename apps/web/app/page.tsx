@@ -63,9 +63,6 @@ export default function Page() {
         <TemplateShowcase />
         <ComparisonTable />
       </main>
-      <footer className="border-t border-slate-200 bg-white py-8 text-center text-sm text-slate-500">
-        © 2026 GrabCode · Hoàng Hải Tech. Sàn kết nối chủ shop với freelancer vibe code.
-      </footer>
     </>
   );
 }

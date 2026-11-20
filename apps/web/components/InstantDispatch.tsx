@@ -29,7 +29,7 @@ export default function InstantDispatch() {
     <section id="dispatch" aria-labelledby="dispatch-title" className="rounded-xl border border-slate-200 bg-white p-4 shadow-l3 sm:p-6">
       <h2 id="dispatch-title" className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
         <span className="material-symbols-outlined text-emerald" aria-hidden>rocket_launch</span>
-        Instant Dispatch
+        Đặt làm app
       </h2>
 
       <div role="tablist" aria-label="Chọn tốc độ" className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -63,7 +63,7 @@ export default function InstantDispatch() {
         rows={4}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Mô tả POC bạn cần, ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
+        placeholder="Mô tả app bạn cần, ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
         className="w-full resize-none p-3"
       />
       <div className="mt-2 flex flex-wrap gap-2" aria-label="Gợi ý nhanh">
@@ -107,7 +107,7 @@ export default function InstantDispatch() {
           </div>
         </dl>
         <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full sm:w-auto">
-          Chuẩn hóa yêu cầu bằng AI
+          Xem đặc tả & báo giá
           <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
         </button>
       </div>

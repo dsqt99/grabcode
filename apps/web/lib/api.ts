@@ -1,5 +1,5 @@
 import { onRealtimeHint, type AIBrief, type OrderTier } from '@grabcode/contracts';
-import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint, RefundAccount, RefundAccountResponse } from '@grabcode/contracts/schemas';
+import type { BriefJob, ChatList, ChatMessage, OrderCreate, OrderDto, OrderList, OrderRepo, OrderStatus, PaymentInstructions, RealtimeHint, RefundAccount, RefundAccountResponse } from '@grabcode/contracts/schemas';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const POLL_MS = 1500;
@@ -48,6 +48,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const createOrder = (input: OrderCreate) => api<OrderDto>('/v1/orders', { method: 'POST', body: JSON.stringify(input) });
+/** Own orders as customer plus orders assigned as coder: filter on customer.id for "Đơn của tôi". */
+export const listOrders = () => api<OrderList>('/v1/orders?scope=mine').then((r) => r.orders);
 export const getOrder = (id: string) => api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}`);
 export const transitionOrder = (id: string, status: OrderStatus, reason?: string) =>
   api<OrderDto>(`/v1/orders/${encodeURIComponent(id)}/transitions`, { method: 'POST', body: JSON.stringify({ status, reason }) });
@@ -65,6 +67,8 @@ export const handoverRepo = (id: string, githubLogin: string) =>
 
 // ---- Escrow (S2): customer pays by bank transfer, SePay webhook funds the order. ----
 export const getOrderPayment = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment`);
+/** "Tôi đã chuyển khoản": tells ops to check the bank (once per order); nothing is booked until an admin confirms. */
+export const reportTransfer = (id: string) => api<PaymentInstructions>(`/v1/orders/${encodeURIComponent(id)}/payment/reported`, { method: 'POST' });
 /** Customer's bank account for refunds of this order (B2); admins transfer refunds there. */
 export const getRefundAccount = (id: string) => api<RefundAccountResponse>(`/v1/orders/${encodeURIComponent(id)}/refund-account`).then((r) => r.refundAccount);
 export const putRefundAccount = (id: string, account: RefundAccount) =>

@@ -3,7 +3,7 @@ import { getTier } from './pricing';
 
 function titleFrom(prompt: string): string {
   const clean = prompt.trim().replace(/\s+/g, ' ');
-  if (!clean) return 'Dự án POC mới';
+  if (!clean) return 'Dự án app mới';
   const first = clean.split(/[.,;\n]/)[0];
   return first.length > 70 ? `${first.slice(0, 67)}...` : first;
 }
@@ -81,7 +81,7 @@ export function genBrief(
 
   return {
     title: `Đặc tả kỹ thuật: ${title}`,
-    scopeSummary: `Xây dựng bản POC "${title}" theo gói ${cfg.label}, ưu tiên demo chạy thật, chia 3 mốc thanh toán 20% / 50% / 30%.`,
+    scopeSummary: `Xây dựng app "${title}" theo gói ${cfg.label}, chia 3 mốc thanh toán 20% / 50% / 30%.`,
     features,
     inScope,
     outOfScope,

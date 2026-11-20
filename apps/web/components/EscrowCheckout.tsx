@@ -1,23 +1,29 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useCurrency } from '../lib/currency';
 import { formatVnd } from '../lib/pricing';
+import StickyActionBar from './StickyActionBar';
 
 interface Props {
   tierLabel: string;
   priceVnd: number;
   etaHours: number;
   disabled?: boolean;
+  /** Why the order cannot be created yet (shown next to the button). */
+  hint?: string | null;
   submitting?: boolean;
   onConfirm: () => void;
+  /** Fields the customer fills before ordering (phone, terms). */
+  children?: ReactNode;
 }
 
-export default function EscrowCheckout({ tierLabel, priceVnd, etaHours, disabled, submitting, onConfirm }: Props) {
+export default function EscrowCheckout({ tierLabel, priceVnd, etaHours, disabled, hint, submitting, onConfirm, children }: Props) {
   // Escrow is paid in VND (bank transfer); USD is only a reference.
   const { usd } = useCurrency();
 
   return (
-    <aside className="card sticky top-24 space-y-5 shadow-l3" aria-label="Ký quỹ thanh toán">
+    <aside className="card min-w-0 space-y-5 shadow-l3 lg:sticky lg:top-24" aria-label="Ký quỹ thanh toán">
       <h2 className="font-display text-lg font-bold text-ink">Ký quỹ & đặt đơn</h2>
 
       <dl className="space-y-2 text-sm">
@@ -42,9 +48,14 @@ export default function EscrowCheckout({ tierLabel, priceVnd, etaHours, disabled
         Thanh toán: chuyển khoản ngân hàng / quét VietQR ở bước sau
       </p>
 
-      <button type="button" onClick={onConfirm} disabled={disabled || submitting} className="btn-primary w-full">
-        {submitting ? 'Đang tạo đơn...' : 'Tạo đơn & chuyển sang thanh toán'}
-      </button>
+      {children}
+
+      <StickyActionBar>
+        {hint && <p className="text-center text-xs font-semibold text-amber-text lg:text-left">{hint}</p>}
+        <button type="button" onClick={onConfirm} disabled={disabled || submitting} className="btn-primary w-full">
+          {submitting ? 'Đang tạo đơn...' : 'Tạo đơn & chuyển sang thanh toán'}
+        </button>
+      </StickyActionBar>
     </aside>
   );
 }

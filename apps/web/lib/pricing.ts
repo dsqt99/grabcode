@@ -13,10 +13,10 @@ export interface TierConfig {
 }
 
 export const TIERS: TierConfig[] = [
-  { id: 'EXPRESS', label: 'Express', ...TIER_PRICING.EXPRESS, blurb: 'POC gọn, dự kiến ~3 giờ', icon: 'bolt' },
-  { id: 'STANDARD', label: 'Standard', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, dự kiến ~8 giờ', icon: 'schedule' },
-  { id: 'PRO', label: 'Pro', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp hơn, dự kiến ~24 giờ', icon: 'domain' },
-  { id: 'TEMPLATE', label: 'Mua Template', ...TIER_PRICING.TEMPLATE, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
+  { id: 'EXPRESS', label: 'Siêu tốc', ...TIER_PRICING.EXPRESS, blurb: 'App gọn, dự kiến ~3 giờ', icon: 'bolt' },
+  { id: 'STANDARD', label: 'Tiêu chuẩn', ...TIER_PRICING.STANDARD, blurb: 'Cân bằng giá và tốc độ, dự kiến ~8 giờ', icon: 'schedule' },
+  { id: 'PRO', label: 'Nâng cao', ...TIER_PRICING.PRO, blurb: 'Luồng nghiệp vụ phức tạp hơn, dự kiến ~24 giờ', icon: 'domain' },
+  { id: 'TEMPLATE', label: 'Từ mẫu có sẵn', ...TIER_PRICING.TEMPLATE, blurb: 'Tuỳ biến từ mẫu có sẵn, nhanh nhất', icon: 'dashboard_customize' },
 ];
 
 export const FRAMEWORKS = ['Next.js 15 + Tailwind CSS', 'FastAPI + React', 'Flutter', 'Node.js + Express', 'Laravel'];

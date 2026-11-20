@@ -18,8 +18,8 @@ const INPUT = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm';
 const OAUTH_BTN = 'inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 font-display text-[15px] font-semibold text-ink transition hover:bg-slate-50';
 
 const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
-  { role: 'CUSTOMER', icon: 'business_center', title: 'Tôi cần thuê Coder', text: 'Đặt POC, ký quỹ, nhận demo chạy thật' },
-  { role: 'CODER', icon: 'code', title: 'Tôi là Coder', text: 'Nhận cuốc đơn POC, kiếm thu nhập' },
+  { role: 'CUSTOMER', icon: 'business_center', title: 'Tôi cần thuê Coder', text: 'Đặt làm app, chuyển khoản trước, duyệt từng mốc' },
+  { role: 'CODER', icon: 'code', title: 'Tôi là freelancer', text: 'Nhận việc làm app, kiếm thu nhập' },
 ];
 
 /** Upwork-style role cards; the role is only chosen once, at sign-up. */
@@ -203,7 +203,7 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald/30 blur-3xl" aria-hidden />
           <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-primary-fixed/10 blur-3xl" aria-hidden />
           <h2 className="relative font-display text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
-            Đặt POC như đặt đồ ăn. <span className="text-primary-fixed">Có demo chạy thật</span> trong vài giờ.
+            Đặt làm app như đặt đồ ăn. <span className="text-primary-fixed">Duyệt từng mốc</span> rồi mới trả tiền.
           </h2>
           <p className="relative mt-3 text-slate-300">Một tài khoản cho cả người đặt đơn và Coder nhận đơn.</p>
           <ul className="relative mt-8 space-y-4">
