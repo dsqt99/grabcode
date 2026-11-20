@@ -13,7 +13,7 @@
     "@grabcode/contracts": "workspace:*",
     "nats": "^2.29.0",
     "postgres": "^3.4.5",
-    "web-push": "^3.6.7"
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
