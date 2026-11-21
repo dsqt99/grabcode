@@ -135,8 +135,28 @@ if [ "$SHARED" = 1 ]; then
   export COMPOSE_PARALLEL_LIMIT=1 COMPOSE_BAKE=false
 fi
 
+# Every rebuild leaves the previous staging images untagged (several GB each time). Remove only those:
+# untagged images built for this project and not used by any container. Production images are never touched.
+prune_staging_images() {
+  docker image prune -f --filter "label=com.docker.compose.project=$PROJECT" >/dev/null 2>&1 || true
+  local id
+  for id in ${OLD_IMAGES:-}; do
+    [ "$(docker image inspect -f '{{len .RepoTags}}' "$id" 2>/dev/null || echo 1)" = "0" ] && docker image rm "$id" >/dev/null 2>&1 || true
+  done
+}
+OLD_IMAGES="$(docker images -q --filter "reference=${PROJECT}-*" | sort -u | tr '\n' ' ')"
+prune_staging_images
+DOCKER_ROOT="$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
+avail_kb="$(df -Pk "$DOCKER_ROOT" 2>/dev/null | awk 'NR==2{print $4}' || true)"
+free_gb=$(( ${avail_kb:-0} / 1024 / 1024 ))
+if [ -n "$avail_kb" ] && [ "$free_gb" -lt 5 ]; then
+  docker system df >&2 || true
+  die "only ${free_gb} GB free on the disk holding $DOCKER_ROOT; the build needs ~5 GB. Free space first, e.g. 'docker builder prune -f' (build cache only: no container, image in use or volume is removed), then deploy again."
+fi
+
 echo "== Building and starting (first build takes 10-20 minutes; needs ~3 GB RAM, add swap on a small VPS) =="
 dc up -d --build
+prune_staging_images
 
 echo "== Waiting for core-api =="
 for _ in $(seq 1 60); do
