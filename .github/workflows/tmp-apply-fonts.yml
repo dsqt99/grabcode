@@ -1,0 +1,28 @@
+name: tmp-apply-fonts-patch
+
+# One-shot helper (agent has no git push): applies tmp/fonts.patch onto staging/redesign.
+# Only runs on pushes to this temporary branch; delete the branch afterwards.
+on:
+  push:
+    branches: [tmp/apply-selfhost-fonts]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging/redesign
+          fetch-depth: 0
+      - name: Apply patch onto staging/redesign
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse HEAD)" = 453884d433243a8336e9c564ffe7d7b23315fcc0 ] || { echo "::error::staging/redesign moved; not applying"; exit 1; }
+          git fetch origin tmp/apply-selfhost-fonts
+          git show FETCH_HEAD:tmp/fonts.patch > /tmp/fonts.patch
+          git -c user.name="Do Manh Hai" -c user.email="71067907+dsqt99@users.noreply.github.com" am /tmp/fonts.patch
+          git log --oneline -2
+          git push origin HEAD:staging/redesign
