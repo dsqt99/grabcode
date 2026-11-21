@@ -1,0 +1,294 @@
+From 181ecdd8281a19283a15f8c4b7a9591dd0e12e30 Mon Sep 17 00:00:00 2001
+From: Do Manh Hai <71067907+dsqt99@users.noreply.github.com>
+Date: Sat, 21 Nov 2026 02:43:06 +0000
+Subject: [PATCH] =?UTF-8?q?fix(fonts):=20t=E1=BB=B1=20host=20Inter=20v?=
+ =?UTF-8?q?=C3=A0=20Plus=20Jakarta=20Sans=20qua=20@fontsource?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+deploy-staging run #21 lỗi build web trên VPS: next/font/google nhận CSS có URL font không có
+đuôi file (TypeError reading '1' trong loader.js); run #20 cũng phải retry khi tải font. Build
+trên GitHub thì xanh, nên lỗi phụ thuộc mạng của VPS. Font giờ đóng gói từ npm, build không gọi
+Google Fonts. Giữ nguyên biến --font-jakarta/--font-inter mà tailwind.config dùng.
+
+Kiểm tra: build web, coder, admin xanh với HTTPS_PROXY trỏ vào cổng chết; typecheck và eslint qua.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ apps/admin/app/globals.css |  6 ++++++
+ apps/admin/app/layout.tsx  | 14 +++++++++-----
+ apps/admin/package.json    |  2 ++
+ apps/coder/app/globals.css |  6 ++++++
+ apps/coder/app/layout.tsx  | 15 +++++++++------
+ apps/coder/package.json    |  2 ++
+ apps/web/app/globals.css   |  6 ++++++
+ apps/web/app/layout.tsx    | 15 +++++++++------
+ apps/web/package.json      |  2 ++
+ pnpm-lock.yaml             | 28 ++++++++++++++++++++++++++++
+ 10 files changed, 79 insertions(+), 17 deletions(-)
+
+diff --git a/apps/admin/app/globals.css b/apps/admin/app/globals.css
+index d457893..36ef045 100644
+--- a/apps/admin/app/globals.css
++++ b/apps/admin/app/globals.css
+@@ -2,6 +2,12 @@
+ @tailwind components;
+ @tailwind utilities;
+ 
++/* Font tự host (@fontsource, import trong app/layout.tsx); tailwind.config dùng 2 biến này. */
++:root {
++  --font-jakarta: 'Plus Jakarta Sans';
++  --font-inter: 'Inter';
++}
++
+ @layer base {
+   html { background: #FAFAF9; }
+   body { @apply bg-stone-50 font-sans text-base text-stone-900 antialiased; }
+diff --git a/apps/admin/app/layout.tsx b/apps/admin/app/layout.tsx
+index 9b95e36..af6dcb9 100644
+--- a/apps/admin/app/layout.tsx
++++ b/apps/admin/app/layout.tsx
+@@ -1,16 +1,20 @@
+ import { BRAND } from '@grabcode/contracts';
+ import type { Metadata } from 'next';
+-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
++// Fonts tự host qua @fontsource: build không phụ thuộc mạng tới Google Fonts (deploy-staging run #21).
++import '@fontsource/plus-jakarta-sans/500.css';
++import '@fontsource/plus-jakarta-sans/600.css';
++import '@fontsource/plus-jakarta-sans/700.css';
++import '@fontsource/plus-jakarta-sans/800.css';
++import '@fontsource/inter/400.css';
++import '@fontsource/inter/500.css';
++import '@fontsource/inter/600.css';
+ import './globals.css';
+ 
+-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
+-const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
+-
+ export const metadata: Metadata = { title: `${BRAND.name} Admin`, description: 'Vận hành: coder, tranh chấp, đối soát, rút tiền, hàng đợi.' };
+ 
+ export default function RootLayout({ children }: { children: React.ReactNode }) {
+   return (
+-    <html lang="vi" className={`${jakarta.variable} ${inter.variable}`}>
++    <html lang="vi">
+       <head>
+         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+       </head>
+diff --git a/apps/admin/package.json b/apps/admin/package.json
+index 5d3d59b..b384606 100644
+--- a/apps/admin/package.json
++++ b/apps/admin/package.json
+@@ -9,6 +9,8 @@
+     "typecheck": "tsc --noEmit"
+   },
+   "dependencies": {
++    "@fontsource/inter": "^5.3.0",
++    "@fontsource/plus-jakarta-sans": "^5.3.0",
+     "@grabcode/contracts": "workspace:*",
+     "next": "^15.1.0",
+     "react": "^19.3.1",
+diff --git a/apps/coder/app/globals.css b/apps/coder/app/globals.css
+index 4f63332..31e0a92 100644
+--- a/apps/coder/app/globals.css
++++ b/apps/coder/app/globals.css
+@@ -2,6 +2,12 @@
+ @tailwind components;
+ @tailwind utilities;
+ 
++/* Font tự host (@fontsource, import trong app/layout.tsx); tailwind.config dùng 2 biến này. */
++:root {
++  --font-jakarta: 'Plus Jakarta Sans';
++  --font-inter: 'Inter';
++}
++
+ @layer base {
+   html { background: #FAFAF9; }
+   body { @apply bg-stone-50 font-sans text-base text-stone-900 antialiased; }
+diff --git a/apps/coder/app/layout.tsx b/apps/coder/app/layout.tsx
+index c3d7a4a..87673f6 100644
+--- a/apps/coder/app/layout.tsx
++++ b/apps/coder/app/layout.tsx
+@@ -1,15 +1,18 @@
+ import type { Metadata } from 'next';
+-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
++// Fonts tự host qua @fontsource: build không phụ thuộc mạng tới Google Fonts (deploy-staging run #21).
++import '@fontsource/plus-jakarta-sans/500.css';
++import '@fontsource/plus-jakarta-sans/600.css';
++import '@fontsource/plus-jakarta-sans/700.css';
++import '@fontsource/plus-jakarta-sans/800.css';
++import '@fontsource/inter/400.css';
++import '@fontsource/inter/500.css';
++import '@fontsource/inter/600.css';
+ import './globals.css';
+ import { RequireAuth } from '@grabcode/auth-ui';
+ import { AuthProvider } from '@grabcode/auth-ui';
+ import ApprovalGate from '../components/ApprovalGate';
+ import { BRAND } from '@grabcode/contracts';
+ 
+-
+-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
+-const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
+-
+ export const metadata: Metadata = {
+   title: `${BRAND.name} Coder — Nhận đơn`,
+   description: `Ứng dụng cho freelancer ${BRAND.name}: nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng.`,
+@@ -17,7 +20,7 @@ export const metadata: Metadata = {
+ 
+ export default function RootLayout({ children }: { children: React.ReactNode }) {
+   return (
+-    <html lang="vi" className={`${jakarta.variable} ${inter.variable}`}>
++    <html lang="vi">
+       <head>
+         <link
+           rel="stylesheet"
+diff --git a/apps/coder/package.json b/apps/coder/package.json
+index 3874a2e..8ac9bf4 100644
+--- a/apps/coder/package.json
++++ b/apps/coder/package.json
+@@ -9,6 +9,8 @@
+     "typecheck": "tsc --noEmit"
+   },
+   "dependencies": {
++    "@fontsource/inter": "^5.3.0",
++    "@fontsource/plus-jakarta-sans": "^5.3.0",
+     "@grabcode/auth-ui": "workspace:*",
+     "@grabcode/contracts": "workspace:*",
+     "lucide-react": "^1.73.0",
+diff --git a/apps/web/app/globals.css b/apps/web/app/globals.css
+index f550462..a7908c0 100644
+--- a/apps/web/app/globals.css
++++ b/apps/web/app/globals.css
+@@ -2,6 +2,12 @@
+ @tailwind components;
+ @tailwind utilities;
+ 
++/* Font tự host (@fontsource, import trong app/layout.tsx); tailwind.config dùng 2 biến này. */
++:root {
++  --font-jakarta: 'Plus Jakarta Sans';
++  --font-inter: 'Inter';
++}
++
+ /* FastDemo redesign components (HON-51 redesign-ds §6). Same block in apps/web, apps/coder, apps/admin. */
+ @layer base {
+   html { background: #FAFAF9; }
+diff --git a/apps/web/app/layout.tsx b/apps/web/app/layout.tsx
+index 9a8c8b0..6b6930c 100644
+--- a/apps/web/app/layout.tsx
++++ b/apps/web/app/layout.tsx
+@@ -1,15 +1,18 @@
+ import type { Metadata } from 'next';
+-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
++// Fonts tự host qua @fontsource: build không phụ thuộc mạng tới Google Fonts (deploy-staging run #21).
++import '@fontsource/plus-jakarta-sans/500.css';
++import '@fontsource/plus-jakarta-sans/600.css';
++import '@fontsource/plus-jakarta-sans/700.css';
++import '@fontsource/plus-jakarta-sans/800.css';
++import '@fontsource/inter/400.css';
++import '@fontsource/inter/500.css';
++import '@fontsource/inter/600.css';
+ import './globals.css';
+ import { AuthProvider } from '@grabcode/auth-ui';
+ import Footer from '../components/Footer';
+ import { CurrencyProvider } from '../lib/currency';
+ import { BRAND } from '@grabcode/contracts';
+ 
+-
+-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['500', '600', '700', '800'], variable: '--font-jakarta' });
+-const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
+-
+ export const metadata: Metadata = {
+   title: `${BRAND.name} — ${BRAND.tagline}`,
+   description: 'Đặt làm app cho shop và SME: AI soạn đặc tả, freelancer vibe code làm, tiền giữ ký quỹ và chỉ giải ngân khi bạn duyệt từng mốc.',
+@@ -17,7 +20,7 @@ export const metadata: Metadata = {
+ 
+ export default function RootLayout({ children }: { children: React.ReactNode }) {
+   return (
+-    <html lang="vi" className={`${jakarta.variable} ${inter.variable}`}>
++    <html lang="vi">
+       <head>
+         <link
+           rel="stylesheet"
+diff --git a/apps/web/package.json b/apps/web/package.json
+index 387fc7b..99f7bb6 100644
+--- a/apps/web/package.json
++++ b/apps/web/package.json
+@@ -10,6 +10,8 @@
+     "test": "tsx --test lib/*.test.ts"
+   },
+   "dependencies": {
++    "@fontsource/inter": "^5.3.0",
++    "@fontsource/plus-jakarta-sans": "^5.3.0",
+     "@grabcode/auth-ui": "workspace:*",
+     "@grabcode/contracts": "workspace:*",
+     "lucide-react": "^1.73.0",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 7ccdf99..46fce06 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -75,6 +75,12 @@ importers:
+ 
+   apps/admin:
+     dependencies:
++      '@fontsource/inter':
++        specifier: ^5.3.0
++        version: 5.3.0
++      '@fontsource/plus-jakarta-sans':
++        specifier: ^5.3.0
++        version: 5.3.0
+       '@grabcode/contracts':
+         specifier: workspace:*
+         version: link:../../packages/contracts
+@@ -112,6 +118,12 @@ importers:
+ 
+   apps/coder:
+     dependencies:
++      '@fontsource/inter':
++        specifier: ^5.3.0
++        version: 5.3.0
++      '@fontsource/plus-jakarta-sans':
++        specifier: ^5.3.0
++        version: 5.3.0
+       '@grabcode/auth-ui':
+         specifier: workspace:*
+         version: link:../../packages/auth-ui
+@@ -155,6 +167,12 @@ importers:
+ 
+   apps/web:
+     dependencies:
++      '@fontsource/inter':
++        specifier: ^5.3.0
++        version: 5.3.0
++      '@fontsource/plus-jakarta-sans':
++        specifier: ^5.3.0
++        version: 5.3.0
+       '@grabcode/auth-ui':
+         specifier: workspace:*
+         version: link:../../packages/auth-ui
+@@ -886,6 +904,12 @@ packages:
+     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
+     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+ 
++  '@fontsource/inter@5.3.0':
++    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
++
++  '@fontsource/plus-jakarta-sans@5.3.0':
++    resolution: {integrity: sha512-9WRw3G74Ve4cyPApAZSXLPY5DiLOZXDn7Q7dIBjFBpA0Pj56ljDItEdy2UUajjJxRuTg2HkMLO5C3K2nAQORWg==}
++
+   '@humanfs/core@0.19.2':
+     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
+     engines: {node: '>=18.18.0'}
+@@ -2832,6 +2856,10 @@ snapshots:
+       '@eslint/core': 0.17.0
+       levn: 0.4.1
+ 
++  '@fontsource/inter@5.3.0': {}
++
++  '@fontsource/plus-jakarta-sans@5.3.0': {}
++
+   '@humanfs/core@0.19.2':
+     dependencies:
+       '@humanfs/types': 0.15.0
+-- 
+2.47.3
+
