@@ -111,8 +111,26 @@ jobs:
           args=()
           [ -z "$port" ] || args+=(--port "$port")
           [ "$public" != "true" ] || args+=(--public)
+          # Every rebuild leaves the previous grabcode-staging-* images untagged (several GB each; run #20 hit
+          # "no space left on device"). Remove only those once untagged and unused; production images are never touched.
+          old_images="$(docker images -q --filter 'reference=grabcode-staging-*' | sort -u | tr '\n' ' ')"
+          prune_old() {
+            docker image prune -f --filter label=com.docker.compose.project=grabcode-staging >/dev/null 2>&1 || true
+            for id in $old_images; do
+              [ "$(docker image inspect -f '{{len .RepoTags}}' "$id" 2>/dev/null || echo 1)" = 0 ] && docker image rm "$id" >/dev/null 2>&1 || true
+            done
+          }
+          prune_old
+          root="$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
+          avail_kb="$(df -Pk "$root" 2>/dev/null | awk 'NR==2{print $4}' || true)"
+          if [ -n "$avail_kb" ] && [ "$avail_kb" -lt $((5 * 1024 * 1024)) ]; then
+            docker system df || true
+            echo "::error::Only $((avail_kb / 1024 / 1024)) GB free on the VPS disk holding $root; the build needs ~5 GB. Free space (e.g. 'docker builder prune -f': build cache only, no container, image in use or volume is removed), then run again."
+            exit 1
+          fi
           # </dev/null: this script arrives on stdin; docker compose inside staging-up would read the rest of it.
           ./infra/deploy/staging-up.sh ${args[@]+"${args[@]}"} "$domain" </dev/null
+          prune_old
           if [ -n "$port" ]; then
             ok=0
             for _ in $(seq 1 20); do
