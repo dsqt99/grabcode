@@ -347,11 +347,11 @@ export function useCoder() {
         const s = stateRef.current;
         if (s.seenOrderIds.includes(order.id) || offerRef.current?.order.id === order.id) return; // duplicate
         if (!s.isOnline) {
-          toast(`Bạn đang Offline — bỏ lỡ cuốc ${order.id}. Bật Online để nhận đơn.`, 'warn');
+          toast(`Bạn đang tắt nhận đơn — đã bỏ lỡ đơn ${order.id}. Bật nhận đơn để không bỏ lỡ.`, 'warn');
           return;
         }
         if ((s.activeOrder && !s.completed) || offerRef.current) {
-          toast(`Đang có cuốc đơn — bỏ qua ${order.id}.`, 'info');
+          toast(`Bạn đang làm một đơn khác — bỏ qua ${order.id}.`, 'info');
           return;
         }
         setPending({
