@@ -46,10 +46,10 @@ export const daysLabel = ([min, max]: readonly [number, number]) => `dự kiến
 export const etaLabel = (etaHours: number) => (etaHours >= 24 ? `dự kiến ${Math.ceil(etaHours / 24)} ngày` : `dự kiến ~${etaHours} giờ`);
 
 /**
- * Tỷ lệ giá đơn trả cho freelancer (phần còn lại là doanh thu nền tảng). Founder chốt số cuối cùng (HON-9 đề xuất 75%,
- * chưa duyệt); chỉ sửa dòng này. Tiền trả được làm tròn tới 1.000đ.
+ * Tỷ lệ giá đơn trả cho freelancer (phần còn lại là doanh thu nền tảng). Founder đã chốt 75% (HON-1, HON-27); nền tảng giữ 25%;
+ * chỉ sửa dòng này. Tiền trả được làm tròn tới 1.000đ.
  */
-export const CODER_PAYOUT_RATE = 0.7;
+export const CODER_PAYOUT_RATE = 0.75;
 
 /** Trọng số mốc mặc định khi brief không tự đặt (brief mẫu, brief-worker). */
 export const DEFAULT_MILESTONE_WEIGHTS = [20, 50, 30];
