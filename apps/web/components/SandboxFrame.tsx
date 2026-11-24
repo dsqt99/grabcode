@@ -10,7 +10,8 @@ export default function SandboxFrame({ order, delivered }: { order: Order; deliv
   const html = useMemo(() => buildPreviewHtml(order), [order]);
   // No sandboxStatus = mock mode (or no repo): keep the generated preview.
   const live = order.demoUrl;
-  const url = live ?? `https://${order.id.toLowerCase()}.preview.grabcode.dev`;
+  // No real URL yet (mock preview): say so instead of inventing a domain.
+  const url = live ?? 'Bản chạy thử (mô phỏng)';
   const status = order.sandboxStatus;
   const shown = delivered && (live || !status);
 
@@ -21,7 +22,7 @@ export default function SandboxFrame({ order, delivered }: { order: Order; deliv
     setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
   };
 
-  const iconBtn = 'grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink active:scale-90 disabled:opacity-40';
+  const iconBtn = 'grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-ink active:scale-90 disabled:opacity-40';
 
   return (
     <section aria-label="Bản chạy thử" className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-l2">

@@ -1,6 +1,6 @@
-# GrabCode — Staging demo cho CEO và Tester
+# FastDemo — Staging demo cho CEO và Tester
 
-Staging là một bản chạy thật của GrabCode (web khách, app freelancer, trang admin) trên một VPS riêng, có sẵn dữ liệu mẫu. Mục đích:
+Staging là một bản chạy thật của FastDemo (web khách, app freelancer, trang admin) trên một VPS riêng, có sẵn dữ liệu mẫu. Mục đích:
 
 - CEO/founder bấm thử cả luồng: đặt đơn → thanh toán → freelancer nhận → bàn giao → nghiệm thu.
 - Tester chạy E2E và smoke test trên đó (HON-22).
@@ -12,8 +12,8 @@ Mặc định staging chạy trên VPS riêng. Nếu chỉ có VPS đang chạy 
 | Thứ | Chi tiết |
 | --- | --- |
 | VPS | Ubuntu 22.04/24.04, **2 vCPU, 4 GB RAM, 40 GB SSD** (đủ cho demo). Khoảng 5–8 USD/tháng (Hetzner, DigitalOcean, Vultr Singapore) hoặc 150.000–350.000đ/tháng (Vietnix, BizFly, Viettel IDC). Kiểm tra lại giá trước khi mua. Lần build đầu cần ~3 GB RAM: bật swap 4 GB. |
-| Tên miền | Một subdomain, ví dụ `staging.grabcode.vn`. |
-| DNS | Bản ghi **A**: `staging.grabcode.vn` → IP của VPS. Mở cổng **80 và 443** trên firewall (Caddy cần cả hai để cấp HTTPS Let's Encrypt). |
+| Tên miền | Một subdomain, ví dụ `staging.example.com`. |
+| DNS | Bản ghi **A**: `staging.example.com` → IP của VPS. Mở cổng **80 và 443** trên firewall (Caddy cần cả hai để cấp HTTPS Let's Encrypt). |
 | GitHub | Quyền thêm GitHub Secrets của repo `dsqt99/grabcode`. |
 
 ## 2. Dựng staging bằng 1 lệnh
@@ -24,7 +24,7 @@ Trên VPS (hoặc máy bất kỳ có Docker, kể cả máy cá nhân để ch�
 curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER && newgrp docker
 sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
 git clone https://github.com/dsqt99/grabcode.git && cd grabcode      # repo private: cần quyền đọc; hoặc để GitHub Actions đẩy source (mục 3)
-./infra/deploy/staging-up.sh staging.grabcode.vn
+./infra/deploy/staging-up.sh staging.example.com
 ```
 
 Script tự làm theo thứ tự:
@@ -69,7 +69,7 @@ Cài một lần:
 | `STAGING_SSH_HOST` | IP hoặc tên máy của VPS |
 | `STAGING_SSH_USER` | user deploy |
 | `STAGING_SSH_KEY` | nội dung file private key `gha_staging` |
-| `STAGING_DOMAIN` | `test-fastcode.cahy.io.vn` (hoặc `staging.grabcode.vn` nếu VPS riêng) |
+| `STAGING_DOMAIN` | `test-fastcode.cahy.io.vn` (hoặc `staging.example.com` nếu VPS riêng) |
 | `STAGING_HTTP_PORT` | `18080` (VPS dùng chung với production, mục 12). Bỏ trống = VPS riêng, Caddy dùng 80/443 |
 | `STAGING_SSH_PORT` (tuỳ chọn) | mặc định 22 |
 | `STAGING_SSH_KNOWN_HOSTS` (tuỳ chọn) | kết quả `ssh-keyscan -H <host>` lấy từ máy tin cậy; không có thì workflow tự lấy host key lần chạy (tin ở lần đầu) |
@@ -116,7 +116,7 @@ Dữ liệu mẫu (đơn nào ở trạng thái nào):
 
 Nhờ đó mỗi đơn mới, "Tôi đã chuyển khoản", tranh chấp, yêu cầu rút tiền sẽ bắn tin vào nhóm Telegram ngay lúc demo.
 
-1. Nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `GrabCode Staging Ops`) và username kết thúc bằng `bot`. BotFather trả **token** dạng `123456789:AA...` (bí mật, không gửi qua chat, không commit).
+1. Nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `FastDemo Staging Ops`) và username kết thúc bằng `bot`. BotFather trả **token** dạng `123456789:AA...` (bí mật, không gửi qua chat, không commit).
 2. Tạo một nhóm Telegram, thêm bot vào, gửi một tin bất kỳ trong nhóm.
 3. Mở `https://api.telegram.org/bot<TOKEN>/getUpdates`, tìm `"chat":{"id":-100...}` (số âm) là chat id.
 4. Điền vào `.env.staging`: `TELEGRAM_BOT_TOKEN=...`, `TELEGRAM_ADMIN_CHAT_ID=-100...`, `ADMIN_PUBLIC_URL=https://<domain>/admin`.

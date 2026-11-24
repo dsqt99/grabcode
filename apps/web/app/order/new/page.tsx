@@ -13,6 +13,8 @@ import { useAuth } from '@grabcode/auth-ui';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
 import { FRAMEWORKS, daysLabel, getMenuItem, getTemplate } from '../../../lib/pricing';
+import { BRAND } from '@grabcode/contracts';
+
 
 function NewOrder() {
   const router = useRouter();
@@ -82,7 +84,7 @@ function NewOrder() {
     : stale
       ? 'Bạn đã sửa yêu cầu — bấm "Phân tích lại" để cập nhật đặc tả.'
       : needPhone && !validPhone
-        ? 'Nhập số điện thoại để GrabCode liên hệ về đơn.'
+        ? `Nhập số điện thoại để ${BRAND.name} liên hệ về đơn.`
         : !agreed
           ? 'Tích đồng ý điều khoản để tạo đơn.'
           : null;
@@ -196,7 +198,7 @@ function NewOrder() {
                   className="mt-1 w-full px-3 py-2"
                 />
                 <span className={`mt-1 block text-xs ${phone && !validPhone ? 'font-semibold text-red-700' : 'text-slate-600'}`}>
-                  {phone && !validPhone ? 'Số di động Việt Nam chưa hợp lệ (10 số, bắt đầu 03/05/07/08/09).' : 'GrabCode gọi / nhắn Zalo khi cần xác nhận đơn. Lưu vào hồ sơ của bạn.'}
+                  {phone && !validPhone ? 'Số di động Việt Nam chưa hợp lệ (10 số, bắt đầu 03/05/07/08/09).' : `${BRAND.name} gọi / nhắn Zalo khi cần xác nhận đơn. Lưu vào hồ sơ của bạn.`}
                 </span>
               </label>
             )}
