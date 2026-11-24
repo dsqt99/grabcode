@@ -10,6 +10,8 @@ interface Props {
   danger?: boolean;
   /** Confirm stays disabled until the user ticked / typed what the sheet asks for. */
   canConfirm?: boolean;
+  /** Shown above the buttons while confirm is disabled, so a locked button always says why (redesign-web-order §8). */
+  blockedReason?: string;
   busy?: boolean;
   /** Shown inside the sheet; what the user typed is kept so they can retry. */
   error?: string | null;
@@ -22,7 +24,7 @@ interface Props {
  * Confirmation step before any money action (UX spec HON-18 "Màn C"): bottom sheet on mobile, centered dialog on desktop.
  * Native <dialog>: focus stays inside while open, Esc / backdrop close it (not while sending), focus returns to the opener.
  */
-export default function ConfirmSheet({ open, title, children, confirmLabel, danger, canConfirm = true, busy, error, cancelLabel = 'Huỷ', onConfirm, onClose }: Props) {
+export default function ConfirmSheet({ open, title, children, confirmLabel, danger, canConfirm = true, blockedReason, busy, error, cancelLabel = 'Huỷ', onConfirm, onClose }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
 
@@ -51,6 +53,7 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
   );
 
   const close = () => !busy && onClose();
+  const blocked = !canConfirm && !busy;
 
   return (
     <dialog
@@ -61,32 +64,39 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
         close();
       }}
       onClick={(e) => e.target === ref.current && close()}
-      className="m-0 mt-auto max-h-[85dvh] w-full max-w-full overflow-y-auto rounded-t-3xl bg-white p-0 text-ink shadow-l3 backdrop:bg-ink/40 md:m-auto md:max-w-md md:rounded-2xl"
+      className="m-0 mt-auto max-h-[90dvh] w-full max-w-full overflow-y-auto rounded-t-3xl bg-white p-0 text-stone-900 shadow-sheet backdrop:bg-ink/50 md:m-auto md:max-w-lg md:rounded-3xl md:shadow-overlay"
     >
       {open && (
-        <div className="space-y-4 p-5 pb-[max(20px,env(safe-area-inset-bottom))]">
-          <h2 id="confirm-sheet-title" className="font-display text-lg font-bold">{title}</h2>
-          <div className="space-y-3 text-sm text-slate-700">{children}</div>
-          {error && (
-            <p className="rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700" role="alert">
-              Chưa thực hiện được: {error}. Thử lại.
-            </p>
-          )}
-          <div className="flex gap-3 pt-1">
-            <button type="button" className="btn-ghost min-h-[44px] flex-1 border border-slate-200" disabled={busy} onClick={close}>
-              {cancelLabel}
-            </button>
-            <button
-              type="button"
-              className={`min-h-[44px] flex-[2] ${danger ? 'inline-flex items-center justify-center rounded-full bg-red-700 px-6 py-3 font-display text-[15px] font-semibold text-white disabled:opacity-50' : 'btn-primary'}`}
-              disabled={!canConfirm || busy}
-              onClick={onConfirm}
-            >
-              {busy && <span className="material-symbols-outlined animate-spin !text-[18px]" aria-hidden>progress_activity</span>}
-              {confirmLabel}
-            </button>
+        <>
+          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-stone-300 md:hidden" aria-hidden />
+          <div className="space-y-4 px-4 pt-3 md:px-6 md:pt-6">
+            <div className="flex items-start justify-between gap-3">
+              <h2 id="confirm-sheet-title" className="pt-2 font-display text-lg font-bold md:text-xl">{title}</h2>
+              <button type="button" className="btn-icon -mr-2" aria-label="Đóng" disabled={busy} onClick={close}>
+                <span className="material-symbols-outlined" aria-hidden>close</span>
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-stone-700">{children}</div>
+            {error && (
+              <p className="banner-danger font-semibold" role="alert">
+                <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
+                Chưa thực hiện được: {error}. Thử lại.
+              </p>
+            )}
           </div>
-        </div>
+          <div className="sticky bottom-0 space-y-2 bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 md:px-6 md:pb-6">
+            {blocked && blockedReason && <p className="text-sm font-semibold text-amber-800">{blockedReason}</p>}
+            <div className="flex gap-3">
+              <button type="button" className="btn-outline flex-1" disabled={busy} onClick={close}>
+                {cancelLabel}
+              </button>
+              <button type="button" className={`${danger ? 'btn-danger' : 'btn-primary'} flex-[2] whitespace-nowrap px-3 text-sm md:text-[15px]`} disabled={!canConfirm || busy} onClick={onConfirm}>
+                {busy && <span className="material-symbols-outlined spinner" aria-hidden>progress_activity</span>}
+                {confirmLabel}
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </dialog>
   );

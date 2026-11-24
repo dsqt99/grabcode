@@ -20,8 +20,8 @@ import { avatarFromFile } from '../../lib/avatar';
 import { currentSubscription, pushKey, pushSupported, subscribePush, unsubscribePush } from '../../lib/push';
 import { BRAND } from '@grabcode/contracts';
 
-const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-normal md:text-sm disabled:bg-slate-50 disabled:text-slate-500';
-const LABEL = 'block text-sm font-semibold text-ink';
+const INPUT = 'field mt-1.5 font-sans font-normal disabled:bg-stone-50 disabled:text-stone-600';
+const LABEL = 'block text-sm font-semibold text-stone-900';
 
 const SECTIONS = [
   { id: 'account', icon: 'person', label: 'Thông tin liên hệ' },
@@ -86,12 +86,12 @@ function useSave() {
     }
   };
   const footer = (label = 'Lưu thay đổi') => (
-    <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+    <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
       <button type="submit" disabled={state.busy} className="btn-primary !py-2.5">
         {state.busy ? 'Đang lưu…' : label}
       </button>
       {state.msg && (
-        <p className={`text-sm ${state.ok ? 'text-emerald-dark' : 'text-red-700'}`} role={state.ok ? 'status' : 'alert'}>
+        <p className={`text-sm ${state.ok ? 'text-brand-800' : 'text-red-700'}`} role={state.ok ? 'status' : 'alert'}>
           {state.msg}
         </p>
       )}
@@ -103,8 +103,8 @@ function useSave() {
 function Section({ id, title, text, children }: { id: string; title: string; text: string; children: ReactNode }) {
   return (
     <section id={id} className="card scroll-mt-24 p-5 sm:p-6">
-      <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
-      <p className="mt-0.5 text-sm text-slate-500">{text}</p>
+      <h2 className="font-display text-lg font-bold text-stone-900">{title}</h2>
+      <p className="mt-0.5 text-sm text-stone-600">{text}</p>
       <div className="mt-5">{children}</div>
     </section>
   );
@@ -112,12 +112,12 @@ function Section({ id, title, text, children }: { id: string; title: string; tex
 
 function Toggle({ checked, onChange, label, text }: { checked: boolean; onChange: (v: boolean) => void; label: string; text?: string }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-slate-200 p-3">
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-stone-200 p-3">
       <span>
-        <span className="block text-sm font-semibold text-ink">{label}</span>
-        {text && <span className="block text-xs text-slate-500">{text}</span>}
+        <span className="block text-sm font-semibold text-stone-900">{label}</span>
+        {text && <span className="block text-xs text-stone-600">{text}</span>}
       </span>
-      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-emerald" />
+      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-brand-700" />
     </label>
   );
 }
@@ -148,10 +148,10 @@ function PushDevice() {
     }
   };
   return (
-    <div className="rounded-lg border border-dashed border-slate-200 p-3 text-sm">
+    <div className="rounded-lg border border-dashed border-stone-200 p-3 text-sm">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-slate-600">{on ? 'Trình duyệt này đang nhận thông báo đẩy.' : 'Trình duyệt này chưa nhận thông báo đẩy.'}</span>
-        <button type="button" disabled={busy} onClick={toggle} className="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 font-semibold hover:bg-slate-50 disabled:opacity-50">
+        <span className="text-stone-600">{on ? 'Trình duyệt này đang nhận thông báo đẩy.' : 'Trình duyệt này chưa nhận thông báo đẩy.'}</span>
+        <button type="button" disabled={busy} onClick={toggle} className="shrink-0 rounded-lg border border-stone-200 px-3 py-1.5 font-semibold hover:bg-stone-50 disabled:opacity-50">
           {on ? 'Tắt trên trình duyệt này' : 'Bật trên trình duyệt này'}
         </button>
       </div>
@@ -170,7 +170,7 @@ function ActivateButton({ role, text }: { role: UserRole; text: string }) {
         run(() => addRole(role), 'Đã kích hoạt.');
       }}
     >
-      <p className="text-sm text-slate-600">{text}</p>
+      <p className="text-sm text-stone-600">{text}</p>
       {footer(role === 'CODER' ? 'Trở thành Coder' : 'Bật vai trò Khách hàng')}
     </form>
   );
@@ -200,9 +200,9 @@ function AccountForm({ me }: { me: Me }) {
     >
       <div className="flex items-center gap-4">
         {f.avatarUrl ? (
-          <img src={f.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-emerald/30" />
+          <img src={f.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-brand-200" />
         ) : (
-          <span className="material-symbols-outlined grid h-16 w-16 place-items-center rounded-full bg-emerald/10 !text-[36px] text-emerald" aria-hidden>
+          <span className="material-symbols-outlined grid h-16 w-16 place-items-center rounded-full bg-brand-50 !text-[36px] text-brand-700" aria-hidden>
             person
           </span>
         )}
@@ -337,7 +337,7 @@ function CoderForm({ me }: { me: Me }) {
           placeholder="Bạn giỏi gì, đã làm dự án nào, cách bạn làm việc với khách hàng…"
           className={INPUT}
         />
-        <span className="mt-1 block text-right text-xs font-normal text-slate-400">{p.bio.length}/2000</span>
+        <span className="mt-1 block text-right text-xs font-normal text-stone-600">{p.bio.length}/2000</span>
       </label>
 
       <fieldset>
@@ -346,11 +346,11 @@ function CoderForm({ me }: { me: Me }) {
           {EXPERIENCE.map((x) => (
             <label
               key={x.v}
-              className={`cursor-pointer rounded-lg border p-3 transition ${p.experienceLevel === x.v ? 'border-emerald bg-emerald/5 ring-1 ring-emerald' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`cursor-pointer rounded-lg border p-3 transition ${p.experienceLevel === x.v ? 'border-brand-700 bg-brand-50 ring-1 ring-brand-700' : 'border-stone-200 hover:border-stone-300'}`}
             >
               <input type="radio" name="exp" className="sr-only" checked={p.experienceLevel === x.v} onChange={() => setP({ ...p, experienceLevel: x.v })} />
-              <span className="block font-display text-sm font-bold text-ink">{x.title}</span>
-              <span className="block text-xs text-slate-500">{x.text}</span>
+              <span className="block font-display text-sm font-bold text-stone-900">{x.title}</span>
+              <span className="block text-xs text-stone-600">{x.text}</span>
             </label>
           ))}
         </div>
@@ -358,7 +358,7 @@ function CoderForm({ me }: { me: Me }) {
 
       <div>
         <label className={LABEL} htmlFor="skill">
-          Kỹ năng <span className="font-normal text-slate-400">({p.skills.length}/20)</span>
+          Kỹ năng <span className="font-normal text-stone-600">({p.skills.length}/20)</span>
         </label>
         <div className="mt-2 flex flex-wrap gap-2">
           {p.skills.map((s) => (
@@ -385,7 +385,7 @@ function CoderForm({ me }: { me: Me }) {
             placeholder="VD: Next.js, NestJS, LangChain — Enter để thêm"
             className={`${INPUT} !mt-0`}
           />
-          <button type="button" onClick={addSkill} className="btn-ghost border border-slate-200">
+          <button type="button" onClick={addSkill} className="btn-ghost border border-stone-200">
             Thêm
           </button>
         </div>
@@ -435,7 +435,7 @@ function CoderForm({ me }: { me: Me }) {
           ))}
         </div>
         {p.languages.length < 10 && (
-          <button type="button" onClick={() => setP({ ...p, languages: [...p.languages, { language: '', level: 'CONVERSATIONAL' }] })} className="btn-ghost mt-2 !px-0 text-emerald-dark">
+          <button type="button" onClick={() => setP({ ...p, languages: [...p.languages, { language: '', level: 'CONVERSATIONAL' }] })} className="btn-ghost mt-2 !px-0 text-brand-800">
             <span className="material-symbols-outlined !text-[18px]" aria-hidden>add</span> Thêm ngôn ngữ
           </button>
         )}
@@ -511,11 +511,11 @@ function PrefsForm({ me }: { me: Me }) {
       </div>
       <fieldset className="mt-5">
         <legend className={LABEL}>Đơn vị tiền tệ hiển thị</legend>
-        <p className="text-xs text-slate-500">Lưu ngay khi chọn.</p>
+        <p className="text-xs text-stone-600">Lưu ngay khi chọn.</p>
         <div className="mt-2 flex gap-2">
           {(['VND', 'USD'] as const).map((c) => (
-            <label key={c} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold ${currency === c ? 'border-emerald bg-emerald/5' : 'border-slate-200'}`}>
-              <input type="radio" name="currency" checked={currency === c} onChange={() => setCurrency(c)} className="accent-emerald" />
+            <label key={c} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold ${currency === c ? 'border-brand-700 bg-brand-50' : 'border-stone-200'}`}>
+              <input type="radio" name="currency" checked={currency === c} onChange={() => setCurrency(c)} className="accent-brand-700" />
               {c === 'VND' ? 'VND (₫)' : 'USD ($)'}
             </label>
           ))}
@@ -534,8 +534,8 @@ function SecurityForm({ me }: { me: Me }) {
   const linkable = (['github', 'google'] as const).filter((p) => providers[p]);
   return (
     <>
-      <p className="text-sm text-slate-600">
-        Đăng nhập bằng: <span className="font-semibold text-ink">{LOGIN_METHOD[me.loginMethod]}</span>
+      <p className="text-sm text-stone-600">
+        Đăng nhập bằng: <span className="font-semibold text-stone-900">{LOGIN_METHOD[me.loginMethod]}</span>
       </p>
       {me.hasPassword ? (
         <form
@@ -559,19 +559,19 @@ function SecurityForm({ me }: { me: Me }) {
           <div className="sm:col-span-2">{footer('Đổi mật khẩu')}</div>
         </form>
       ) : (
-        <p className="mt-2 text-sm text-slate-500">Mật khẩu do {LOGIN_METHOD[me.loginMethod]} quản lý.</p>
+        <p className="mt-2 text-sm text-stone-600">Mật khẩu do {LOGIN_METHOD[me.loginMethod]} quản lý.</p>
       )}
       {linkable.length > 0 && (
         <div className="mt-6">
-          <p className="text-sm font-semibold text-ink">Liên kết đăng nhập</p>
+          <p className="text-sm font-semibold text-stone-900">Liên kết đăng nhập</p>
           <ul className="mt-2 space-y-2">
             {linkable.map((p) => (
-              <li key={p} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm">
+              <li key={p} className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 text-sm">
                 <span>{LOGIN_METHOD[p]}</span>
                 {me.linkedProviders.includes(p) ? (
-                  <span className="font-semibold text-emerald-dark">Đã liên kết</span>
+                  <span className="font-semibold text-brand-800">Đã liên kết</span>
                 ) : (
-                  <a href={oauthUrl(p, undefined, true)} className="font-semibold text-emerald-dark hover:underline">
+                  <a href={oauthUrl(p, undefined, true)} className="font-semibold text-brand-800 hover:underline">
                     Liên kết
                   </a>
                 )}
@@ -585,7 +585,7 @@ function SecurityForm({ me }: { me: Me }) {
           )}
         </div>
       )}
-      <button type="button" onClick={() => logout()} className="btn-ghost mt-4 border border-slate-200 text-red-700">
+      <button type="button" onClick={() => logout()} className="btn-ghost mt-4 border border-stone-200 text-red-700">
         <span className="material-symbols-outlined !text-[18px]" aria-hidden>logout</span> Đăng xuất
       </button>
     </>
@@ -599,7 +599,7 @@ function Settings() {
     // Mock mode (no NEXT_PUBLIC_API_URL): only the browser-local currency preference exists.
     return (
       <main className="mx-auto max-w-2xl px-4 py-8">
-        <p className="card text-sm text-slate-500">Chế độ demo: chưa kết nối API nên không có hồ sơ tài khoản.</p>
+        <p className="card text-sm text-stone-600">Chế độ demo: chưa kết nối API nên không có hồ sơ tài khoản.</p>
       </main>
     );
   }
@@ -609,10 +609,10 @@ function Settings() {
   return (
     <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[220px_1fr] md:px-8">
       <aside className="min-w-0 md:sticky md:top-20 md:self-start">
-        <h1 className="font-display text-2xl font-extrabold text-ink">Cài đặt</h1>
+        <h1 className="font-display text-2xl font-extrabold text-stone-900">Cài đặt</h1>
         <nav className="mt-4 flex gap-1 overflow-x-auto md:flex-col" aria-label="Mục cài đặt">
           {SECTIONS.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-ink">
+            <a key={s.id} href={`#${s.id}`} className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-stone-600 hover:bg-stone-100 hover:text-stone-900">
               <span className="material-symbols-outlined !text-[18px]" aria-hidden>{s.icon}</span>
               {s.label}
             </a>
@@ -625,7 +625,7 @@ function Settings() {
         <Section id="account" title="Thông tin liên hệ" text={`Chỉ ${BRAND.name} và đối tác trong đơn hàng thấy số điện thoại của bạn.`}>
           <AccountForm me={me} />
         </Section>
-        <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao cuốc cho bạn.">
+        <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao việc cho bạn.">
           {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text={`Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần ${BRAND.name} duyệt trước khi nhận việc.`} />}
         </Section>
         <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho freelancer khi nhận đơn của bạn và trên hóa đơn.">

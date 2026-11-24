@@ -3,29 +3,35 @@
 import { useEffect, useState } from 'react';
 import { RefundAccountSchema, type RefundAccount } from '@grabcode/contracts/schemas';
 import { getRefundAccount, putRefundAccount } from '../lib/api';
+import { formatVnd } from '../lib/pricing';
 import { BRAND } from '@grabcode/contracts';
 
 
 const EMPTY: RefundAccount = { bankName: '', accountNumber: '', accountName: '' };
 
-/** Where FastDemo transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund. */
-export default function RefundAccountCard({ orderId }: { orderId: string }) {
+/**
+ * Where FastDemo transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund.
+ * `dueVnd` set: a refund is due now, the form opens right away (redesign-web-order §6); otherwise a collapsed row.
+ */
+export default function RefundAccountCard({ orderId, dueVnd }: { orderId: string; dueVnd?: number }) {
+  const urgent = dueVnd !== undefined;
   const [saved, setSaved] = useState<RefundAccount | null | undefined>(undefined);
   const [form, setForm] = useState<RefundAccount>(EMPTY);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getRefundAccount(orderId).then(
       (a) => {
         setSaved(a);
-        setEditing(!a);
+        setEditing(!a && urgent);
         if (a) setForm(a);
       },
       () => setError('Không tải được tài khoản nhận hoàn.'),
     );
-  }, [orderId]);
+  }, [orderId, urgent]);
 
   const save = async () => {
     const parsed = RefundAccountSchema.safeParse({ ...form, accountName: form.accountName.toUpperCase() });
@@ -37,6 +43,7 @@ export default function RefundAccountCard({ orderId }: { orderId: string }) {
       setSaved(a);
       setForm(a);
       setEditing(false);
+      setDone(true);
     } catch {
       setError('Chưa lưu được, vui lòng thử lại.');
     } finally {
@@ -45,44 +52,57 @@ export default function RefundAccountCard({ orderId }: { orderId: string }) {
   };
 
   const field = (key: keyof RefundAccount, label: string, extra: object = {}) => (
-    <label className="block text-sm">
-      <span className="font-semibold text-slate-700">{label}</span>
-      <input
-        className="mt-1 min-h-[44px] w-full px-3 py-2 !text-base"
-        value={form[key]}
-        disabled={busy}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        {...extra}
-      />
-    </label>
+    <div>
+      <label htmlFor={`refund-${key}`} className="label">{label}</label>
+      <input id={`refund-${key}`} className="field" value={form[key]} disabled={busy} onChange={(e) => setForm({ ...form, [key]: e.target.value })} {...extra} />
+    </div>
   );
 
   return (
-    <section className="card space-y-3" aria-labelledby="refund-account-title">
-      <h2 id="refund-account-title" className="font-display text-base font-bold text-ink">Tài khoản nhận hoàn tiền</h2>
-      <p className="text-sm text-slate-600">Nếu đơn bị huỷ hoặc được hoàn một phần, {BRAND.name} chuyển trả vào tài khoản này.</p>
-      {saved === undefined && !error && <p className="text-sm text-slate-500">Đang tải…</p>}
-      {saved && !editing && (
-        <div className="flex items-start justify-between gap-3 text-sm">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-            <dt className="text-slate-500">Ngân hàng</dt><dd className="font-semibold">{saved.bankName}</dd>
-            <dt className="text-slate-500">Số tài khoản</dt><dd className="font-mono font-semibold">{saved.accountNumber}</dd>
-            <dt className="text-slate-500">Chủ tài khoản</dt><dd className="font-semibold">{saved.accountName}</dd>
-          </dl>
-          <button type="button" className="btn-ghost min-h-[44px]" onClick={() => setEditing(true)}>Sửa</button>
+    <section className={`${urgent ? 'card-action' : 'card'} space-y-3`} aria-labelledby="refund-account-title">
+      <div className="flex min-h-[44px] items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="refund-account-title" className="font-display text-base font-bold text-stone-900">Tài khoản nhận hoàn tiền</h2>
+          {saved === undefined && !error ? (
+            <div className="skeleton mt-1 h-4 w-32" aria-busy="true"><span className="sr-only">Đang tải…</span></div>
+          ) : (
+            !editing && (
+              <p className="text-sm text-stone-600">
+                {saved ? `${saved.bankName} · ****${saved.accountNumber.slice(-4)}` : 'Chưa khai báo'}
+              </p>
+            )
+          )}
         </div>
+        {saved !== undefined && !editing && (
+          <button type="button" className="btn-ghost btn-sm shrink-0" onClick={() => (setEditing(true), setDone(false))}>
+            {saved ? 'Sửa' : 'Thêm'}
+          </button>
+        )}
+      </div>
+      {urgent && (
+        <p className="banner-warn">
+          <span className="material-symbols-outlined !text-[20px]" aria-hidden>undo</span>
+          {BRAND.name} cần tài khoản này để chuyển trả {formatVnd(dueVnd)}.
+        </p>
       )}
-      {editing && saved !== undefined && (
+      {editing && (
         <div className="space-y-3">
+          <p className="text-sm text-stone-600">Nếu đơn bị huỷ hoặc được hoàn một phần, {BRAND.name} chuyển trả vào tài khoản này.</p>
           {field('bankName', 'Ngân hàng', { placeholder: 'VD: MB Bank', autoComplete: 'off' })}
           {field('accountNumber', 'Số tài khoản', { inputMode: 'numeric', placeholder: 'Chỉ chữ số', autoComplete: 'off' })}
           {field('accountName', 'Chủ tài khoản', { placeholder: 'VD: NGUYEN VAN A', autoCapitalize: 'characters', autoComplete: 'off' })}
-          <button type="button" className="btn-primary min-h-[44px] w-full" disabled={busy} onClick={save}>
+          <button type="button" className="btn-primary w-full" disabled={busy} onClick={save}>
             {busy ? 'Đang lưu…' : 'Lưu tài khoản nhận hoàn'}
           </button>
+          {(saved || !urgent) && (
+            <button type="button" className="btn-ghost w-full" disabled={busy} onClick={() => (setEditing(false), setError(null), setForm(saved ?? EMPTY))}>
+              Huỷ
+            </button>
+          )}
         </div>
       )}
-      {error && <p className="text-sm font-semibold text-red-700" role="alert">{error}</p>}
+      {done && !editing && <p className="text-sm text-teal-700" role="status">Đã lưu</p>}
+      {error && <p className="error-text" role="alert">{error}</p>}
     </section>
   );
 }

@@ -5,48 +5,55 @@ import { SEED_TEMPLATES } from '@grabcode/contracts';
 import { useCurrency } from '../lib/currency';
 import { daysLabel, getMenuItem } from '../lib/pricing';
 
+/** Drawn tile instead of the hotlinked `thumbnail` photos (outside hosts, one showed a copyrighted character). */
+const CATEGORY_ICON: [RegExp, string][] = [
+  [/crm/i, 'contacts'],
+  [/fintech|saas/i, 'monitoring'],
+  [/e-?commerce/i, 'storefront'],
+  [/\bai\b/i, 'smart_toy'],
+];
+const categoryIcon = (category: string) => CATEGORY_ICON.find(([re]) => re.test(category))?.[1] ?? 'web';
+
 export default function TemplateShowcase() {
   const { money } = useCurrency();
   return (
-    <section id="templates" aria-labelledby="tpl-title" className="mx-auto max-w-7xl px-4 py-16 md:px-8">
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id="tpl-title" className="font-display text-2xl font-bold text-ink md:text-3xl">Template bàn đạp, có giá từ và thời gian dự kiến</h2>
-          <p className="mt-1 text-slate-500">Chọn mẫu gần nhất với ý tưởng, freelancer tuỳ biến phần còn lại.</p>
-        </div>
-      </div>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <section id="templates" aria-labelledby="tpl-title" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 md:px-8 md:py-16">
+      <h2 id="tpl-title" className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">Mẫu có sẵn, có giá từ và thời gian dự kiến</h2>
+      <p className="mt-1 text-stone-600">Chọn mẫu gần nhất với ý tưởng, freelancer tuỳ biến phần còn lại.</p>
+      <ul className="-mx-4 mt-6 flex snap-x gap-3 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
         {SEED_TEMPLATES.map((t) => ({ t, item: getMenuItem(t.menuItem) })).map(({ t, item }) => (
-          <article key={t.id} className="card card-hover flex flex-col overflow-hidden !p-0">
-            <div className="relative aspect-[16/10] bg-slate-100">
-              <img src={t.thumbnail} alt={`Ảnh minh hoạ ${t.title}`} loading="lazy" className="h-full w-full object-cover" />
-            </div>
-            <div className="flex flex-1 flex-col p-4">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.category}</span>
-              <h3 className="mt-1 font-display text-base font-bold text-ink">{t.title}</h3>
-              <p className="mt-1 line-clamp-3 text-sm text-slate-500">{t.tagline}</p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {t.techStack.slice(0, 3).map((s) => (
-                  <span key={s} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{s}</span>
-                ))}
+          <li key={t.id} className="w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-auto">
+            <article className="card card-hover flex h-full flex-col overflow-hidden !p-0">
+              <div className="grid aspect-[16/9] place-items-center rounded-t-2xl bg-gradient-to-br from-brand-50 to-stone-100" aria-hidden>
+                <span className="material-symbols-outlined !text-[48px] text-brand-700">{categoryIcon(t.category)}</span>
               </div>
-              <div className="mt-auto flex items-end justify-between pt-4">
-                <div>
-                  <div className="font-display text-lg font-extrabold text-emerald-dark">từ {money(item.fromPriceVnd)}</div>
-                  <div className="text-xs text-slate-500">{daysLabel(item.days)}</div>
+              <div className="flex flex-1 flex-col p-4">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">{t.category}</span>
+                <h3 className="mt-1 font-display text-base font-bold text-stone-900">{t.title}</h3>
+                <p className="mt-1 line-clamp-3 text-sm text-stone-600">{t.tagline}</p>
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {t.techStack.slice(0, 3).map((s) => (
+                    <span key={s} className="chip-neutral">{s}</span>
+                  ))}
                 </div>
-                <Link
-                  href={`/order/new?item=${item.code}&template=${t.id}&prompt=${encodeURIComponent(t.tagline)}`}
-                  className="btn-secondary !px-4 !py-2 !text-sm"
-                  aria-label={`Dùng template ${t.title}`}
-                >
-                  Dùng mẫu
-                </Link>
+                <div className="mt-auto flex items-end justify-between gap-2 pt-4">
+                  <div>
+                    <div className="font-display font-bold tabular-nums text-brand-800">từ {money(item.fromPriceVnd)}</div>
+                    <div className="text-xs text-stone-600">{daysLabel(item.days)}</div>
+                  </div>
+                  <Link
+                    href={`/order/new?item=${item.code}&template=${t.id}&prompt=${encodeURIComponent(t.tagline)}`}
+                    className="btn-secondary btn-sm"
+                    aria-label={`Dùng template ${t.title}`}
+                  >
+                    Dùng mẫu
+                  </Link>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
