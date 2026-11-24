@@ -17,6 +17,18 @@ export const CoderApprovalSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
 
 const UrlSchema = z.string().trim().url().max(300);
 
+/**
+ * Uploaded avatars (no object storage yet): the browser crops/resizes to AVATAR_SIZE px and sends a base64 data URL.
+ * Raster formats only (no SVG); the cap keeps /me and order payloads small and well under the API body limit.
+ */
+export const AVATAR_SIZE = 128;
+export const AVATAR_DATA_URL_MAX = 20_000;
+export const AVATAR_DATA_URL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+export const AvatarUrlSchema = z.union([
+  UrlSchema.refine((u) => /^https?:\/\//i.test(u), 'Avatar URL must be http(s)'),
+  z.string().max(AVATAR_DATA_URL_MAX).regex(AVATAR_DATA_URL),
+]);
+
 export const NotificationPrefsSchema = z.object({
   email: z.boolean(),
   zalo: z.boolean(),
@@ -81,7 +93,7 @@ export const MeSchema = z.object({
 export const UpdateMeSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
-    avatarUrl: UrlSchema.nullable(),
+    avatarUrl: AvatarUrlSchema.nullable(),
     phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/).nullable(),
     country: z.string().regex(/^[A-Z]{2}$/),
     timezone: z
