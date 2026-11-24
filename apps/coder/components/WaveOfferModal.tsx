@@ -79,20 +79,28 @@ export default function WaveOfferModal({
   const frac = Math.min(1, remainingMs / (total * 1000));
   const urgent = secs <= 10;
   const { offer, order } = pending;
+  // Screen readers hear only the 10s and 5s marks, not every tick.
+  const announce = secs === 10 || secs === 5 ? `Còn ${secs} giây` : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md animate-pop rounded-t-xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-l3 sm:rounded-xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="offer-title"
+        className="w-full max-w-md animate-pop rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-sheet sm:rounded-3xl sm:shadow-overlay"
+      >
+        <span className="sr-only" aria-live="polite">{announce}</span>
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <span className="chip-ok">
-              <span className="material-symbols-outlined !text-[14px]">bolt</span> Cuốc đơn mới
+          <div className="min-w-0">
+            <span className="chip-progress">
+              <span className="material-symbols-outlined !text-[14px]" aria-hidden>bolt</span> Đơn mới
             </span>
-            <h2 className="mt-2 font-display text-xl font-extrabold leading-tight text-ink">{offer.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{offer.customerName}</p>
+            <h2 id="offer-title" className="mt-2 font-display text-xl font-extrabold leading-tight text-stone-900">{offer.title}</h2>
+            <p className="mt-1 text-sm text-stone-600">{offer.customerName}</p>
           </div>
-          <div className="relative h-16 w-16 shrink-0" aria-label={`Còn ${secs} giây`}>
-            <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
+          <div className="relative h-16 w-16 shrink-0" role="img" aria-label={`Còn ${secs} giây`}>
+            <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90" aria-hidden>
               <circle cx="32" cy="32" r={R} fill="none" stroke="#FEF3C7" strokeWidth="6" />
               <circle
                 cx="32"
@@ -107,33 +115,33 @@ export default function WaveOfferModal({
                 style={{ transition: 'stroke-dashoffset 0.2s linear' }}
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center font-display text-lg font-extrabold text-amber-text">
+            <span className="absolute inset-0 flex items-center justify-center font-display text-lg font-extrabold tabular-nums text-amber-800" aria-hidden>
               {secs}
             </span>
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg bg-emerald-mint p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-dark">Thu nhập ròng</p>
-          <p className="font-display text-3xl font-extrabold text-emerald-dark">{formatVnd(offer.netPayoutVnd)}</p>
+        <div className="mt-4 rounded-2xl bg-teal-50 p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">Bạn nhận</p>
+          <p className="font-display text-[28px] font-extrabold tabular-nums text-teal-800">{formatVnd(offer.netPayoutVnd)}</p>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="chip-dark">{TIER_LABEL[offer.tier] ?? offer.tier}</span>
           <span className="chip-warn">
-            <span className="material-symbols-outlined !text-[14px]">schedule</span> {etaLabel(offer.deadlineHours)}
+            <span className="material-symbols-outlined !text-[14px]" aria-hidden>schedule</span> {etaLabel(offer.deadlineHours)}
           </span>
-          {(offer.templateName || order.templateName) && <span className="chip-ok">{offer.templateName || order.templateName}</span>}
+          {(offer.templateName || order.templateName) && <span className="chip-neutral">{offer.templateName || order.templateName}</span>}
         </div>
 
-        <p className="mt-3 line-clamp-3 text-sm text-slate-600">{offer.summary}</p>
+        <p className="mt-3 line-clamp-3 text-sm text-stone-700">{offer.summary}</p>
 
         <div className="mt-5 grid grid-cols-[1fr_2fr] gap-3">
-          <button type="button" className="btn-ghost min-h-[52px] border border-slate-200" onClick={() => { rejected.current = true; onReject('DECLINED'); }}>
-            Từ chối
+          <button type="button" className="btn-outline min-h-[52px]" onClick={() => { rejected.current = true; onReject('DECLINED'); }}>
+            Bỏ qua
           </button>
           <button type="button" className="btn-primary min-h-[52px] text-base" onClick={() => { rejected.current = true; onAccept(); }}>
-            Nhận cuốc đơn
+            Nhận đơn
           </button>
         </div>
       </div>

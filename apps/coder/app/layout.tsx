@@ -11,7 +11,7 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ['latin', 'vietnamese'], weight: ['
 const inter = Inter({ subsets: ['latin', 'vietnamese'], weight: ['400', '500', '600'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} Coder — Nhận cuốc đơn`,
+  title: `${BRAND.name} Coder — Nhận đơn`,
   description: `Ứng dụng cho freelancer ${BRAND.name}: nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng.`,
 };
 
