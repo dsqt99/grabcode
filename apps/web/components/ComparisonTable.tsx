@@ -4,7 +4,7 @@ const ROWS: { label: string; self: string; grab: string }[] = [
   { label: 'Giữ tiền', self: 'Chuyển thẳng cho người làm', grab: `Giữ ký quỹ trên ${BRAND.name}` },
   { label: 'Thanh toán', self: 'Thoả thuận riêng', grab: 'Giải ngân theo từng mốc khi bạn duyệt' },
   { label: 'Khi chưa đạt', self: 'Tự thương lượng', grab: 'Yêu cầu sửa; tranh chấp có admin xử lý' },
-  { label: 'Người làm', self: 'Tự tìm', grab: 'Freelancer vibe code làm app bằng công cụ AI' },
+  { label: 'Người làm', self: 'Tự tìm', grab: 'Freelancer trên chợ nhận đơn POC, làm bằng công cụ AI' },
 ];
 
 export default function ComparisonTable() {

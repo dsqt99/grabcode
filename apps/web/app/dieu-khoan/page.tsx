@@ -11,7 +11,7 @@ export default function TermsPage() {
       <section>
         <h2>1. {BRAND.name} làm gì</h2>
         <ul>
-          <li>{BRAND.name} kết nối người đặt làm app (khách) với freelancer làm app bằng công cụ AI.</li>
+          <li>{BRAND.name} là chợ kết nối khách đặt POC/demo ngắn với freelancer làm bằng công cụ AI; không nhận làm sản phẩm đầy đủ.</li>
           <li>Khách mô tả yêu cầu; đặc tả và các mốc bàn giao được soạn trước khi đặt đơn và khách xem lại trước khi tạo đơn.</li>
           <Pending>Thông tin pháp nhân, vai trò của {BRAND.name} (sàn trung gian / bên thu hộ), phạm vi trách nhiệm.</Pending>
         </ul>

@@ -7,10 +7,10 @@ import { BRAND } from '@grabcode/contracts';
 
 
 const STEPS = [
-  { icon: 'edit_note', title: 'Chọn món, ghi yêu cầu', text: 'Mô tả app bạn cần bằng tiếng Việt, như ghi chú cho quán.' },
-  { icon: 'auto_awesome', title: 'AI lên bill & mốc giao', text: 'AI chuyển mô tả thành đặc tả, báo giá và các mốc giao từng phần.' },
+  { icon: 'edit_note', title: 'Chọn gói POC, ghi yêu cầu', text: 'Mô tả demo bạn cần bằng tiếng Việt: một tính năng chính, làm ngắn, chi phí nhỏ.' },
+  { icon: 'auto_awesome', title: 'AI soạn đặc tả & báo giá', text: 'AI chuyển mô tả thành đặc tả ngắn; báo giá chốt (dưới 3 triệu đồng) và mốc giao.' },
   { icon: 'qr_code_2', title: 'Thanh toán, tiền được giữ', text: `Quét VietQR, tiền được giữ ký quỹ trên ${BRAND.name}, chưa trả cho ai.` },
-  { icon: 'inventory_2', title: 'Coder vibe code giao demo', text: 'Mỗi mốc giao xong, bạn xem demo rồi duyệt mới giải ngân.' },
+  { icon: 'inventory_2', title: 'Freelancer nhận đơn, giao demo', text: 'Freelancer nhận đơn trên chợ và giao demo chạy được. Bạn xem demo rồi duyệt mới giải ngân.' },
 ];
 
 const PROMISES = [
@@ -42,17 +42,17 @@ export default function Page() {
           <div>
             <span className="chip-progress mb-4">
               <span className="material-symbols-outlined !text-[16px]" aria-hidden>storefront</span>
-              Dành cho chủ shop & SME Việt Nam
+              Chợ POC demo ngắn · dưới 3 triệu đồng
             </span>
             {/* tagline is a full sentence with its own punctuation: never append to it (docs/BRAND.md). */}
             <h1 className="text-balance font-display text-[30px] font-extrabold leading-9 tracking-tight text-stone-900 md:text-5xl md:leading-[1.1]">
               {BRAND.tagline}
             </h1>
             <p className="mt-3 font-display text-xl font-bold text-stone-900 md:text-2xl">
-              <span className="text-brand-800">Coder vibe code nấu demo</span>, bạn nhận từng mốc mới trả tiền.
+              <span className="text-brand-800">Freelancer nhận đơn làm demo</span>, bạn xem demo rồi mới trả tiền.
             </p>
             <p className="mt-4 max-w-xl text-lg text-stone-600">
-              Mô tả ý tưởng như đặt món: AI lên đặc tả và bill, tiền được giữ ký quỹ, freelancer dùng công cụ AI làm nhanh rồi giao demo tận tay.
+              Đặt một bản POC/demo ngắn để thử ý tưởng, không phải sản phẩm đầy đủ: AI soạn đặc tả và báo giá, tiền được giữ ký quỹ, freelancer nhận đơn làm nhanh rồi giao demo cho bạn xem.
             </p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-3">
               {PROMISES.map((p) => (
@@ -63,7 +63,7 @@ export default function Page() {
               ))}
             </ul>
             <a href="#dispatch" className="btn-primary mt-6 w-full scroll-smooth lg:hidden">
-              Đặt làm app
+              Đặt POC demo
               <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_downward</span>
             </a>
           </div>
@@ -109,7 +109,7 @@ export default function Page() {
 
         <section aria-labelledby="how-title" className="bg-ink">
           <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
-            <h2 id="how-title" className="mb-8 font-display text-2xl font-extrabold text-white md:text-center md:text-3xl">Đặt demo như đặt đồ ăn</h2>
+            <h2 id="how-title" className="mb-8 font-display text-2xl font-extrabold text-white md:text-center md:text-3xl">Đặt POC demo, xem rồi mới chốt</h2>
             <ol className="grid grid-cols-1 gap-6 md:grid-cols-4">
               {STEPS.map((s, i) => (
                 <li key={s.title} className="flex gap-4 md:flex-col md:items-center md:text-center">

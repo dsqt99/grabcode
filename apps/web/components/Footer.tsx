@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="space-y-2">
           <Logo />
           <p className="text-balance text-sm font-semibold text-stone-900">{BRAND.tagline}</p>
-          <p className="text-sm text-stone-600">Sàn kết nối chủ shop với freelancer vibe code.</p>
+          <p className="text-sm text-stone-600">Chợ nối khách với freelancer cho POC/demo ngắn.</p>
         </div>
         <nav aria-labelledby="footer-policy">
           <h2 id="footer-policy" className="font-display text-sm font-bold text-stone-900">Chính sách</h2>

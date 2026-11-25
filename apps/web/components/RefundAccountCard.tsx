@@ -10,7 +10,7 @@ import { BRAND } from '@grabcode/contracts';
 const EMPTY: RefundAccount = { bankName: '', accountNumber: '', accountName: '' };
 
 /**
- * Where FastDemo transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund.
+ * Where Ai Code AI transfers a refund of this order (cancelled, auto refund, dispute split). Admins see it on the refund.
  * `dueVnd` set: a refund is due now, the form opens right away (redesign-web-order §6); otherwise a collapsed row.
  */
 export default function RefundAccountCard({ orderId, dueVnd }: { orderId: string; dueVnd?: number }) {
