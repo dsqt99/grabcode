@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font tự host (@fontsource, import trong app/layout.tsx); tailwind.config dùng 2 biến này. */
+:root {
+  --font-jakarta: 'Plus Jakarta Sans';
+  --font-inter: 'Inter';
+}
+
 @layer base {
   html { background: #FAFAF9; }
   body { @apply bg-stone-50 font-sans text-base text-stone-900 antialiased; }
