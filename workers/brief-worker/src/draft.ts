@@ -39,7 +39,7 @@ export function assembleBrief(draft: BriefDraft, req: BriefRequestedEvent['data'
     `- **Gói dịch vụ:** ${req.tier}`,
     `- **Công nghệ yêu cầu:** ${req.framework}`,
     `- **Yêu cầu gốc của khách:** ${req.prompt}`,
-    '- **Tiêu chuẩn giao diện:** FastDemo Design System (#4F46E5)',
+    '- **Tiêu chuẩn giao diện:** Ai Code AI Design System (#4F46E5)',
     '',
     '## Mốc bàn giao',
     ...milestones.map((m, i) => `${i + 1}. [${m.id}] ${m.title} (${m.weightPercent}% thù lao)`),

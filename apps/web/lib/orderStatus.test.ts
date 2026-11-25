@@ -25,7 +25,7 @@ test('Màn B status table: chip, money line, step and actions per server status'
   const unpaid = { paidVnd: 0, heldVnd: 0, releasedVnd: 0, refundedVnd: 0 };
   const half = { paidVnd: 2_900_000, heldVnd: 2_320_000, releasedVnd: 580_000, refundedVnd: 0 };
   assert.deepEqual(row(input('DRAFT', { money: unpaid })), ['Chờ thanh toán', 'warn', 0, 'Chưa thanh toán', '']);
-  assert.deepEqual(row(input('FUNDED')), ['Đang tìm coder', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại FastDemo', '']);
+  assert.deepEqual(row(input('FUNDED')), ['Đang tìm coder', 'info', 1, 'Đã nhận 2.900.000 đ · đang giữ tại Ai Code AI', '']);
   assert.deepEqual(row(input('DISPATCHED')), row(input('FUNDED')));
   assert.deepEqual(row(input('IN_PROGRESS', { money: half, milestones: ms('COMPLETED', 'IN_PROGRESS', 'PENDING') })), [
     'Đang nấu demo',
@@ -110,7 +110,7 @@ test('Màn D: what the customer must do and which tab each order lands in', () =
 });
 
 test('P0-11: waiting for a freelancer says the money arrived and the 24h refund', () => {
-  assert.match(statusView(input('FUNDED')).description, /^Đã nhận tiền, đang chờ freelancer nhận đơn\. Không ai nhận trong 24 giờ thì FastDemo hoàn tiền\.$/);
+  assert.match(statusView(input('FUNDED')).description, /^Đã nhận tiền, đang chờ freelancer nhận đơn\. Không ai nhận trong 24 giờ thì Ai Code AI hoàn tiền\.$/);
 });
 
 test('P0-7: an unquoted DRAFT waits for the quote (no payment step text), a quoted one asks for the transfer', () => {

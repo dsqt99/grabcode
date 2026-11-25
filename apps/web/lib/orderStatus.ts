@@ -16,7 +16,7 @@ export interface StatusInput {
   status: ServerStatus;
   money: OrderMoney;
   priceVnd: number;
-  /** false: DRAFT waiting for FastDemo's quote (priceVnd is the menu "giá từ"). */
+  /** false: DRAFT waiting for Ai Code AI's quote (priceVnd is the menu "giá từ"). */
   priceQuoted: boolean;
   milestones: Order['brief']['milestones'];
   coderName?: string;
@@ -180,9 +180,9 @@ export const ORDER_TABS: { id: OrderTab; label: string }[] = [
   { id: 'cancelled', label: 'Đã huỷ' },
 ];
 
-/** What the customer has to do on the order now; null = nothing (waiting on the freelancer or FastDemo). */
+/** What the customer has to do on the order now; null = nothing (waiting on the freelancer or Ai Code AI). */
 export function customerTodo(o: Pick<StatusInput, 'status' | 'priceQuoted' | 'milestones'>): string | null {
-  // Unquoted DRAFT: FastDemo owes the quote, there is no QR to pay yet (P0-7).
+  // Unquoted DRAFT: Ai Code AI owes the quote, there is no QR to pay yet (P0-7).
   if (o.status === 'DRAFT') return o.priceQuoted ? 'Chờ bạn chuyển khoản' : null;
   if (o.status === 'DELIVERED') return 'Demo đã giao, chờ bạn nhận';
   const submitted = o.status === 'IN_PROGRESS' && o.milestones.find((m) => m.status === 'SUBMITTED');
