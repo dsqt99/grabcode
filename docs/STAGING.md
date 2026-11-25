@@ -1,6 +1,6 @@
-# FastDemo — Staging demo cho CEO và Tester
+# Ai Code AI — Staging demo cho CEO và Tester
 
-Staging là một bản chạy thật của FastDemo (web khách, app freelancer, trang admin) trên một VPS riêng, có sẵn dữ liệu mẫu. Mục đích:
+Staging là một bản chạy thật của Ai Code AI (web khách, app freelancer, trang admin) trên một VPS riêng, có sẵn dữ liệu mẫu. Mục đích:
 
 - CEO/founder bấm thử cả luồng: đặt đơn → thanh toán → freelancer nhận → bàn giao → nghiệm thu.
 - Tester chạy E2E và smoke test trên đó (HON-22).
@@ -116,7 +116,7 @@ Dữ liệu mẫu (đơn nào ở trạng thái nào):
 
 Nhờ đó mỗi đơn mới, "Tôi đã chuyển khoản", tranh chấp, yêu cầu rút tiền sẽ bắn tin vào nhóm Telegram ngay lúc demo.
 
-1. Nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `FastDemo Staging Ops`) và username kết thúc bằng `bot`. BotFather trả **token** dạng `123456789:AA...` (bí mật, không gửi qua chat, không commit).
+1. Nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `Ai Code AI Staging Ops`) và username kết thúc bằng `bot`. BotFather trả **token** dạng `123456789:AA...` (bí mật, không gửi qua chat, không commit).
 2. Tạo một nhóm Telegram, thêm bot vào, gửi một tin bất kỳ trong nhóm.
 3. Mở `https://api.telegram.org/bot<TOKEN>/getUpdates`, tìm `"chat":{"id":-100...}` (số âm) là chat id.
 4. Điền vào `.env.staging`: `TELEGRAM_BOT_TOKEN=...`, `TELEGRAM_ADMIN_CHAT_ID=-100...`, `ADMIN_PUBLIC_URL=https://<domain>/admin`.

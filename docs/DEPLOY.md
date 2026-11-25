@@ -1,4 +1,4 @@
-# FastDemo — Chạy thử và triển khai MVP
+# Ai Code AI — Chạy thử và triển khai MVP
 
 Tài liệu cho bản MVP nhận đơn và thu tiền thật. Luồng chạy như sau:
 
@@ -180,7 +180,7 @@ Mỗi tin có mã đơn, số tiền, tên + SĐT khách (hoặc freelancer) và
 
 **Tạo bot (khoảng 5 phút):**
 
-1. Trong Telegram, nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `FastDemo Ops`) và username kết thúc bằng `bot`. BotFather trả về **token** dạng `123456789:AA...`. Token này là bí mật: không gửi qua chat, không commit.
+1. Trong Telegram, nhắn [@BotFather](https://t.me/BotFather) lệnh `/newbot`, đặt tên (ví dụ `Ai Code AI Ops`) và username kết thúc bằng `bot`. BotFather trả về **token** dạng `123456789:AA...`. Token này là bí mật: không gửi qua chat, không commit.
 2. Tạo một nhóm Telegram cho vận hành và thêm bot vào nhóm. Gửi một tin bất kỳ trong nhóm, ví dụ `/start`.
 3. Lấy **chat id** của nhóm: mở `https://api.telegram.org/bot<TOKEN>/getUpdates` trên trình duyệt, tìm `"chat":{"id":-100...}`. Chat id của nhóm là số âm.
 4. Điền vào `.env.production`:
