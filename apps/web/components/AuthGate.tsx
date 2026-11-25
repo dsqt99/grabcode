@@ -22,8 +22,8 @@ const LABEL = 'font-display text-sm font-semibold text-stone-900';
 const OAUTH_BTN = 'btn-outline w-full';
 
 const ROLES: { role: UserRole; icon: string; title: string; text: string }[] = [
-  { role: 'CUSTOMER', icon: 'business_center', title: 'Tôi cần thuê Coder', text: 'Đặt làm app, chuyển khoản trước, duyệt từng mốc' },
-  { role: 'CODER', icon: 'code', title: 'Tôi là freelancer', text: 'Nhận việc làm app, kiếm thu nhập' },
+  { role: 'CUSTOMER', icon: 'business_center', title: 'Tôi cần đặt POC demo', text: 'Đặt demo ngắn dưới 3 triệu, chuyển khoản trước, xem demo rồi chốt' },
+  { role: 'CODER', icon: 'code', title: 'Tôi là freelancer', text: 'Nhận đơn POC/demo ngắn, kiếm thu nhập' },
 ];
 
 /** Upwork-style role cards; the role is only chosen once, at sign-up. */
@@ -207,7 +207,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
 const PERKS = [
   { icon: 'storefront', text: 'Chủ shop / SME: đăng yêu cầu, duyệt từng mốc rồi mới trả tiền' },
   { icon: 'shield_lock', text: 'Tiền giữ ký quỹ, tranh chấp có admin xử lý' },
-  { icon: 'payments', text: 'Freelancer vibe code: nhận việc, bàn giao theo mốc, rút tiền về ngân hàng' },
+  { icon: 'payments', text: 'Chợ POC ngắn: freelancer nhận đơn, bàn giao theo mốc, rút tiền về ngân hàng' },
 ];
 
 /** Full-width login banner: brand pitch on the left, sign-in panel on the right (form first on mobile). */

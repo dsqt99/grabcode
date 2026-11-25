@@ -89,7 +89,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
     );
   }
 
-  // HON-10 Q3: no QR / bank account before FastDemo quotes the final price (the server sends none either).
+  // HON-10 Q3: no QR / bank account before Ai Code AI quotes the final price (the server sends none either).
   if (!p.priceQuoted) {
     return (
       <section className="card space-y-3 border-l-4 border-l-blue-600" aria-labelledby="quote-title" role="status">
