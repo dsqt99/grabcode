@@ -6,6 +6,7 @@ import { splitBrandName } from './brand';
 
 test('splitBrandName splits before the 2nd capital', () => {
   assert.deepEqual(splitBrandName('FastDemo'), ['Fast', 'Demo']);
+  assert.deepEqual(splitBrandName('Ai Code AI'), ['Ai ', 'Code AI']);
   assert.deepEqual(splitBrandName('Fastdemo'), ['Fastdemo', '']);
   assert.deepEqual(splitBrandName('ABC'), ['A', 'BC']);
 });

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: `${BRAND.name} Coder`,
     short_name: `${BRAND.name} Coder`,
-    description: 'Nhận đơn, làm app bằng công cụ AI, rút tiền về ngân hàng.',
+    description: 'Nhận đơn POC/demo ngắn, làm bằng công cụ AI, rút tiền về ngân hàng.',
     start_url: '/coder',
     scope: '/coder',
     display: 'standalone',

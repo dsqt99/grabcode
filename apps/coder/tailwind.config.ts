@@ -4,7 +4,7 @@ const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', '../../packages/auth-ui/src/**/*.tsx'],
   theme: {
     extend: {
-      // FastDemo redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
+      // Ai Code AI redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
       colors: {
         brand: { 50: '#FFF7ED', 100: '#FFEDD5', 200: '#FED7AA', 300: '#FDBA74', 400: '#FB923C', 500: '#F97316', 600: '#EA580C', 700: '#C2410C', 800: '#9A3412', 900: '#7C2D12' },
         ink: { DEFAULT: '#1C1917', soft: '#292524' },
