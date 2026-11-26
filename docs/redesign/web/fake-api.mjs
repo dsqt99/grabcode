@@ -40,7 +40,7 @@ const done = (url) => ({ deliveryUrl: url, completedAt: t(10), commitHash: 'f00b
 
 const money = (paidVnd, heldVnd, releasedVnd, refundedVnd = 0) => ({ paidVnd, heldVnd, releasedVnd, refundedVnd });
 const order = (id, status, milestones, m, extra = {}) => ({
-  id, status, tier: 'STANDARD', menuItem: 'BOOKING', title: 'Web đặt phòng homestay Đà Lạt có thanh toán VietQR', prompt: 'Dựng web đặt phòng homestay có thanh toán VietQR',
+  id, status, tier: 'STANDARD', menuItem: 'DEMO_BOOKING', title: 'Web đặt phòng homestay Đà Lạt có thanh toán VietQR', prompt: 'Dựng web đặt phòng homestay có thanh toán VietQR',
   templateId: null, framework: 'Next.js 15 + Tailwind CSS', brief: brief(milestones), priceVnd: PRICE, priceQuotedAt: t(1), payoutVnd: 8_250_000,
   money: m, fundedAt: status === 'DRAFT' ? null : t(2), etaHours: 240, disputeReason: null, sandbox: null,
   customer: { id: ME.id, name: ME.name, avatarUrl: null }, coder: ['DRAFT', 'FUNDED', 'DISPATCHED'].includes(status) || id === 'GC-2010' ? null : CODER,

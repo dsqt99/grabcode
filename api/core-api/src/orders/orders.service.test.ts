@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { MENU, OrderCreateSchema, SUBJECTS, payoutOf } from '@grabcode/contracts/schemas';
+import { MAX_ORDER_VND, MENU, OrderCreateSchema, OrderQuoteSchema, SUBJECTS, payoutOf } from '@grabcode/contracts/schemas';
 import { orders, outbox } from '../db/schema';
 import { AdminService } from '../admin/admin.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -112,38 +112,52 @@ test('B4: a dispute after delivery still has the last milestone share to split',
 test('P0-7: a new order starts at the menu "giá từ", unquoted: no QR, a transfer does not fund it until the admin quotes', async () => {
   const ctx = await setup();
   const { db, svc, adminSvc, payments, admin, customer } = ctx;
-  const landing = MENU.find((m) => m.code === 'LANDING')!;
+  const landing = MENU.find((m) => m.code === 'DEMO_LANDING')!;
   const input = OrderCreateSchema.parse({
     prompt: 'Landing page bán khoá học',
-    menuItem: 'LANDING',
+    menuItem: 'DEMO_LANDING',
     brief: { ...brief(), milestones: brief().milestones },
     acceptTerms: true,
     phone: '0912345678',
   });
   const o = await svc.create(customer, input);
-  assert.deepEqual([o.menuItem, o.priceVnd, o.priceQuotedAt, o.etaHours], ['LANDING', landing.fromPriceVnd, null, landing.days[1] * 24]);
+  assert.deepEqual([o.menuItem, o.priceVnd, o.priceQuotedAt, o.etaHours], ['DEMO_LANDING', landing.fromPriceVnd, null, landing.days[1] * 24]);
   const pay = await payments.instructions(customer, o.id);
   assert.deepEqual([pay.priceQuoted, pay.bank], [false, null]);
   // No QR yet, so there is no transfer to report (P0-4 needs the quote first).
   await rejects(payments.reportTransfer(customer, o.id), ConflictException);
 
   // The customer transferred anyway: booked on escrow, order stays DRAFT.
-  await adminSvc.confirmPayment(admin, o.id, { amountVnd: 3_000_000, reference: 'FT100' });
+  await adminSvc.confirmPayment(admin, o.id, { amountVnd: 2_500_000, reference: 'FT100' });
   assert.equal((await svc.get(customer, o.id)).status, 'DRAFT');
 
-  await rejects(adminSvc.quote(o.id, { priceVnd: 2_900_000, etaDays: 3 }), BadRequestException);
-  const quoted = await adminSvc.quote(o.id, { priceVnd: 3_500_000, etaDays: 3 });
-  assert.deepEqual([quoted.status, quoted.priceVnd, quoted.payoutVnd, quoted.etaHours], ['DRAFT', 3_500_000, payoutOf(3_500_000), 72]);
+  await rejects(adminSvc.quote(o.id, { priceVnd: 2_000_000, etaDays: 3 }), BadRequestException);
+  // HON-60 cap: the admin cannot quote above MAX_ORDER_VND (service guard; the HTTP pipe rejects it earlier via OrderQuoteSchema).
+  await rejects(adminSvc.quote(o.id, { priceVnd: 3_000_000, etaDays: 3 }), BadRequestException);
+  const quoted = await adminSvc.quote(o.id, { priceVnd: MAX_ORDER_VND, etaDays: 3 });
+  assert.deepEqual([quoted.status, quoted.priceVnd, quoted.payoutVnd, quoted.etaHours], ['DRAFT', MAX_ORDER_VND, payoutOf(MAX_ORDER_VND), 72]);
   assert.ok(quoted.priceQuotedAt);
   assert.equal((await payments.instructions(customer, o.id)).priceQuoted, true);
-  assert.equal((await payments.instructions(customer, o.id)).dueVnd, 500_000);
+  assert.equal((await payments.instructions(customer, o.id)).dueVnd, MAX_ORDER_VND - 2_500_000);
 
   // Re-quote down to what was paid: funded right away.
-  const funded = await adminSvc.quote(o.id, { priceVnd: 3_000_000, etaDays: 3 });
+  const funded = await adminSvc.quote(o.id, { priceVnd: 2_500_000, etaDays: 3 });
   assert.equal(funded.status, 'FUNDED');
-  await rejects(adminSvc.quote(o.id, { priceVnd: 3_000_000, etaDays: 3 }), ConflictException);
+  await rejects(adminSvc.quote(o.id, { priceVnd: 2_500_000, etaDays: 3 }), ConflictException);
   const [row] = await db.select().from(orders).where(eq(orders.id, o.id));
-  assert.equal(row.payoutVnd, payoutOf(3_000_000));
+  assert.equal(row.payoutVnd, payoutOf(2_500_000));
+});
+
+test('HON-60: OrderQuoteSchema refuses a price above the cap with a clear message', () => {
+  assert.equal(OrderQuoteSchema.safeParse({ priceVnd: MAX_ORDER_VND, etaDays: 3 }).success, true);
+  const over = OrderQuoteSchema.safeParse({ priceVnd: 3_000_000, etaDays: 3 });
+  assert.equal(over.success, false);
+  assert.match(over.error!.issues[0].message, /tối đa 2\.990\.000/);
+});
+
+test('HON-60: every menu item is a demo under the cap', () => {
+  assert.equal(MENU.length, 8);
+  for (const m of MENU) assert.ok(m.fromPriceVnd <= MAX_ORDER_VND && m.fromPriceVnd % 1000 === 0, m.code);
 });
 
 test('P0-4: a payout request emits payout.requested for the admin notifier', async () => {
