@@ -1,71 +1,40 @@
 import { Order } from '../types/order';
 import { CoderProfile } from '../types/coder';
-import type { MenuItemCode } from '../schemas/pricing';
+import { MENU, type MenuItemCode } from '../schemas/pricing';
 
 export interface POCTemplate {
   id: string;
   title: string;
+  /** Câu hỏi mẫu của gói (HON-60): điền vào ô mô tả khi bấm "Dùng mẫu". */
   tagline: string;
   category: string;
-  /** Menu item the template is priced as ("giá từ" of that item; the admin quotes the order). */
+  /** Gói menu của mẫu: giá từ, thời gian giao; mỗi gói dưới trần MAX_ORDER_VND. */
   menuItem: MenuItemCode;
   techStack: string[];
   features: string[];
   popular: boolean;
-  thumbnail: string;
-  previewUrl: string;
 }
 
-export const SEED_TEMPLATES: POCTemplate[] = [
-  {
-    id: "tpl-realestate-crm",
-    title: "Mini CRM Bất Động Sản",
-    tagline: "Quản lý khách nét F0, giỏ hàng căn hộ & thông báo Telegram bot tự động",
-    category: "CRM & B2B",
-    menuItem: "INTERNAL_TOOL",
-    techStack: ["Next.js 15", "Tailwind CSS", "Supabase", "Telegram Bot"],
-    features: ["Kanban quản lý lead", "Bản đồ mặt bằng SVG", "Bắn tin Telegram khi có cọc", "Phân quyền Sale/Admin"],
-    popular: true,
-    thumbnail: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80",
-    previewUrl: "https://demo.grabcode.dev/realestate-crm"
-  },
-  {
-    id: "tpl-saas-billing",
-    title: "SaaS Billing & Subscription",
-    tagline: "Dashboard quản trị thành viên, gói thuê bao & đối soát thanh toán VietQR",
-    category: "Fintech & SaaS",
-    menuItem: "MVP",
-    techStack: ["Next.js 15", "Recharts", "Prisma", "VietQR Hook"],
-    features: ["Biểu đồ MRR/ARR thời gian thực", "Webhook tự động kích hoạt tài khoản", "Xuất báo cáo PDF", "Bảng so sánh gói dịch vụ"],
-    popular: true,
-    thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-    previewUrl: "https://demo.grabcode.dev/saas-billing"
-  },
-  {
-    id: "tpl-ecommerce-fast",
-    title: "E-Commerce Checkout Siêu Tốc",
-    tagline: "Luồng đặt hàng 1 trang (One-page Checkout) kèm VietQR động chuẩn hóa",
-    category: "E-Commerce",
-    menuItem: "SHOP",
-    techStack: ["React 19", "Zustand", "Tailwind CSS", "Web Audio API"],
-    features: ["Giỏ hàng kéo thả mượt mà", "Tự sinh QR theo số tiền", "Âm thanh chốt đơn", "Tối ưu chuyển đổi di động"],
-    popular: false,
-    thumbnail: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=600&q=80",
-    previewUrl: "https://demo.grabcode.dev/fast-checkout"
-  },
-  {
-    id: "tpl-voice-agent",
-    title: "AI Voice Agent Booking",
-    tagline: "Giao diện trợ lý đàm thoại AI giọng nói đặt lịch hẹn nha khoa / spa tự động",
-    category: "AI & Automation",
-    menuItem: "CHATBOT",
-    techStack: ["Next.js 15", "ElevenLabs API", "FastAPI", "WebRTC"],
-    features: ["Microphone visualizer thời gian thực", "Speech-to-Text độ trễ thấp", "Đồng bộ lịch Google Calendar", "Lưu biên bản cuộc gọi"],
-    popular: true,
-    thumbnail: "https://images.unsplash.com/photo-1589254065878-42c9da997008?auto=format&fit=crop&w=600&q=80",
-    previewUrl: "https://demo.grabcode.dev/ai-voice-booking"
-  }
-];
+/** Một mẫu cho mỗi gói trong MENU (cùng thứ tự); tên và câu hỏi mẫu lấy thẳng từ MENU để không lệch giá/gói. */
+const TEMPLATE_DETAILS: Record<MenuItemCode, { category: string; techStack: string[]; features: string[]; popular?: boolean }> = {
+  DEMO_LANDING: { category: 'Chủ shop online', techStack: ['Next.js', 'Tailwind CSS', 'Google Sheets'], features: ['Trang bán 1 sản phẩm chuẩn mobile', 'Form đặt hàng gửi về Zalo/Sheets'], popular: true },
+  DEMO_SHOP: { category: 'Chủ shop online', techStack: ['Next.js', 'Tailwind CSS', 'Zustand'], features: ['Danh sách sản phẩm mẫu, chọn size', 'Giỏ hàng và đặt đơn COD'], popular: true },
+  DEMO_CHATBOT: { category: 'Chủ shop online', techStack: ['Messenger/Zalo test', 'LLM API'], features: ['Trả lời 10 câu hỏi thường gặp về giá, ship', 'Chạy ở kênh thử'] },
+  DEMO_SHEETS_SYNC: { category: 'Chủ shop online', techStack: ['Google Sheets', 'Apps Script', 'CSV'], features: ['Nhập file đơn xuất từ sàn', 'Tự tính doanh thu ngày'] },
+  DEMO_BOOKING: { category: 'Chủ shop online', techStack: ['Next.js', 'Tailwind CSS'], features: ['Chọn dịch vụ, giờ, xác nhận', 'Lịch hiện ra cho chủ tiệm'] },
+  APP_CHECKUP: { category: 'Founder có prototype AI', techStack: ['Code review', 'Claude Code'], features: ['Báo cáo khám 1–2 trang', 'Sửa mẫu 1 lỗi nặng nhất, video trước/sau'] },
+  DEMO_AI_DOCS: { category: 'Founder có prototype AI', techStack: ['Next.js', 'LLM API', 'Vector search'], features: ['Chat hỏi đáp trên tối đa 10 tài liệu', 'Trả lời có trích nguồn'], popular: true },
+  DEMO_APP_FLOW: { category: 'Founder có prototype AI', techStack: ['Next.js', 'Tailwind CSS'], features: ['1 luồng chính chạy trên điện thoại', 'Dữ liệu mẫu để show đối tác'] },
+};
+
+export const SEED_TEMPLATES: POCTemplate[] = MENU.map((m) => ({
+  id: `tpl-${m.code.toLowerCase().replace(/_/g, '-')}`,
+  title: m.name,
+  tagline: m.sampleQuestion,
+  menuItem: m.code,
+  ...TEMPLATE_DETAILS[m.code],
+  popular: TEMPLATE_DETAILS[m.code].popular ?? false,
+}));
 
 export const SEED_CODER: CoderProfile = {
   id: "cdr-8891",
@@ -80,12 +49,8 @@ export const SEED_CODER: CoderProfile = {
   phone: "0982***678"
 };
 
-export const SAMPLE_PROMPTS = [
-  "Dựng Mini App đặt phòng homestay Đà Lạt có bản đồ phòng trống và thanh toán VietQR",
-  "Làm Web App chấm công nhân viên qua GPS và camera nhận diện nụ cười",
-  "Tạo Tool tự động tổng hợp tin tức thị trường chứng khoán gửi qua Telegram mỗi 8h sáng",
-  "Xây dựng Landing Page tuyển sinh khóa học AI có form trắc nghiệm định hướng nghề nghiệp"
-];
+/** Câu hỏi mẫu trên trang chủ: đúng 8 câu của menu HON-60, gói 1–5 cho chủ shop, 6–8 cho founder. */
+export const SAMPLE_PROMPTS: string[] = MENU.map((m) => m.sampleQuestion);
 
 export const INITIAL_DEMO_ORDER: Order = {
   id: "GC-9821",
@@ -93,8 +58,8 @@ export const INITIAL_DEMO_ORDER: Order = {
   title: "Mini CRM Bất Động Sản Đô Thị Mới",
   customerName: "Khách demo (dữ liệu mẫu)",
   customerPrompt: "Cần gấp 1 web CRM quản lý 80 căn hộ phân khu Sun Grand, sale có thể kéo thả trạng thái chốt cọc và bắn tin qua Telegram cho giám đốc sàn.",
-  templateId: "tpl-realestate-crm",
-  templateName: "Mini CRM Bất Động Sản",
+  templateId: "tpl-demo-shop",
+  templateName: "Demo shop mini",
   framework: "Next.js 15 + Tailwind CSS + Supabase",
   priceVnd: 2800000,
   escrowStatus: "ESCROW_LOCKED",
