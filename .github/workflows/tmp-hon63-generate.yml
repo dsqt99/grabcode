@@ -1,0 +1,27 @@
+name: tmp-hon63-generate
+on:
+  push:
+    branches: [feat/hon-63-poc-menu-under-3m]
+    paths: ['.github/workflows/tmp-hon63-generate.yml']
+permissions:
+  contents: write
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm generate
+      - name: Commit generated contracts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/contracts
+          git diff --cached --quiet && echo "no change" && exit 0
+          git commit -m "chore(contracts): sinh lại OpenAPI cho menu 8 gói (HON-63)"
+          git push
