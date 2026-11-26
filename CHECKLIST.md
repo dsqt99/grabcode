@@ -247,3 +247,8 @@
 
 - [x] `/profile`: nút Tải ảnh lên / Xoá ảnh; trình duyệt cắt vuông 128px, nén JPEG thành data URL; contract chỉ nhận http(s) hoặc data URL png/jpeg/webp ≤20.000 ký tự — c143888
 - [ ] Kho lưu file (object storage + URL ký sẵn) nếu cần ảnh lớn hơn hoặc file đính kèm khác; khi có thì chuyển avatar sang đó
+
+## Menu POC dưới 3 triệu (HON-63) — branch `feat/hon-63-poc-menu-under-3m`
+- [x] Thay menu 13 món bằng 8 gói demo của HON-60 trong `pricing.ts`; trần `MAX_ORDER_VND` 2.990.000 ở API (tạo đơn, báo giá), schema báo giá, admin và web; test.
+- [x] Câu hỏi mẫu trang chủ và "Dùng mẫu" theo 8 gói (mỗi câu chọn đúng gói).
+- [ ] 👤 Cọc 30% + chi 70/30 (HON-60 mục 3) chưa làm: cần đổi máy trạng thái FUNDED/ledger, chờ founder và luật sư (HON-24).
