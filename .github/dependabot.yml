@@ -10,6 +10,9 @@ updates:
       # @nestjs/platform-express must stay on the same major as @nestjs/core/common (11): a 12.x bump broke core-api at boot.
       - dependency-name: '@nestjs/*'
         update-types: ['version-update:semver-major']
+      # Tailwind 4 moved its PostCSS plugin to @tailwindcss/postcss and drops tailwind.config.ts/@tailwind directives; a blind bump broke every app build (HON-66). Migrate on purpose.
+      - dependency-name: tailwindcss
+        update-types: ['version-update:semver-major']
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
