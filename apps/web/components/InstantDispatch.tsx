@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { SAMPLE_PROMPTS, SEED_TEMPLATES } from '@grabcode/contracts';
 import { useCurrency } from '../lib/currency';
+import { MAX_ORDER_VND } from '@grabcode/contracts/schemas';
 import { FRAMEWORKS, MENU, daysLabel, getMenuItem, type MenuItemCode } from '../lib/pricing';
 import { BRAND } from '@grabcode/contracts';
 
@@ -23,6 +24,13 @@ export default function InstantDispatch() {
   const length = prompt.trim().length;
   const canSubmit = length >= MIN_PROMPT;
 
+  // A sample question belongs to exactly one demo pack (HON-60): picking it also selects that pack.
+  const pickSample = (question: string) => {
+    setPrompt(question);
+    const m = MENU.find((x) => x.sampleQuestion === question);
+    if (m) setCode(m.code);
+  };
+
   const submit = () => {
     const q = new URLSearchParams({ prompt: prompt.trim(), item: code, framework });
     if (templateId) q.set('template', templateId);
@@ -37,19 +45,20 @@ export default function InstantDispatch() {
       </h2>
 
       <div>
-        <label htmlFor="item" className="label">Loại việc</label>
+        <label htmlFor="item" className="label">Gói demo</label>
         <select id="item" value={code} onChange={(e) => setCode(e.target.value as MenuItemCode)} className="field">
           {MENU.map((m) => (
             <option key={m.code} value={m.code}>
-              {m.name} · từ {money(m.fromPriceVnd)}
+              {m.name} · {money(m.fromPriceVnd)}
             </option>
           ))}
         </select>
+        <p className="mt-1 text-xs text-stone-600">Bản chạy thử (demo/POC) giao trong 2–3 ngày, mỗi đơn tối đa {money(MAX_ORDER_VND)}. Sản phẩm đầy đủ nằm ngoài phạm vi.</p>
         <div className="mt-2 rounded-xl bg-stone-50 p-3" aria-live="polite">
           <p className="text-sm text-stone-700">{item.scope}</p>
           <dl className="mt-2 grid grid-cols-2 gap-3">
             <div>
-              <dt className="text-xs text-stone-600">Giá từ</dt>
+              <dt className="text-xs text-stone-600">Giá gói</dt>
               <dd className="font-display font-bold tabular-nums text-brand-800">{money(item.fromPriceVnd)}</dd>
             </div>
             <div>
@@ -70,14 +79,14 @@ export default function InstantDispatch() {
           rows={4}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ví dụ: Dựng web đặt phòng homestay có thanh toán VietQR..."
+          placeholder="Ví dụ: Mình bán son handmade, cần 1 trang có nút đặt qua Zalo..."
           className="field resize-none"
         />
         <div className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Gợi ý nhanh">
           {SAMPLE_PROMPTS.map((p) => (
-            <button key={p} type="button" onClick={() => setPrompt(p)} className="chip-neutral min-h-[44px] shrink-0 snap-start px-3 text-left hover:bg-brand-50 hover:text-brand-800">
+            <button key={p} type="button" onClick={() => pickSample(p)} className="chip-neutral min-h-[44px] shrink-0 snap-start px-3 text-left hover:bg-brand-50 hover:text-brand-800">
               <span className="material-symbols-outlined !text-[16px]" aria-hidden>auto_awesome</span>
-              <span className="line-clamp-1 max-w-[16rem]">{p}</span>
+              <span className="line-clamp-2 max-w-[18rem]">{p}</span>
             </button>
           ))}
         </div>
