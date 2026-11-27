@@ -13,7 +13,7 @@ function List({ items, icon, tone }: { items: string[]; icon: string; tone: stri
     <ul className="space-y-2">
       {items.map((t) => (
         <li key={t} className="flex gap-2 text-sm text-stone-700">
-          <span className={`material-symbols-outlined !text-[20px] ${tone}`} aria-hidden>{icon}</span>
+          <span className={`material-symbols-outlined text-[20px]! ${tone}`} aria-hidden>{icon}</span>
           {t}
         </li>
       ))}
@@ -52,9 +52,9 @@ export default function AIBriefViewer({ brief, analyzing }: Props) {
   }
 
   return (
-    <div className="card !p-0">
+    <div className="card p-0!">
       <div className="border-b border-stone-200 p-4 md:p-6">
-        <span className="chip-success mb-2"><span className="material-symbols-outlined !text-[16px]" aria-hidden>verified</span>Đặc tả đã soạn</span>
+        <span className="chip-success mb-2"><span className="material-symbols-outlined text-[16px]!" aria-hidden>verified</span>Đặc tả đã soạn</span>
         <h2 className="font-display text-lg font-bold text-stone-900 md:text-xl">{brief.title}</h2>
         <p className="mt-1 text-sm text-stone-600">{brief.scopeSummary}</p>
       </div>

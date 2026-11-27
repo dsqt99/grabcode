@@ -109,7 +109,7 @@ export default function OrderDetail({ id, onClose }: { id: string; onClose: () =
                   )}
                   {m.commitHash && <div className="font-mono text-xs">{m.commitHash}</div>}
                 </td>
-                <td className="max-w-xs break-words">{m.note ?? '—'}</td>
+                <td className="max-w-xs wrap-break-word">{m.note ?? '—'}</td>
                 <td className="text-xs">
                   {m.submittedAt ? when(m.submittedAt) : '—'}
                   <br />
@@ -124,7 +124,7 @@ export default function OrderDetail({ id, onClose }: { id: string; onClose: () =
                 <td>
                   {m.senderName} ({m.sender === 'CUSTOMER' ? 'khách' : 'coder'})
                 </td>
-                <td className="max-w-md whitespace-pre-wrap break-words">{m.text}</td>
+                <td className="max-w-md whitespace-pre-wrap wrap-break-word">{m.text}</td>
                 <td className="text-xs">{when(m.timestamp)}</td>
               </tr>
             ))}

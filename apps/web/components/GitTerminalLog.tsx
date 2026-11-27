@@ -19,7 +19,7 @@ export default function GitTerminalLog({ commits, repoUrl }: { commits: CommitLo
       <div ref={ref} className="max-h-56 overflow-y-auto p-4 font-mono text-xs leading-6" role="log" aria-live="polite">
         {commits.length === 0 && <p className="text-stone-400">$ chờ commit đầu tiên của freelancer...</p>}
         {commits.map((c) => (
-          <p key={c.hash} className="animate-pop break-words">
+          <p key={c.hash} className="animate-pop wrap-break-word">
             <span className="text-amber-300">{c.hash}</span> <span className="text-stone-100">{c.message}</span>{' '}
             <span className="text-stone-400">
               ({c.milestoneId ? `${c.milestoneId}, ` : ''}{c.author}, {formatTime(c.timestamp)})

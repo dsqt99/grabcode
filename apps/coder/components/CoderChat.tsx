@@ -27,7 +27,7 @@ export default function CoderChat({
   };
 
   return (
-    <div className="card !p-0 overflow-hidden">
+    <div className="card p-0! overflow-hidden">
       <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-3">
         <span className="material-symbols-outlined text-brand-700" aria-hidden>chat</span>
         <h3 className="font-display text-sm font-bold">Chat với khách hàng</h3>
@@ -63,7 +63,7 @@ export default function CoderChat({
           placeholder="Nhắn cho khách…"
           className="field flex-1"
         />
-        <button type="submit" disabled={disabled || !text.trim()} className="btn-primary !px-4" aria-label="Gửi">
+        <button type="submit" disabled={disabled || !text.trim()} className="btn-primary px-4!" aria-label="Gửi">
           <span className="material-symbols-outlined" aria-hidden>send</span>
         </button>
       </form>

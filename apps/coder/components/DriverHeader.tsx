@@ -37,7 +37,7 @@ export default function DriverHeader({
           {avatar ? (
             <img src={avatar} alt="" className="h-11 w-11 rounded-full object-cover ring-2 ring-brand-600" />
           ) : (
-            <span className="material-symbols-outlined grid h-11 w-11 place-items-center rounded-full bg-white/10 !text-[28px] ring-2 ring-brand-600" aria-hidden>
+            <span className="material-symbols-outlined grid h-11 w-11 place-items-center rounded-full bg-white/10 text-[28px]! ring-2 ring-brand-600" aria-hidden>
               person
             </span>
           )}
@@ -52,14 +52,14 @@ export default function DriverHeader({
           {(c.tier || c.rating !== null) && (
             <div className="mt-0.5 flex items-center gap-2">
               {c.tier && (
-                <span className="chip bg-white/10 !min-h-0 py-0.5 text-brand-200">
-                  <span className="material-symbols-outlined !text-[14px]" aria-hidden>military_tech</span>
+                <span className="chip bg-white/10 min-h-0! py-0.5 text-brand-200">
+                  <span className="material-symbols-outlined text-[14px]!" aria-hidden>military_tech</span>
                   {TIER_LABEL[c.tier] ?? c.tier}
                 </span>
               )}
               {c.rating !== null && (
                 <span className="flex items-center gap-0.5 font-display text-sm font-semibold text-amber-300">
-                  <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden>star</span>
+                  <span className="material-symbols-outlined text-[16px]!" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden>star</span>
                   {c.rating.toFixed(2)}
                 </span>
               )}
@@ -83,7 +83,7 @@ export default function DriverHeader({
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-white/10 p-3">
             <p className="flex items-center gap-1 text-xs text-stone-300">
-              <span className="material-symbols-outlined !text-[16px]" aria-hidden>account_balance_wallet</span> Số dư ví
+              <span className="material-symbols-outlined text-[16px]!" aria-hidden>account_balance_wallet</span> Số dư ví
             </p>
             <p className={`mt-1 font-display text-lg font-extrabold tabular-nums transition-all duration-500 ${walletFlash ? "scale-105 text-brand-300" : "text-white"}`}>
               {formatVnd(walletVnd)}
@@ -91,7 +91,7 @@ export default function DriverHeader({
           </div>
           <div className="rounded-2xl bg-white/10 p-3">
             <p className="flex items-center gap-1 text-xs text-stone-300">
-              <span className="material-symbols-outlined !text-[16px]" aria-hidden>payments</span> Thu nhập hôm nay
+              <span className="material-symbols-outlined text-[16px]!" aria-hidden>payments</span> Thu nhập hôm nay
             </p>
             <p className="mt-1 font-display text-lg font-extrabold tabular-nums text-brand-300">{formatVnd(todayEarningsVnd)}</p>
           </div>

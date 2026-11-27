@@ -31,7 +31,7 @@ function Row({ label, children, copy }: { label: string; children: React.ReactNo
     <div className="flex min-h-[48px] items-center justify-between gap-3 border-b border-stone-100 py-2 last:border-0">
       <div className="min-w-0">
         <p className="text-xs text-stone-600">{label}</p>
-        <div className="break-words text-stone-900">{children}</div>
+        <div className="wrap-break-word text-stone-900">{children}</div>
       </div>
       {copy && <CopyButton {...copy} />}
     </div>
@@ -110,7 +110,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
           </ol>
         </div>
         <p className="banner-warn">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>warning</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>warning</span>
           Vui lòng chưa chuyển khoản trước khi có giá chốt.
         </p>
       </section>
@@ -140,7 +140,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
   if (paidFull) {
     return (
       <p className="banner-success font-semibold" role="status">
-        <span className="material-symbols-outlined !text-[20px]" aria-hidden>check_circle</span>
+        <span className="material-symbols-outlined text-[20px]!" aria-hidden>check_circle</span>
         Đã nhận đủ {formatVnd(p.priceVnd)}. Đơn đang được đưa lên bảng việc.
       </p>
     );
@@ -211,7 +211,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
                 className="mx-auto h-60 w-60 rounded-xl border border-stone-200 bg-white"
               />
               <button type="button" className="btn-outline w-full" onClick={() => void saveQr(bank.qrUrl, orderId)}>
-                <span className="material-symbols-outlined !text-[20px]" aria-hidden>download</span>
+                <span className="material-symbols-outlined text-[20px]!" aria-hidden>download</span>
                 Lưu ảnh QR
               </button>
               <p className="help">Mở app ngân hàng → Quét QR → Chọn ảnh từ thư viện. Số tiền và nội dung đã điền sẵn.</p>
@@ -231,7 +231,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
       </div>
 
       <div className="banner-info">
-        <span className="material-symbols-outlined !text-[20px]" aria-hidden>info</span>
+        <span className="material-symbols-outlined text-[20px]!" aria-hidden>info</span>
         <div>
           <p className="font-semibold">Sau khi chuyển</p>
           <p>
@@ -251,7 +251,7 @@ export default function PaymentPanel({ orderId }: { orderId: string }) {
       <StickyActionBar>
         {p.reportedAt ? (
           <p className="banner-info min-h-[48px] items-center font-semibold" role="status">
-            <span className="material-symbols-outlined !text-[20px]" aria-hidden>schedule</span>
+            <span className="material-symbols-outlined text-[20px]!" aria-hidden>schedule</span>
             Đã báo chuyển khoản, đang chờ đối soát
           </p>
         ) : (

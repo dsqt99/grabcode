@@ -8,7 +8,7 @@ export default function MonitorView() {
   const { data, error, busy, act, load } = useList<Monitor>('/v1/admin/monitor');
   return (
     <div className="space-y-4">
-      <div className="card flex flex-wrap items-center gap-6 !p-4 text-sm tabular-nums">
+      <div className="card flex flex-wrap items-center gap-6 p-4! text-sm tabular-nums">
         <span>Outbox chờ relay: <b>{data?.outboxPending ?? '…'}</b>{data?.outboxOldestSeconds != null && ` (cũ nhất ${data.outboxOldestSeconds}s)`}</span>
         <span>Realtime chờ Centrifugo: <b>{data?.realtimePending ?? '…'}</b></span>
         <button className="btn-outline btn-compact" onClick={() => void load()}>Làm mới</button>
@@ -31,7 +31,7 @@ export default function MonitorView() {
               <div className="text-xs text-stone-600">{when(j.updatedAt)}</div>
             </td>
             <td>{j.orderId ?? '—'}</td>
-            <td className="max-w-md break-words text-xs">{j.error}</td>
+            <td className="max-w-md wrap-break-word text-xs">{j.error}</td>
             <td>
               {j.retryable && (
                 <button className="btn-primary btn-compact" disabled={busy} onClick={() => act(() => api(`/v1/admin/jobs/${j.kind}/${j.orderId}/retry`, 'POST'))}>

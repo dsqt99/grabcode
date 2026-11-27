@@ -48,7 +48,7 @@ export default function MoneyLedger({ money, priceVnd, priceQuoted }: { money: O
               .map((r) => (
                 <div key={r.icon} className="flex min-h-[44px] items-center justify-between gap-3 py-2">
                   <dt className="flex items-center gap-2 text-sm text-stone-700">
-                    <span className={`material-symbols-outlined !text-[20px] ${r.tone}`} aria-hidden>{r.icon}</span>
+                    <span className={`material-symbols-outlined text-[20px]! ${r.tone}`} aria-hidden>{r.icon}</span>
                     {r.label}
                   </dt>
                   <dd className={`font-display tabular-nums ${r.strong ? 'font-bold text-blue-700' : 'font-semibold text-stone-900'}`}>{formatVnd(r.value)}</dd>

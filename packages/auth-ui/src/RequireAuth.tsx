@@ -39,7 +39,7 @@ export function ActivateRole({ role }: { role: UserRole }) {
     <main className="mx-auto w-full max-w-md px-4 py-16">
       <section className="card p-6 text-center">
         <BrandMark size={48} className="mx-auto mb-4" />
-        <span className="material-symbols-outlined !text-[40px] text-emerald" aria-hidden>{copy.icon}</span>
+        <span className="material-symbols-outlined text-[40px]! text-emerald" aria-hidden>{copy.icon}</span>
         <h1 className="mt-2 font-display text-xl font-extrabold text-ink">{copy.title}</h1>
         <p className="mt-1 text-sm text-slate-500">
           Tài khoản {me?.email ?? me?.githubLogin ?? me?.name} chưa có vai trò này. {copy.text}

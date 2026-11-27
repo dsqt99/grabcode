@@ -93,7 +93,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
 
       {error && (
         <p className="banner-danger mt-4" role="alert">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>error</span>
           {error}
         </p>
       )}
@@ -150,7 +150,7 @@ export function LoginPanel({ defaultRole = 'CUSTOMER', className = '' }: { defau
               aria-pressed={showPassword}
               onClick={() => setShowPassword((v) => !v)}
             >
-              <span className="material-symbols-outlined !text-[20px]" aria-hidden>{showPassword ? 'visibility_off' : 'visibility'}</span>
+              <span className="material-symbols-outlined text-[20px]!" aria-hidden>{showPassword ? 'visibility_off' : 'visibility'}</span>
             </button>
             </span>
             {isRegister && <span className="help font-sans font-normal">Tối thiểu 8 ký tự.</span>}
@@ -228,14 +228,14 @@ export function LoginBanner({ children }: { children: React.ReactNode }) {
             {PERKS.map((p) => (
               <li key={p.icon} className="flex items-center gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-brand-300">
-                  <span className="material-symbols-outlined !text-[20px]" aria-hidden>{p.icon}</span>
+                  <span className="material-symbols-outlined text-[20px]!" aria-hidden>{p.icon}</span>
                 </span>
                 <span className="text-sm text-stone-100">{p.text}</span>
               </li>
             ))}
           </ul>
         </section>
-        <div className="order-first flex flex-col justify-center lg:order-none">{children}</div>
+        <div className="order-first flex flex-col justify-center lg:order-0">{children}</div>
       </main>
     </>
   );
