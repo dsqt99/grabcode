@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@grabcode/contracts": "workspace:*",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
+    "@nestjs/common": "^11.2.11",
+    "@nestjs/core": "^11.2.11",
     "@nestjs/platform-express": "^11.0.0",
-    "drizzle-orm": "^0.44.0",
+    "drizzle-orm": "^0.45.4",
     "nats": "^2.29.0",
     "postgres": "^4.1.1",
     "reflect-metadata": "^0.2.2",
@@ -25,7 +25,7 @@
     "zod": "^4.1.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.16",
+    "@electric-sql/pglite": "^0.6.0",
     "@types/express": "^5.0.0",
     "@types/node": "^26.6.6",
     "drizzle-kit": "^0.31.0",
