@@ -37,13 +37,13 @@ importers:
         version: 11.2.11(@nestjs/common@11.2.8(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.2.8)
       drizzle-orm:
         specifier: ^0.44.0
-        version: 0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9)
+        version: 0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@4.1.1)
       nats:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -258,8 +258,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
       zod:
         specifier: ^4.1.0
         version: 4.6.7
@@ -286,8 +286,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -308,8 +308,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
       web-push:
         specifier: ^4.0.0
         version: 4.0.0
@@ -336,8 +336,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -361,8 +361,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -383,8 +383,8 @@ importers:
         specifier: ^2.29.0
         version: 2.29.3
       postgres:
-        specifier: ^3.4.5
-        version: 3.4.9
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -2217,9 +2217,9 @@ packages:
     resolution: {integrity: sha512-RVHEU9/Pp1Fnjr/MpAJsZoADukCKhfIi15OunEYiGktIkYLkPVvC1sioWolGDS7XByMTx9m/IGbro0Js13zhnQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postgres@3.4.9:
-    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
-    engines: {node: '>=12'}
+  postgres@4.1.1:
+    resolution: {integrity: sha512-1kJDojqNZC+iTHHXh6eif0J98LUtyLAePe/qkW1GK35eh2JixlsAiIKq3FGI+xqI+SUGTNodzf7TScVeIIyUug==}
+    engines: {node: '>=18'}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -3435,11 +3435,11 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@3.4.9):
+  drizzle-orm@0.44.7(@electric-sql/pglite@0.3.16)(@opentelemetry/api@1.10.0)(postgres@4.1.1):
     optionalDependencies:
       '@electric-sql/pglite': 0.3.16
       '@opentelemetry/api': 1.10.0
-      postgres: 3.4.9
+      postgres: 4.1.1
 
   dunder-proto@1.0.1:
     dependencies:
@@ -4086,7 +4086,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.4
 
-  postgres@3.4.9: {}
+  postgres@4.1.1: {}
 
   prelude-ls@1.2.1: {}
 
