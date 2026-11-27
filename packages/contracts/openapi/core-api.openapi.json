@@ -4760,19 +4760,14 @@
           "menuItem": {
             "type": "string",
             "enum": [
-              "FIX",
-              "LANDING",
-              "COMPANY_SITE",
-              "SHOP",
-              "ZALO_MINI_APP",
-              "CHATBOT",
-              "PAYMENT",
-              "MARKETPLACE_SYNC",
-              "INTERNAL_TOOL",
-              "BOOKING",
-              "RESCUE",
-              "DEPLOY",
-              "MVP"
+              "DEMO_LANDING",
+              "DEMO_SHOP",
+              "DEMO_CHATBOT",
+              "DEMO_SHEETS_SYNC",
+              "DEMO_BOOKING",
+              "APP_CHECKUP",
+              "DEMO_AI_DOCS",
+              "DEMO_APP_FLOW"
             ]
           },
           "tier": {
@@ -5025,19 +5020,14 @@
               {
                 "type": "string",
                 "enum": [
-                  "FIX",
-                  "LANDING",
-                  "COMPANY_SITE",
-                  "SHOP",
-                  "ZALO_MINI_APP",
-                  "CHATBOT",
-                  "PAYMENT",
-                  "MARKETPLACE_SYNC",
-                  "INTERNAL_TOOL",
-                  "BOOKING",
-                  "RESCUE",
-                  "DEPLOY",
-                  "MVP"
+                  "DEMO_LANDING",
+                  "DEMO_SHOP",
+                  "DEMO_CHATBOT",
+                  "DEMO_SHEETS_SYNC",
+                  "DEMO_BOOKING",
+                  "APP_CHECKUP",
+                  "DEMO_AI_DOCS",
+                  "DEMO_APP_FLOW"
                 ]
               },
               {
@@ -5509,19 +5499,14 @@
                     {
                       "type": "string",
                       "enum": [
-                        "FIX",
-                        "LANDING",
-                        "COMPANY_SITE",
-                        "SHOP",
-                        "ZALO_MINI_APP",
-                        "CHATBOT",
-                        "PAYMENT",
-                        "MARKETPLACE_SYNC",
-                        "INTERNAL_TOOL",
-                        "BOOKING",
-                        "RESCUE",
-                        "DEPLOY",
-                        "MVP"
+                        "DEMO_LANDING",
+                        "DEMO_SHOP",
+                        "DEMO_CHATBOT",
+                        "DEMO_SHEETS_SYNC",
+                        "DEMO_BOOKING",
+                        "APP_CHECKUP",
+                        "DEMO_AI_DOCS",
+                        "DEMO_APP_FLOW"
                       ]
                     },
                     {
@@ -6381,19 +6366,14 @@
                         {
                           "type": "string",
                           "enum": [
-                            "FIX",
-                            "LANDING",
-                            "COMPANY_SITE",
-                            "SHOP",
-                            "ZALO_MINI_APP",
-                            "CHATBOT",
-                            "PAYMENT",
-                            "MARKETPLACE_SYNC",
-                            "INTERNAL_TOOL",
-                            "BOOKING",
-                            "RESCUE",
-                            "DEPLOY",
-                            "MVP"
+                            "DEMO_LANDING",
+                            "DEMO_SHOP",
+                            "DEMO_CHATBOT",
+                            "DEMO_SHEETS_SYNC",
+                            "DEMO_BOOKING",
+                            "APP_CHECKUP",
+                            "DEMO_AI_DOCS",
+                            "DEMO_APP_FLOW"
                           ]
                         },
                         {
@@ -6885,19 +6865,14 @@
                     {
                       "type": "string",
                       "enum": [
-                        "FIX",
-                        "LANDING",
-                        "COMPANY_SITE",
-                        "SHOP",
-                        "ZALO_MINI_APP",
-                        "CHATBOT",
-                        "PAYMENT",
-                        "MARKETPLACE_SYNC",
-                        "INTERNAL_TOOL",
-                        "BOOKING",
-                        "RESCUE",
-                        "DEPLOY",
-                        "MVP"
+                        "DEMO_LANDING",
+                        "DEMO_SHOP",
+                        "DEMO_CHATBOT",
+                        "DEMO_SHEETS_SYNC",
+                        "DEMO_BOOKING",
+                        "APP_CHECKUP",
+                        "DEMO_AI_DOCS",
+                        "DEMO_APP_FLOW"
                       ]
                     },
                     {
@@ -7891,19 +7866,14 @@
               {
                 "type": "string",
                 "enum": [
-                  "FIX",
-                  "LANDING",
-                  "COMPANY_SITE",
-                  "SHOP",
-                  "ZALO_MINI_APP",
-                  "CHATBOT",
-                  "PAYMENT",
-                  "MARKETPLACE_SYNC",
-                  "INTERNAL_TOOL",
-                  "BOOKING",
-                  "RESCUE",
-                  "DEPLOY",
-                  "MVP"
+                  "DEMO_LANDING",
+                  "DEMO_SHOP",
+                  "DEMO_CHATBOT",
+                  "DEMO_SHEETS_SYNC",
+                  "DEMO_BOOKING",
+                  "APP_CHECKUP",
+                  "DEMO_AI_DOCS",
+                  "DEMO_APP_FLOW"
                 ]
               },
               {
@@ -8044,19 +8014,14 @@
                     {
                       "type": "string",
                       "enum": [
-                        "FIX",
-                        "LANDING",
-                        "COMPANY_SITE",
-                        "SHOP",
-                        "ZALO_MINI_APP",
-                        "CHATBOT",
-                        "PAYMENT",
-                        "MARKETPLACE_SYNC",
-                        "INTERNAL_TOOL",
-                        "BOOKING",
-                        "RESCUE",
-                        "DEPLOY",
-                        "MVP"
+                        "DEMO_LANDING",
+                        "DEMO_SHOP",
+                        "DEMO_CHATBOT",
+                        "DEMO_SHEETS_SYNC",
+                        "DEMO_BOOKING",
+                        "APP_CHECKUP",
+                        "DEMO_AI_DOCS",
+                        "DEMO_APP_FLOW"
                       ]
                     },
                     {
@@ -8202,19 +8167,14 @@
                   {
                     "type": "string",
                     "enum": [
-                      "FIX",
-                      "LANDING",
-                      "COMPANY_SITE",
-                      "SHOP",
-                      "ZALO_MINI_APP",
-                      "CHATBOT",
-                      "PAYMENT",
-                      "MARKETPLACE_SYNC",
-                      "INTERNAL_TOOL",
-                      "BOOKING",
-                      "RESCUE",
-                      "DEPLOY",
-                      "MVP"
+                      "DEMO_LANDING",
+                      "DEMO_SHOP",
+                      "DEMO_CHATBOT",
+                      "DEMO_SHEETS_SYNC",
+                      "DEMO_BOOKING",
+                      "APP_CHECKUP",
+                      "DEMO_AI_DOCS",
+                      "DEMO_APP_FLOW"
                     ]
                   },
                   {
@@ -8934,7 +8894,7 @@
           "priceVnd": {
             "type": "integer",
             "minimum": 100000,
-            "maximum": 1000000000
+            "maximum": 2990000
           },
           "etaDays": {
             "type": "integer",
