@@ -162,7 +162,7 @@ function NewOrder() {
           <div className="min-w-0 space-y-4 md:space-y-6">
             <div className="card space-y-3">
               <label htmlFor="prompt" className="label">Yêu cầu của bạn</label>
-              <textarea id="prompt" rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="field resize-none" placeholder="Mô tả app bạn cần..." />
+              <textarea id="prompt" rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="field resize-none" placeholder="Mô tả demo bạn cần (một tính năng chính)…" />
               {stale && (
                 <p className="banner-warn" role="status">
                   <span className="material-symbols-outlined !text-[20px]" aria-hidden>info</span>

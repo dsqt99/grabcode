@@ -4,12 +4,14 @@
  * Do not hardcode a domain here: domains come from env (WEB_ORIGIN, DOMAIN, ...).
  */
 export const BRAND = {
-  name: 'FastDemo',
+  name: 'Ai Code AI',
   /**
-   * TẠM (HON-43, theo chỉ đạo founder: cosplay app giao đồ ăn, vibe code ship demo nhanh). Founder CHƯA chốt câu chữ.
+   * TẠM (HON-61): founder CHƯA chốt slogan. Phương án thay thế:
+   *  - 'Chợ POC ngắn: đặt demo dưới 3 triệu, xem demo rồi mới chốt.'
+   *  - 'Có ý tưởng? Đặt POC demo dưới 3 triệu, ưng mới chốt.'
    * A full sentence with its own punctuation: never append to it in components.
    */
-  tagline: 'Đặt demo như đặt đồ ăn. Vibe code giao nhanh, ưng mới chốt.',
+  tagline: 'Đặt POC demo dưới 3 triệu. Freelancer làm, xem demo rồi mới chốt.',
   /** Org line used in the footer. */
   company: 'Hoàng Hải Tech',
 } as const;

@@ -1,6 +1,6 @@
 import type { Config } from 'tailwindcss';
 
-// FastDemo redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
+// Ai Code AI redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', '../../packages/auth-ui/src/**/*.tsx'],
   theme: {

@@ -10,7 +10,7 @@ import { BRAND } from '@grabcode/contracts';
 
 const MIN_PROMPT = 10;
 
-/** Home order box: pick a menu item (giá từ + days), describe the job; FastDemo quotes the final price before payment. */
+/** Home order box: pick a menu item (giá từ + days), describe the job; Ai Code AI quotes the final price before payment. */
 export default function InstantDispatch() {
   const router = useRouter();
   const { money } = useCurrency();

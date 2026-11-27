@@ -1,7 +1,7 @@
 // WebPush service worker (scope /, so it also covers /coder served through the web rewrite).
 // Payload from workers/notifier: { title, body, url, tag }.
 self.addEventListener('push', (e) => {
-  const n = e.data ? e.data.json() : { title: 'FastDemo' /* keep in sync with BRAND.name (static file, cannot import) */, body: '' };
+  const n = e.data ? e.data.json() : { title: 'Ai Code AI' /* keep in sync with BRAND.name (static file, cannot import) */, body: '' };
   e.waitUntil(self.registration.showNotification(n.title, { body: n.body, tag: n.tag, icon: '/icon.png', data: { url: n.url || '/' } }));
 });
 

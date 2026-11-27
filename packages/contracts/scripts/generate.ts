@@ -85,7 +85,6 @@ import {
   RegisterSchema,
   UpdateMeSchema,
 } from '../src/schemas/auth.ts';
-import { BRAND } from '../src/brand.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const write = (rel: string, data: unknown) => {
@@ -113,7 +112,7 @@ const role = { name: 'role', in: 'query', required: false, description: 'Role fo
 
 write('openapi/core-api.openapi.json', {
   openapi: '3.1.0',
-  info: { title: `${BRAND.name} core-api`, version: '0.1.0' },
+  info: { title: 'FastDemo core-api' /* technical API id, not user-facing; kept so the generated spec does not drift */, version: '0.1.0' },
   servers: [{ url: 'http://localhost:4000' }],
   paths: {
     '/v1/briefs': {

@@ -20,7 +20,7 @@ interface Props {
   children?: ReactNode;
 }
 
-/** Order summary before creating the DRAFT: menu "giá từ"; the final price comes from FastDemo's quote (HON-10 Q3). */
+/** Order summary before creating the DRAFT: menu "giá từ"; the final price comes from Ai Code AI's quote (HON-10 Q3). */
 export default function EscrowCheckout({ itemName, fromPriceVnd, days, disabled, hint, submitting, onConfirm, children }: Props) {
   // Paid in VND (bank transfer); USD is only a reference.
   const { usd } = useCurrency();

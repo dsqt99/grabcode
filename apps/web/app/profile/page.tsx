@@ -32,7 +32,7 @@ const SECTIONS = [
 ];
 
 const EXPERIENCE: { v: ExperienceLevel; title: string; text: string }[] = [
-  { v: 'ENTRY', title: 'Mới vào nghề', text: 'Dưới 2 năm, làm app nhỏ' },
+  { v: 'ENTRY', title: 'Mới vào nghề', text: 'Dưới 2 năm, làm demo nhỏ' },
   { v: 'INTERMEDIATE', title: 'Trung cấp', text: '2–5 năm, tự build full-stack' },
   { v: 'EXPERT', title: 'Chuyên gia', text: 'Trên 5 năm, kiến trúc & AI' },
 ];
@@ -626,10 +626,10 @@ function Settings() {
           <AccountForm me={me} />
         </Section>
         <Section id="coder" title="Hồ sơ Coder" text="Khách hàng và thuật toán matching dựa vào hồ sơ này để giao việc cho bạn.">
-          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text={`Muốn nhận việc làm app và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần ${BRAND.name} duyệt trước khi nhận việc.`} />}
+          {isCoder ? <CoderForm me={me} /> : <ActivateButton role="CODER" text={`Muốn nhận đơn POC/demo và kiếm thêm thu nhập? Bật vai trò freelancer trên chính tài khoản này. Hồ sơ cần ${BRAND.name} duyệt trước khi nhận việc.`} />}
         </Section>
         <Section id="customer" title="Hồ sơ doanh nghiệp" text="Hiển thị cho freelancer khi nhận đơn của bạn và trên hóa đơn.">
-          {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần thuê freelancer làm app? Bật vai trò Khách hàng trên chính tài khoản này." />}
+          {isCustomer ? <CustomerForm me={me} /> : <ActivateButton role="CUSTOMER" text="Cần đặt POC/demo? Bật vai trò Khách hàng trên chính tài khoản này." />}
         </Section>
         <Section id="prefs" title="Thông báo & hiển thị" text={`Chọn kênh ${BRAND.name} được phép liên hệ bạn.`}>
           <PrefsForm me={me} />

@@ -96,7 +96,7 @@ export default function Navbar() {
                   </Link>
                 </>
               )}
-              <Link href="/#dispatch" className="btn-primary btn-sm ml-1 hidden lg:inline-flex">Đặt làm app</Link>
+              <Link href="/#dispatch" className="btn-primary btn-sm ml-1 hidden lg:inline-flex">Đặt POC demo</Link>
               <button
                 type="button"
                 className="btn-icon lg:hidden"
@@ -124,7 +124,7 @@ export default function Navbar() {
                 </a>
               </li>
               <li className="pt-2">
-                <Link href="/#dispatch" onClick={() => setOpen(false)} className="btn-primary w-full">Đặt làm app</Link>
+                <Link href="/#dispatch" onClick={() => setOpen(false)} className="btn-primary w-full">Đặt POC demo</Link>
               </li>
             </ul>
           )}
