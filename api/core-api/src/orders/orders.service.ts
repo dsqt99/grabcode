@@ -6,9 +6,11 @@ import {
   ORDER_SUBJECTS,
   SUBJECTS,
   coderTierFor,
+  MAX_ORDER_VND,
   estimateOrder,
   milestoneShare,
   normalizeVnPhone,
+  orderCapMessage,
   payoutOf,
   releasesOnApproval,
   REVISION_NOTE_MIN,
@@ -157,6 +159,7 @@ export class OrdersService {
     if (!phone) throw new BadRequestException({ message: 'A Vietnamese mobile number is required', issues: [{ path: ['phone'], message: 'Required' }] });
     // "Giá từ" of the menu item; an admin quotes the real price before the customer can pay (Q3).
     const est = estimateOrder(input.menuItem);
+    if (est.priceVnd > MAX_ORDER_VND) throw new BadRequestException({ message: orderCapMessage() });
     // The customer only reviewed the plan: progress always starts from scratch, milestone ids come from the server.
     const brief = freshBrief(input.brief);
     const id = await this.db.transaction(async (tx) => {
