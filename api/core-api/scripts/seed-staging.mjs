@@ -111,9 +111,9 @@ const approve = async (o, id) => must(await customer('POST', `${ms(o, id)}/appro
 const move = async (c, o, status) => must(await c('POST', `/v1/orders/${o.id}/transitions`, { status }), `${o.id} -> ${status}`);
 
 // A. ACCEPTED: finished and paid out to freelancer 1 (wallet has money, one withdrawal request waits for the admin).
-const a = await place('LANDING', 'Landing page bán khóa học tiếng Anh online, có form đăng ký tư vấn.', 'Landing khóa học tiếng Anh');
-await quote(a, 3_000_000, 3);
-await pay(a, 3_000_000, 'FT-DEMO-A1');
+const a = await place('DEMO_LANDING', 'Mình bán khóa học tiếng Anh online, cần 1 trang có form đăng ký tư vấn.', 'Demo trang khóa học tiếng Anh');
+await quote(a, 1_500_000, 2);
+await pay(a, 1_500_000, 'FT-DEMO-A1');
 await claim(f1, a);
 for (const id of ['M1', 'M2', 'M3']) {
   await submit(f1, a, id, `https://demo.staging.grabcode.test/landing-anh-van/${id.toLowerCase()}`);
@@ -126,9 +126,9 @@ const withdraw = Math.min(1_000_000, Math.floor(wallet / 1000) * 1000);
 if (withdraw >= 10_000) must(await f1('POST', '/v1/me/payouts', { amountVnd: withdraw, bankAccount: 'MB Bank 0123456789 NGUYEN VAN DEMO' }), 'payout request');
 
 // B. DELIVERED: all milestones approved, waiting for the customer to accept (demo step "nghiệm thu").
-const b = await place('COMPANY_SITE', 'Website giới thiệu công ty nội thất, 6 trang, có trang tin tức.', 'Website công ty nội thất An Phát');
-await quote(b, 6_000_000, 6);
-await pay(b, 6_000_000, 'FT-DEMO-B1');
+const b = await place('DEMO_AI_DOCS', 'Mình có 40 file PDF chính sách bảo hành nội thất, muốn có chat hỏi đáp để show khách.', 'Demo chat hỏi đáp tài liệu An Phát');
+await quote(b, 2_900_000, 3);
+await pay(b, 2_900_000, 'FT-DEMO-B1');
 await claim(f1, b);
 for (const id of ['M1', 'M2', 'M3']) {
   await submit(f1, b, id, `https://demo.staging.grabcode.test/noi-that-an-phat/${id.toLowerCase()}`);
@@ -137,23 +137,23 @@ for (const id of ['M1', 'M2', 'M3']) {
 await move(f1, b, 'DELIVERED');
 
 // C. IN_PROGRESS: freelancer 1 handed in milestone 1, the customer has not reviewed it yet (demo step "duyệt mốc").
-const c = await place('SHOP', 'Web bán hàng cho shop mỹ phẩm handmade, thanh toán COD + VietQR.', 'Web bán mỹ phẩm handmade');
-await quote(c, 11_000_000, 8);
-await pay(c, 11_000_000, 'FT-DEMO-C1');
+const c = await place('DEMO_SHOP', 'Mình có 30 mẫu mỹ phẩm handmade, muốn khách thêm giỏ và đặt thử trên điện thoại.', 'Demo shop mỹ phẩm handmade');
+await quote(c, 2_900_000, 3);
+await pay(c, 2_900_000, 'FT-DEMO-C1');
 await claim(f1, c);
 await submit(f1, c, 'M1', 'https://demo.staging.grabcode.test/my-pham/m1');
 
 // D. FUNDED: paid, nobody took it. The demo freelancer (freelancer 2) claims it live from "Việc đang chờ nhận".
-const d = await place('BOOKING', 'Trang đặt lịch cho tiệm tóc, nhắc lịch qua Zalo.', 'Trang đặt lịch tiệm tóc Minh Anh');
-await quote(d, 6_500_000, 6);
-await pay(d, 6_500_000, 'FT-DEMO-D1');
+const d = await place('DEMO_BOOKING', 'Tiệm tóc mình muốn khách tự chọn dịch vụ và giờ, khỏi nhắn tin qua lại.', 'Demo đặt lịch tiệm tóc Minh Anh');
+await quote(d, 2_400_000, 3);
+await pay(d, 2_400_000, 'FT-DEMO-D1');
 
 // E. DRAFT, quoted: waiting for the customer's bank transfer (demo step "thanh toán": QR + admin confirms).
-const e = await place('CHATBOT', 'Chatbot Zalo OA trả lời câu hỏi thường gặp của phòng khám nha khoa.', 'Chatbot Zalo phòng khám nha khoa');
-await quote(e, 4_500_000, 4);
+const e = await place('DEMO_CHATBOT', 'Phòng khám nha khoa mình tối nào khách cũng hỏi giá, bot trả lời giùm được không?', 'Demo chatbot phòng khám nha khoa');
+await quote(e, 2_000_000, 3);
 
 // F. DRAFT, not quoted: waiting for the admin's quote (demo step "báo giá").
-await place('LANDING', 'Landing page giới thiệu sản phẩm cà phê rang xay, có nút đặt hàng qua Zalo.', 'Landing cà phê rang xay');
+await place('DEMO_LANDING', 'Mình bán cà phê rang xay, cần 1 trang có nút đặt qua Zalo, 2 ngày làm được không?', 'Demo trang cà phê rang xay');
 
 console.log('seed-staging: đã tạo 6 đơn mẫu (ACCEPTED, DELIVERED, IN_PROGRESS, FUNDED chờ nhận, DRAFT chờ chuyển khoản, DRAFT chờ báo giá).');
 printLogins();
