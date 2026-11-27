@@ -6,12 +6,12 @@ const config: Config = {
     extend: {
       // Ai Code AI redesign tokens (HON-51 redesign-spec). Same block in apps/web, apps/coder, apps/admin.
       colors: {
-        brand: { 50: '#FFF7ED', 100: '#FFEDD5', 200: '#FED7AA', 300: '#FDBA74', 400: '#FB923C', 500: '#F97316', 600: '#EA580C', 700: '#C2410C', 800: '#9A3412', 900: '#7C2D12' },
+        brand: { 50: '#EEF4FF', 100: '#DCE8FF', 200: '#BAD1FF', 300: '#8DB2FF', 400: '#5A8BFA', 500: '#2F66EA', 600: '#0B44CC', 700: '#0A38A8', 800: '#0C2F85', 900: '#0D2766' },
         ink: { DEFAULT: '#1C1917', soft: '#292524' },
         'line-strong': '#8A817C',
         // --- legacy aliases: keep until every screen of the app is redesigned, then delete (P1 cleanup) ---
-        'brand-strong': '#C2410C', primary: '#9A3412', 'primary-fixed': '#FED7AA', 'inverse-primary': '#FDBA74',
-        emerald: { DEFAULT: '#EA580C', dark: '#9A3412', mint: '#FFF7ED', mintHover: '#FFEDD5' },
+        'brand-strong': '#0A38A8', primary: '#0C2F85', 'primary-fixed': '#BAD1FF', 'inverse-primary': '#8DB2FF',
+        emerald: { DEFAULT: '#0B44CC', dark: '#0C2F85', mint: '#EEF4FF', mintHover: '#DCE8FF' },
         amber: { DEFAULT: '#F59E0B', tint: '#FEF3C7', text: '#92400E' },
       },
       fontFamily: {
