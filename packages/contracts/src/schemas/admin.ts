@@ -3,7 +3,7 @@ import { AIBriefSchema } from './brief';
 import { CoderApprovalSchema, CoderProfileDetailsSchema } from './auth';
 import { CoderTierSchema, OrderStatusSchema, RefundAccountSchema } from './order';
 import { LedgerKindSchema } from './payment';
-import { MenuItemCodeSchema } from './pricing';
+import { MAX_ORDER_VND, MenuItemCodeSchema, orderCapMessage } from './pricing';
 import { ChatMessageSchema } from './realtime';
 
 // Admin portal (S7). Every /v1/admin/* route needs the ADMIN role (granted in the DB, never self-service).
@@ -126,11 +126,11 @@ export type ConfirmPayment = z.infer<typeof ConfirmPaymentSchema>;
 
 /**
  * POST /v1/admin/orders/{id}/quote (DRAFT only): the admin sets the final price and delivery days (founder decision Q3).
- * Re-quoting is allowed while DRAFT, never below what the customer already transferred. payoutVnd follows the new price.
+ * Hard cap MAX_ORDER_VND (HON-60): a higher quote is rejected (400). Re-quoting is allowed while DRAFT, never below what the customer already transferred. payoutVnd follows the new price.
  * The order is funded right away if the escrow already holds the quoted price.
  */
 export const OrderQuoteSchema = z.object({
-  priceVnd: z.number().int().min(100_000).max(1_000_000_000).refine((v) => v % 1000 === 0, 'Round to 1,000 VND'),
+  priceVnd: z.number().int().min(100_000).max(MAX_ORDER_VND, orderCapMessage()).refine((v) => v % 1000 === 0, 'Round to 1,000 VND'),
   etaDays: z.number().int().min(1).max(120),
 });
 export type OrderQuote = z.infer<typeof OrderQuoteSchema>;
