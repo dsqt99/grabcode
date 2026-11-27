@@ -41,7 +41,7 @@ export default function Page() {
         <section className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-8 px-4 py-8 md:px-8 lg:grid-cols-2 lg:gap-12 lg:py-16">
           <div>
             <span className="chip-progress mb-4">
-              <span className="material-symbols-outlined !text-[16px]" aria-hidden>storefront</span>
+              <span className="material-symbols-outlined text-[16px]!" aria-hidden>storefront</span>
               Chợ POC demo ngắn · dưới 3 triệu đồng
             </span>
             {/* tagline is a full sentence with its own punctuation: never append to it (docs/BRAND.md). */}
@@ -64,7 +64,7 @@ export default function Page() {
             </ul>
             <a href="#dispatch" className="btn-primary mt-6 w-full scroll-smooth lg:hidden">
               Đặt POC demo
-              <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_downward</span>
+              <span className="material-symbols-outlined text-[20px]!" aria-hidden>arrow_downward</span>
             </a>
           </div>
           <InstantDispatch />
@@ -83,7 +83,7 @@ export default function Page() {
                   <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink font-display text-sm font-bold text-white">{i + 1}</span>
                   <div>
                     <p className="flex items-center gap-2 font-display font-bold text-stone-900">
-                      <span className="material-symbols-outlined !text-[20px] text-brand-700" aria-hidden>{s.icon}</span>
+                      <span className="material-symbols-outlined text-[20px]! text-brand-700" aria-hidden>{s.icon}</span>
                       {s.title}
                     </p>
                     <p className="mt-1 text-sm text-stone-600">{s.text}</p>

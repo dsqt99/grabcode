@@ -11,7 +11,7 @@ export default function OnlineRadar({
   hint?: string;
 }) {
   return (
-    <section className="card flex min-h-[72px] items-center gap-3 !p-4">
+    <section className="card flex min-h-[72px] items-center gap-3 p-4!">
       <span className={`h-3 w-3 shrink-0 rounded-full ${isOnline ? 'animate-pulse bg-teal-600 motion-reduce:animate-none' : 'bg-stone-400'}`} aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="font-display text-base font-bold text-stone-900">{isOnline ? 'Đang nhận đơn mới' : 'Đang tắt nhận đơn'}</p>
@@ -28,7 +28,7 @@ export default function OnlineRadar({
         className="grid h-11 w-[52px] shrink-0 place-items-center"
       >
         <span className={`relative h-8 w-[52px] rounded-full transition ${isOnline ? 'bg-brand-700' : 'bg-stone-300'}`}>
-          <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${isOnline ? 'left-[24px]' : 'left-1'}`} />
+          <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-all ${isOnline ? 'left-[24px]' : 'left-1'}`} />
         </span>
       </button>
     </section>

@@ -21,7 +21,7 @@ export default function ComparisonTable() {
             <h3 className="font-display text-base font-bold text-stone-900">{r.label}</h3>
             <p className="text-sm text-stone-600">Tự thuê bên ngoài: {r.self}</p>
             <p className="flex items-start gap-2 text-sm font-semibold text-brand-800">
-              <span className="material-symbols-outlined !text-[20px]" aria-hidden>check_circle</span>
+              <span className="material-symbols-outlined text-[20px]!" aria-hidden>check_circle</span>
               <span>{BRAND.name}: {r.grab}</span>
             </p>
           </li>

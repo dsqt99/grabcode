@@ -81,7 +81,7 @@ export default function RefundAccountCard({ orderId, dueVnd }: { orderId: string
       </div>
       {urgent && (
         <p className="banner-warn">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>undo</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>undo</span>
           {BRAND.name} cần tài khoản này để chuyển trả {formatVnd(dueVnd)}.
         </p>
       )}

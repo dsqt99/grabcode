@@ -113,7 +113,7 @@ export default function Orders() {
                 </div>
                 {o.disputeReason && <div className="mt-1 text-xs text-red-700">Lý do: {o.disputeReason}</div>}
                 {reported && o.paymentReportedAt && (
-                  <div className="banner-warn mt-2 !p-3">
+                  <div className="banner-warn mt-2 p-3!">
                     <span className="material-symbols-outlined" aria-hidden>notifications_active</span>
                     <p className="font-semibold">Khách báo đã chuyển khoản lúc {when(o.paymentReportedAt)} — kiểm tra app ngân hàng</p>
                   </div>
@@ -218,7 +218,7 @@ export default function Orders() {
                       </Block>
                     )}
                     {(o.escrowVnd > 0 || cancels(o)) && (
-                      <button className="btn-outline btn-compact self-start !text-red-700" disabled={busy} onClick={() => refundAll(o)}>
+                      <button className="btn-outline btn-compact self-start text-red-700!" disabled={busy} onClick={() => refundAll(o)}>
                         {cancels(o) ? 'Hoàn & huỷ đơn' : 'Hoàn tiền thừa'}
                       </button>
                     )}

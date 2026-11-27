@@ -83,7 +83,7 @@ export default function WaveOfferModal({
   const announce = secs === 10 || secs === 5 ? `Còn ${secs} giây` : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-xs sm:items-center">
       <div
         role="dialog"
         aria-modal="true"
@@ -94,7 +94,7 @@ export default function WaveOfferModal({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <span className="chip-progress">
-              <span className="material-symbols-outlined !text-[14px]" aria-hidden>bolt</span> Đơn mới
+              <span className="material-symbols-outlined text-[14px]!" aria-hidden>bolt</span> Đơn mới
             </span>
             <h2 id="offer-title" className="mt-2 font-display text-xl font-extrabold leading-tight text-stone-900">{offer.title}</h2>
             <p className="mt-1 text-sm text-stone-600">{offer.customerName}</p>
@@ -129,7 +129,7 @@ export default function WaveOfferModal({
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="chip-dark">{TIER_LABEL[offer.tier] ?? offer.tier}</span>
           <span className="chip-warn">
-            <span className="material-symbols-outlined !text-[14px]" aria-hidden>schedule</span> {etaLabel(offer.deadlineHours)}
+            <span className="material-symbols-outlined text-[14px]!" aria-hidden>schedule</span> {etaLabel(offer.deadlineHours)}
           </span>
           {(offer.templateName || order.templateName) && <span className="chip-neutral">{offer.templateName || order.templateName}</span>}
         </div>

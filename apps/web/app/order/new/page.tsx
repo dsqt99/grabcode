@@ -153,7 +153,7 @@ function NewOrder() {
           <p className="mt-2 text-sm text-stone-600">Đây là bản demo chạy thử, không phải sản phẩm đầy đủ. Mỗi đơn tối đa {formatVnd(MAX_ORDER_VND)}.</p>
           {error && (
             <p role="alert" className="banner-danger mt-3">
-              <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
+              <span className="material-symbols-outlined text-[20px]!" aria-hidden>error</span>
               {error}
             </p>
           )}
@@ -166,12 +166,12 @@ function NewOrder() {
               <textarea id="prompt" rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} className="field resize-none" placeholder="Mô tả demo bạn cần (một tính năng chính)…" />
               {stale && (
                 <p className="banner-warn" role="status">
-                  <span className="material-symbols-outlined !text-[20px]" aria-hidden>info</span>
+                  <span className="material-symbols-outlined text-[20px]!" aria-hidden>info</span>
                   Bạn đã sửa yêu cầu — bấm Phân tích lại để cập nhật đặc tả.
                 </p>
               )}
               <button type="button" onClick={() => setRun((n) => n + 1)} disabled={analyzing || !prompt.trim()} className="btn-outline btn-sm">
-                <span className="material-symbols-outlined !text-[20px]" aria-hidden>refresh</span>
+                <span className="material-symbols-outlined text-[20px]!" aria-hidden>refresh</span>
                 Phân tích lại
               </button>
             </div>
@@ -255,7 +255,7 @@ function OrderSteps() {
                 i < CURRENT_STEP ? 'bg-teal-600 text-white' : i === CURRENT_STEP ? 'bg-brand-700 text-white' : 'bg-stone-200 text-stone-700'
               }`}
             >
-              {i < CURRENT_STEP ? <span className="material-symbols-outlined !text-[16px]" aria-label="Xong">check</span> : i + 1}
+              {i < CURRENT_STEP ? <span className="material-symbols-outlined text-[16px]!" aria-label="Xong">check</span> : i + 1}
             </span>
             <span className={i === CURRENT_STEP ? 'font-semibold text-stone-900' : 'text-stone-600'}>{s}</span>
             {i < ORDER_STEPS.length - 1 && <span className="h-px w-8 bg-stone-300" aria-hidden />}

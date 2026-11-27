@@ -79,7 +79,7 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
             <div className="space-y-3 text-sm text-stone-700">{children}</div>
             {error && (
               <p className="banner-danger font-semibold" role="alert">
-                <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
+                <span className="material-symbols-outlined text-[20px]!" aria-hidden>error</span>
                 Chưa thực hiện được: {error}. Thử lại.
               </p>
             )}
@@ -90,7 +90,7 @@ export default function ConfirmSheet({ open, title, children, confirmLabel, dang
               <button type="button" className="btn-outline flex-1" disabled={busy} onClick={close}>
                 {cancelLabel}
               </button>
-              <button type="button" className={`${danger ? 'btn-danger' : 'btn-primary'} flex-[2] whitespace-nowrap px-3 text-sm md:text-[15px]`} disabled={!canConfirm || busy} onClick={onConfirm}>
+              <button type="button" className={`${danger ? 'btn-danger' : 'btn-primary'} flex-2 whitespace-nowrap px-3 text-sm md:text-[15px]`} disabled={!canConfirm || busy} onClick={onConfirm}>
                 {busy && <span className="material-symbols-outlined spinner" aria-hidden>progress_activity</span>}
                 {confirmLabel}
               </button>

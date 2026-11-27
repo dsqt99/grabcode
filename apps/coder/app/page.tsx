@@ -70,13 +70,13 @@ export default function Page() {
 
         {/* Mock mode only: with core-api, offers come from real orders. */}
         {!API_URL && <button type="button" onClick={c.simulateDispatch} className="btn-outline btn-sm self-center border-dashed">
-          <span className="material-symbols-outlined !text-[16px]" aria-hidden>science</span> Giả lập đơn đến
+          <span className="material-symbols-outlined text-[16px]!" aria-hidden>science</span> Giả lập đơn đến
         </button>}
       </div>
 
       {c.offer && <WaveOfferModal key={c.offer.order.id} pending={c.offer} onAccept={c.acceptOffer} onReject={c.rejectOffer} />}
 
-      <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[60] mx-auto flex max-w-md flex-col gap-2 px-4">
+      <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-60 mx-auto flex max-w-md flex-col gap-2 px-4">
         {c.toasts.map((t) => (
           <div key={t.id} role={t.tone === 'warn' ? 'alert' : 'status'} className="toast animate-pop">
             <span

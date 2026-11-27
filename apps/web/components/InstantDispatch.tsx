@@ -85,7 +85,7 @@ export default function InstantDispatch() {
         <div className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Gợi ý nhanh">
           {SAMPLE_PROMPTS.map((p) => (
             <button key={p} type="button" onClick={() => pickSample(p)} className="chip-neutral min-h-[44px] shrink-0 snap-start px-3 text-left hover:bg-brand-50 hover:text-brand-800">
-              <span className="material-symbols-outlined !text-[16px]" aria-hidden>auto_awesome</span>
+              <span className="material-symbols-outlined text-[16px]!" aria-hidden>auto_awesome</span>
               <span className="line-clamp-2 max-w-[18rem]">{p}</span>
             </button>
           ))}
@@ -121,7 +121,7 @@ export default function InstantDispatch() {
       <div>
         <button type="button" disabled={!canSubmit} onClick={submit} className="btn-primary w-full" aria-describedby="dispatch-help">
           Xem đặc tả & báo giá
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>arrow_forward</span>
         </button>
         <p id="dispatch-help" className={`mt-2 text-sm ${canSubmit ? 'text-stone-600' : 'font-semibold text-amber-800'}`}>
           {canSubmit
