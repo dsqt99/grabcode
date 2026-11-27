@@ -37,11 +37,11 @@ export default function AdminPage() {
       <header className="flex h-14 items-center justify-between bg-ink px-6 text-white">
         <h1 className="flex items-center gap-2 font-display text-base font-bold">
           <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden focusable="false">
-            <rect width="64" height="64" rx="16" fill="#EA580C" />
-            <path d="M26 24c0-4 2.6-7 6-7s6 3 6 7" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-            <path d="M21 25h22a2 2 0 0 1 2 2.1l-1.4 19a3 3 0 0 1-3 2.8H23.4a3 3 0 0 1-3-2.8L19 27.1A2 2 0 0 1 21 25Z" fill="#fff" />
-            <path d="M29 31v10l8.5-5Z" fill="#EA580C" />
-          </svg>
+            <rect width="64" height="64" rx="14" fill="#0B44CC" />
+            <g fill="none" stroke="#fff" strokeWidth="4.5" strokeLinecap="butt" strokeLinejoin="miter">
+            <path d="M10 21V10h11"/><path d="M43 10h11v11"/><path d="M54 43v11H43"/><path d="M21 54H10V43"/></g>
+            <g fill="#fff" transform="translate(1.5 0)"><path fillRule="evenodd" d="M17 41 23.2 23h4.6L34 41h-4.8L28 37.4h-5L21.8 41ZM24.1 33.6h2.8l-1.4-4.2Z"/><rect x="38" y="23" width="5" height="18"/></g>
+            </svg>
           {BRAND.name} Admin
         </h1>
         <span className="text-sm text-stone-300">{me.email ?? me.githubLogin ?? me.name}</span>

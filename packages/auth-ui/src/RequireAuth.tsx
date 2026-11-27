@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { UserRole } from '@grabcode/contracts/schemas';
 import { useAuth } from './auth';
+import { BrandMark } from './BrandMark';
 
 const ROLE_COPY: Record<UserRole, { title: string; text: string; icon: string }> = {
   CUSTOMER: { title: 'Bật vai trò Khách hàng', text: 'Để đặt làm app, thanh toán và theo dõi đơn hàng.', icon: 'business_center' },
@@ -37,6 +38,7 @@ export function ActivateRole({ role }: { role: UserRole }) {
   return (
     <main className="mx-auto w-full max-w-md px-4 py-16">
       <section className="card p-6 text-center">
+        <BrandMark size={48} className="mx-auto mb-4" />
         <span className="material-symbols-outlined !text-[40px] text-emerald" aria-hidden>{copy.icon}</span>
         <h1 className="mt-2 font-display text-xl font-extrabold text-ink">{copy.title}</h1>
         <p className="mt-1 text-sm text-slate-500">
