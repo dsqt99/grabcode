@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
-import { estimateOrder, normalizeVnPhone, payoutOf } from '@grabcode/contracts/schemas';
+import { MAX_ORDER_VND, estimateOrder, normalizeVnPhone, payoutOf } from '@grabcode/contracts/schemas';
 import { eventBus, type AIBrief, type Order, type WaveOffer } from '@grabcode/contracts';
 import AIBriefViewer from '../../../components/AIBriefViewer';
 import EscrowCheckout from '../../../components/EscrowCheckout';
@@ -12,7 +12,7 @@ import { createOrder, ordersApiEnabled, requestBrief } from '../../../lib/api';
 import { useAuth } from '@grabcode/auth-ui';
 import { genBrief } from '../../../lib/brief';
 import { newOrderId, saveOrder } from '../../../lib/orderStore';
-import { FRAMEWORKS, daysLabel, getMenuItem, getTemplate } from '../../../lib/pricing';
+import { FRAMEWORKS, daysLabel, formatVnd, getMenuItem, getTemplate } from '../../../lib/pricing';
 import { BRAND } from '@grabcode/contracts';
 
 
@@ -150,6 +150,7 @@ function NewOrder() {
         <div className="mb-6 mt-4">
           <h1 className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">Xác nhận đặc tả & đặt đơn</h1>
           <span className="chip-progress mt-2">{item.name} · {daysLabel(item.days)}</span>
+          <p className="mt-2 text-sm text-stone-600">Đây là bản demo chạy thử, không phải sản phẩm đầy đủ. Mỗi đơn tối đa {formatVnd(MAX_ORDER_VND)}.</p>
           {error && (
             <p role="alert" className="banner-danger mt-3">
               <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
