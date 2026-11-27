@@ -153,7 +153,7 @@ export default function ActiveJobWorkspace({
               ) : (
                 <button type="button" onClick={openHandIn} className="btn-primary w-full">{submitLabel}</button>
               )}
-              {isLast && <p className="help !mt-0">Tiền mốc cuối được trả khi khách nghiệm thu cả đơn.</p>}
+              {isLast && <p className="help mt-0!">Tiền mốc cuối được trả khi khách nghiệm thu cả đơn.</p>}
             </>
           ) : state.delivered ? (
             <div className="banner-info">
@@ -183,11 +183,11 @@ export default function ActiveJobWorkspace({
         <div className="flex flex-wrap gap-2">
           {ready && (
             <a href={repo} target="_blank" rel="noreferrer" className="btn-outline btn-sm">
-              <span className="material-symbols-outlined !text-[18px]" aria-hidden>link</span> Mở repo
+              <span className="material-symbols-outlined text-[18px]!" aria-hidden>link</span> Mở repo
             </a>
           )}
           <button type="button" onClick={downloadClaudeMd} className="btn-outline btn-sm">
-            <span className="material-symbols-outlined !text-[18px]" aria-hidden>download</span> Tải CLAUDE.md
+            <span className="material-symbols-outlined text-[18px]!" aria-hidden>download</span> Tải CLAUDE.md
           </button>
         </div>
       </section>
@@ -207,7 +207,7 @@ export default function ActiveJobWorkspace({
                       isDone ? 'bg-teal-700 text-white' : isCurrent ? 'bg-ink text-white' : 'bg-stone-200 text-stone-700'
                     }`}
                   >
-                    {isDone ? <span className="material-symbols-outlined !text-[18px]" aria-label="Đã xong">check</span> : m.id}
+                    {isDone ? <span className="material-symbols-outlined text-[18px]!" aria-label="Đã xong">check</span> : m.id}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-stone-900">{m.title}</p>
@@ -247,7 +247,7 @@ export default function ActiveJobWorkspace({
               type="submit"
               form="handin-form"
               disabled={!handIn || (!handIn.url.trim() && !handIn.note.trim()) || urlBad}
-              className="btn-primary flex-[2]"
+              className="btn-primary flex-2"
             >
               Gửi khách duyệt
             </button>
@@ -296,7 +296,7 @@ export default function ActiveJobWorkspace({
         )}
       </Sheet>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-stone-200 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-sheet backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-stone-200 bg-white/95 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 shadow-sheet backdrop-blur-sm">
         {state.completed ? (
           <button type="button" onClick={onDismiss} className="btn-primary w-full">Nhận đơn mới</button>
         ) : disputed ? (

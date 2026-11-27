@@ -17,7 +17,7 @@ export default function LegalDraft({ title, children }: { title: string; childre
       <Navbar />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:px-8">
         <p className="banner-warn font-display font-bold" role="note">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>warning</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>warning</span>
           BẢN NHÁP – chờ founder duyệt. Nội dung chưa có giá trị pháp lý chính thức.
         </p>
         <h1 className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">{title}</h1>

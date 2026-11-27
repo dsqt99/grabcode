@@ -19,7 +19,7 @@ export default function Suspense() {
             <div className="text-xs text-stone-600">{when(i.createdAt)}</div>
           </td>
           <td className="num font-bold">{vnd(i.amountVnd)}</td>
-          <td className="max-w-xs break-words font-mono">{i.content}</td>
+          <td className="max-w-xs wrap-break-word font-mono">{i.content}</td>
           <td>
             <div className="flex flex-wrap items-center gap-2">
               <input

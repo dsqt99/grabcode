@@ -45,12 +45,12 @@ function ReviewActions({ m, approveLabel, onReview }: { m: Milestone; approveLab
     <div className="space-y-2">
       {qaFailed && (
         <p className="error-text">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>error</span>
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>error</span>
           Kiểm tra tự động chưa đạt — hãy yêu cầu freelancer sửa trước.
         </p>
       )}
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" className="btn-primary flex-[2]" disabled={qaFailed} onClick={() => onReview(m.id, true)}>
+        <button type="button" className="btn-primary flex-2" disabled={qaFailed} onClick={() => onReview(m.id, true)}>
           {approveLabel}
         </button>
         <button type="button" className="btn-outline flex-1" onClick={() => onReview(m.id, false)}>
@@ -93,7 +93,7 @@ export function SubmittedMilestone({
       {m.deliveryUrl ? (
         <div className="space-y-1">
           <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="btn-outline btn-sm">
-            <span className="material-symbols-outlined !text-[20px]" aria-hidden>open_in_new</span>
+            <span className="material-symbols-outlined text-[20px]!" aria-hidden>open_in_new</span>
             Mở bản bàn giao
           </a>
           <p className="truncate text-xs text-stone-600">{m.deliveryUrl}</p>
@@ -141,7 +141,7 @@ export default function MilestoneList({
             <li key={m.id} className="relative flex gap-3 pb-5 last:pb-0">
               {!last && <span className="absolute bottom-0 left-4 top-8 w-px bg-stone-200" aria-hidden />}
               <span className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full font-display text-sm font-bold ${meta.dot}`} aria-hidden>
-                {meta.icon ? <span className="material-symbols-outlined !text-[18px]">{meta.icon}</span> : i + 1}
+                {meta.icon ? <span className="material-symbols-outlined text-[18px]!">{meta.icon}</span> : i + 1}
               </span>
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex items-start justify-between gap-2">
@@ -152,18 +152,18 @@ export default function MilestoneList({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={meta.chip}>{meta.label}</span>
                   {m.qa && <span className={QA[m.qa.status].cls}>{QA[m.qa.status].label}</span>}
-                  {m.commitHash && <code className="rounded bg-stone-100 px-1.5 font-mono text-xs text-stone-700">{m.commitHash}</code>}
+                  {m.commitHash && <code className="rounded-sm bg-stone-100 px-1.5 font-mono text-xs text-stone-700">{m.commitHash}</code>}
                   {m.completedAt && <span className="text-xs text-stone-600">{formatTime(m.completedAt)}</span>}
                 </div>
                 {last && paysOnApproval && !paysOnApproval(m.id) && m.status !== 'COMPLETED' && (
                   <p className="text-sm text-stone-600">Tiền mốc cuối trả khi bạn nghiệm thu cả đơn.</p>
                 )}
                 {m.note && m.status === 'IN_PROGRESS' && (
-                  <p className="banner-warn !p-3">Bạn yêu cầu sửa: {m.note}</p>
+                  <p className="banner-warn p-3!">Bạn yêu cầu sửa: {m.note}</p>
                 )}
                 {m.deliveryUrl && (
                   <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex min-h-[44px] max-w-full items-center gap-1 text-sm font-semibold text-brand-800 underline">
-                    <span className="material-symbols-outlined !text-[16px]" aria-hidden>open_in_new</span>
+                    <span className="material-symbols-outlined text-[16px]!" aria-hidden>open_in_new</span>
                     <span className="truncate">Mở bản bàn giao</span>
                   </a>
                 )}

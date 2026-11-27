@@ -16,7 +16,7 @@ export default function ApprovalGate({ children }: { children: ReactNode }) {
     <main className="mx-auto w-full max-w-md px-4 py-12">
       <section className="card text-center">
         <span className={`mx-auto grid h-16 w-16 place-items-center rounded-full ${rejected ? 'bg-red-50 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
-          <span className="material-symbols-outlined !text-[40px]" aria-hidden>{rejected ? 'block' : 'hourglass_top'}</span>
+          <span className="material-symbols-outlined text-[40px]!" aria-hidden>{rejected ? 'block' : 'hourglass_top'}</span>
         </span>
         <h1 className="mt-3 font-display text-2xl font-extrabold text-stone-900">{rejected ? 'Hồ sơ chưa được duyệt' : 'Hồ sơ đang chờ duyệt'}</h1>
         <p className="mt-2 text-sm text-stone-600">

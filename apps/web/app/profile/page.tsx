@@ -87,7 +87,7 @@ function useSave() {
   };
   const footer = (label = 'Lưu thay đổi') => (
     <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-4">
-      <button type="submit" disabled={state.busy} className="btn-primary !py-2.5">
+      <button type="submit" disabled={state.busy} className="btn-primary py-2.5!">
         {state.busy ? 'Đang lưu…' : label}
       </button>
       {state.msg && (
@@ -202,14 +202,14 @@ function AccountForm({ me }: { me: Me }) {
         {f.avatarUrl ? (
           <img src={f.avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-brand-200" />
         ) : (
-          <span className="material-symbols-outlined grid h-16 w-16 place-items-center rounded-full bg-brand-50 !text-[36px] text-brand-700" aria-hidden>
+          <span className="material-symbols-outlined grid h-16 w-16 place-items-center rounded-full bg-brand-50 text-[36px]! text-brand-700" aria-hidden>
             person
           </span>
         )}
         <div className="flex-1">
           <span className={LABEL}>Ảnh đại diện</span>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <label className="btn-secondary cursor-pointer !px-4 !py-2">
+            <label className="btn-secondary cursor-pointer px-4! py-2!">
               Tải ảnh lên
               <input
                 type="file"
@@ -365,7 +365,7 @@ function CoderForm({ me }: { me: Me }) {
             <span key={s} className="chip-ok">
               {s}
               <button type="button" onClick={() => setP({ ...p, skills: p.skills.filter((x) => x !== s) })} aria-label={`Xóa ${s}`} className="ml-0.5">
-                <span className="material-symbols-outlined !text-[14px]" aria-hidden>close</span>
+                <span className="material-symbols-outlined text-[14px]!" aria-hidden>close</span>
               </button>
             </span>
           ))}
@@ -383,7 +383,7 @@ function CoderForm({ me }: { me: Me }) {
               }
             }}
             placeholder="VD: Next.js, NestJS, LangChain — Enter để thêm"
-            className={`${INPUT} !mt-0`}
+            className={`${INPUT} mt-0!`}
           />
           <button type="button" onClick={addSkill} className="btn-ghost border border-stone-200">
             Thêm
@@ -420,23 +420,23 @@ function CoderForm({ me }: { me: Me }) {
         <div className="mt-2 grid gap-2">
           {p.languages.map((l, i) => (
             <div key={i} className="flex gap-2">
-              <input aria-label="Ngôn ngữ" maxLength={40} value={l.language} onChange={(e) => setLang(i, { language: e.target.value })} className={`${INPUT} !mt-0`} />
-              <select aria-label="Trình độ" value={l.level} onChange={(e) => setLang(i, { level: e.target.value as LanguageLevel })} className={`${INPUT} !mt-0 max-w-40`}>
+              <input aria-label="Ngôn ngữ" maxLength={40} value={l.language} onChange={(e) => setLang(i, { language: e.target.value })} className={`${INPUT} mt-0!`} />
+              <select aria-label="Trình độ" value={l.level} onChange={(e) => setLang(i, { level: e.target.value as LanguageLevel })} className={`${INPUT} mt-0! max-w-40`}>
                 {Object.entries(LANG_LEVEL).map(([v, label]) => (
                   <option key={v} value={v}>
                     {label}
                   </option>
                 ))}
               </select>
-              <button type="button" onClick={() => setP({ ...p, languages: p.languages.filter((_, j) => j !== i) })} className="btn-ghost !px-2" aria-label="Xóa ngôn ngữ">
-                <span className="material-symbols-outlined !text-[18px]" aria-hidden>delete</span>
+              <button type="button" onClick={() => setP({ ...p, languages: p.languages.filter((_, j) => j !== i) })} className="btn-ghost px-2!" aria-label="Xóa ngôn ngữ">
+                <span className="material-symbols-outlined text-[18px]!" aria-hidden>delete</span>
               </button>
             </div>
           ))}
         </div>
         {p.languages.length < 10 && (
-          <button type="button" onClick={() => setP({ ...p, languages: [...p.languages, { language: '', level: 'CONVERSATIONAL' }] })} className="btn-ghost mt-2 !px-0 text-brand-800">
-            <span className="material-symbols-outlined !text-[18px]" aria-hidden>add</span> Thêm ngôn ngữ
+          <button type="button" onClick={() => setP({ ...p, languages: [...p.languages, { language: '', level: 'CONVERSATIONAL' }] })} className="btn-ghost mt-2 px-0! text-brand-800">
+            <span className="material-symbols-outlined text-[18px]!" aria-hidden>add</span> Thêm ngôn ngữ
           </button>
         )}
       </fieldset>
@@ -586,7 +586,7 @@ function SecurityForm({ me }: { me: Me }) {
         </div>
       )}
       <button type="button" onClick={() => logout()} className="btn-ghost mt-4 border border-stone-200 text-red-700">
-        <span className="material-symbols-outlined !text-[18px]" aria-hidden>logout</span> Đăng xuất
+        <span className="material-symbols-outlined text-[18px]!" aria-hidden>logout</span> Đăng xuất
       </button>
     </>
   );
@@ -613,7 +613,7 @@ function Settings() {
         <nav className="mt-4 flex gap-1 overflow-x-auto md:flex-col" aria-label="Mục cài đặt">
           {SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`} className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-stone-600 hover:bg-stone-100 hover:text-stone-900">
-              <span className="material-symbols-outlined !text-[18px]" aria-hidden>{s.icon}</span>
+              <span className="material-symbols-outlined text-[18px]!" aria-hidden>{s.icon}</span>
               {s.label}
             </a>
           ))}

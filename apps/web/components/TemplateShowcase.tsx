@@ -23,9 +23,9 @@ export default function TemplateShowcase() {
       <ul className="-mx-4 mt-6 flex snap-x gap-3 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
         {SEED_TEMPLATES.map((t) => ({ t, item: getMenuItem(t.menuItem) })).map(({ t, item }) => (
           <li key={t.id} className="w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-auto">
-            <article className="card card-hover flex h-full flex-col overflow-hidden !p-0">
-              <div className="grid aspect-[16/9] place-items-center rounded-t-2xl bg-gradient-to-br from-brand-50 to-stone-100" aria-hidden>
-                <span className="material-symbols-outlined !text-[48px] text-brand-700">{categoryIcon(t.category)}</span>
+            <article className="card card-hover flex h-full flex-col overflow-hidden p-0!">
+              <div className="grid aspect-video place-items-center rounded-t-2xl bg-linear-to-br from-brand-50 to-stone-100" aria-hidden>
+                <span className="material-symbols-outlined text-[48px]! text-brand-700">{categoryIcon(t.category)}</span>
               </div>
               <div className="flex flex-1 flex-col p-4">
                 <span className="text-xs font-semibold uppercase tracking-wide text-stone-600">{t.category}</span>
