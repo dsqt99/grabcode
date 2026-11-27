@@ -7,6 +7,8 @@ import {
   STREAM_NAME,
   SUBJECTS,
   coderTierFor,
+  MAX_ORDER_VND,
+  orderCapMessage,
   payoutOf,
   type AdminCoder,
   type AdminCoderPatch,
@@ -290,6 +292,7 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     await this.db.transaction(async (tx) => {
       const row = await this.lockOrder(tx, id);
       if (row.status !== 'DRAFT') throw new ConflictException({ message: `Order is ${row.status}, the price can only change before payment` });
+      if (body.priceVnd > MAX_ORDER_VND) throw new BadRequestException({ message: orderCapMessage() });
       const paid = await balanceOf(tx, escrowOf(id));
       if (body.priceVnd < paid) throw new BadRequestException({ message: `Price below the amount already paid (${paid} VND)` });
       const [next] = await tx
