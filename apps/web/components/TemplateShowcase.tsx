@@ -18,8 +18,8 @@ export default function TemplateShowcase() {
   const { money } = useCurrency();
   return (
     <section id="templates" aria-labelledby="tpl-title" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-12 md:px-8 md:py-16">
-      <h2 id="tpl-title" className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">Mẫu có sẵn, có giá từ và thời gian dự kiến</h2>
-      <p className="mt-1 text-stone-600">Chọn mẫu gần nhất với ý tưởng, freelancer tuỳ biến phần còn lại.</p>
+      <h2 id="tpl-title" className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">8 gói demo, có giá và thời gian giao</h2>
+      <p className="mt-1 text-stone-600">Bản chạy thử trong 2–3 ngày, mỗi đơn dưới 3 triệu. Chọn câu hỏi giống bạn nhất, bấm Dùng mẫu.</p>
       <ul className="-mx-4 mt-6 flex snap-x gap-3 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:px-0">
         {SEED_TEMPLATES.map((t) => ({ t, item: getMenuItem(t.menuItem) })).map(({ t, item }) => (
           <li key={t.id} className="w-[78%] shrink-0 snap-start sm:w-[45%] lg:w-auto">
@@ -38,7 +38,7 @@ export default function TemplateShowcase() {
                 </div>
                 <div className="mt-auto flex items-end justify-between gap-2 pt-4">
                   <div>
-                    <div className="font-display font-bold tabular-nums text-brand-800">từ {money(item.fromPriceVnd)}</div>
+                    <div className="font-display font-bold tabular-nums text-brand-800">{money(item.fromPriceVnd)}</div>
                     <div className="text-xs text-stone-600">{daysLabel(item.days)}</div>
                   </div>
                   <Link

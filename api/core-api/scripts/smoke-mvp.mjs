@@ -39,14 +39,15 @@ for (const c of [coder, coder2]) await admin('PATCH', `/v1/admin/coders/${c.id}`
 // 1. Customer posts. Client-chosen milestone ids are replaced (duplicates would merge two escrow releases).
 const milestones = [20, 80].map((w) => ({ id: 'dup', title: `m${w}`, description: '', weightPercent: w, status: 'COMPLETED' }));
 const brief = { title: 'MVP smoke', scopeSummary: 'shop', features: [], inScope: [], outOfScope: [], acceptanceCriteria: [], claudeMdContent: '', milestones };
-const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', menuItem: 'LANDING', brief, phone: '0912345678', acceptTerms: true });
+const created = await cust('POST', '/v1/orders', { prompt: 'Web bán hàng cho shop', menuItem: 'DEMO_LANDING', brief, phone: '0912345678', acceptTerms: true });
 ok(created.status === 201 && created.body.status === 'DRAFT', `order ${created.body.id} DRAFT`);
 let o = created.body;
 // Founder decision: the admin quotes the final price before the customer pays (the order starts at "giá từ").
 ok(o.priceQuotedAt === null, 'new order waits for a quote');
-ok((await cust('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 3_000_000, etaDays: 3 })).status === 403, 'customer cannot quote');
-const quoted = await admin('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 3_000_000, etaDays: 3 });
-ok(quoted.status === 200 && quoted.body.priceVnd === 3_000_000, 'admin quotes 3.000.000');
+ok((await cust('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 2_900_000, etaDays: 3 })).status === 403, 'customer cannot quote');
+ok((await admin('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 3_000_000, etaDays: 3 })).status === 400, 'admin cannot quote above the 2.990.000 cap');
+const quoted = await admin('POST', `/v1/admin/orders/${o.id}/quote`, { priceVnd: 2_900_000, etaDays: 3 });
+ok(quoted.status === 200 && quoted.body.priceVnd === 2_900_000, 'admin quotes 2.900.000');
 o = (await cust('GET', `/v1/orders/${o.id}`)).body;
 ok(o.brief.milestones.map((m) => `${m.id}:${m.status}`).join() === 'M1:PENDING,M2:PENDING', 'server-assigned milestone ids, progress reset');
 ok(o.payoutVnd > 0 && o.payoutVnd < o.priceVnd, `payout ${o.payoutVnd} of ${o.priceVnd} fixed on the order`);
