@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { disputeCoderShare, menuItemOf, payoutOf, type AdminOrder, type AdminOrderList } from '@grabcode/contracts/schemas';
+import { MAX_ORDER_VND, disputeCoderShare, menuItemOf, orderCapMessage, payoutOf, type AdminOrder, type AdminOrderList } from '@grabcode/contracts/schemas';
 import { api, vnd, when } from '../lib/api';
 import { Chip, Table, Toolbar, loadingOf, useList } from './ui';
 import OrderDetail from './OrderDetail';
@@ -57,6 +57,7 @@ export default function Orders() {
     const priceVnd = Number(q.price);
     const etaDays = Number(q.days || Math.ceil(o.etaHours / 24));
     if (!Number.isInteger(priceVnd) || priceVnd < 100_000 || priceVnd % 1000 !== 0) return alert('Nhập giá chốt (VND, tròn nghìn, từ 100.000).');
+    if (priceVnd > MAX_ORDER_VND) return alert(orderCapMessage());
     if (priceVnd < o.paidVnd) return alert(`Khách đã chuyển ${vnd(o.paidVnd)}: giá chốt không được thấp hơn.`);
     if (!Number.isInteger(etaDays) || etaDays < 1 || etaDays > 120) return alert('Nhập số ngày giao (1–120).');
     if (confirm(`Báo giá ${o.id}: ${vnd(priceVnd)}, giao trong ${etaDays} ngày (freelancer nhận ${vnd(payoutOf(priceVnd))}). Khách sẽ thấy giá này và mã QR.`))
@@ -94,7 +95,7 @@ export default function Orders() {
           const refundOk = refundRaw !== '' && Number.isInteger(refundN) && refundN >= 0 && refundN <= o.escrowVnd;
           const coderShare = refundOk ? disputeCoderShare(o.escrowVnd, refundN, o.priceVnd, o.payoutVnd) : 0;
           const qPrice = Number(quote[o.id]?.price ?? '');
-          const qOk = Number.isInteger(qPrice) && qPrice >= 100_000 && qPrice % 1000 === 0;
+          const qOk = Number.isInteger(qPrice) && qPrice >= 100_000 && qPrice <= MAX_ORDER_VND && qPrice % 1000 === 0;
           return (
             <tr key={o.id} className={reported ? 'bg-amber-50' : undefined}>
               <td>
@@ -163,6 +164,7 @@ export default function Orders() {
                           <input
                             type="number"
                             min={100_000}
+                            max={MAX_ORDER_VND}
                             step={1000}
                             className="min-h-[36px] w-36 px-2"
                             aria-label={`Giá chốt cho đơn ${o.id}`}
@@ -184,7 +186,7 @@ export default function Orders() {
                             {o.priceQuotedAt ? 'Báo giá lại' : 'Báo giá'}
                           </button>
                         </div>
-                        {qOk && <p className="text-xs text-stone-600">Freelancer nhận {vnd(payoutOf(qPrice))}</p>}
+                        <p className="text-xs text-stone-600">Trần mỗi đơn {vnd(MAX_ORDER_VND)}.{qOk && ` Freelancer nhận ${vnd(payoutOf(qPrice))}.`}</p>
                       </Block>
                     )}
                     {o.status === 'DRAFT' && (

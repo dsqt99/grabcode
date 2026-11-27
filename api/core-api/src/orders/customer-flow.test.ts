@@ -15,7 +15,7 @@ const setup = async () => {
   const customer = await addUser(db, ['CUSTOMER']);
   return { db, customer, svc: new OrdersService(db), payments: new PaymentsService(db), admin: new AdminService(db, {} as ReposService) };
 };
-const input = (extra: Record<string, unknown> = {}) => OrderCreateSchema.parse({ prompt: 'Web đặt bàn', menuItem: 'LANDING', brief: brief(), acceptTerms: true, ...extra });
+const input = (extra: Record<string, unknown> = {}) => OrderCreateSchema.parse({ prompt: 'Web đặt bàn', menuItem: 'DEMO_LANDING', brief: brief(), acceptTerms: true, ...extra });
 const userRow = async (db: Awaited<ReturnType<typeof testDb>>, id: string) => (await db.select().from(users).where(eq(users.id, id)))[0];
 const events = async (db: Awaited<ReturnType<typeof testDb>>, subject: string) =>
   (await db.select().from(outbox).where(eq(outbox.subject, subject))).map((r) => r.payload);
@@ -44,7 +44,7 @@ test('P0-5: a profile phone that is not a VN mobile still asks for one', async (
 
 test('P0-9: an order needs the terms ticked', () => {
   assert.throws(() => input({ acceptTerms: false, phone: '0912345678' }));
-  assert.throws(() => OrderCreateSchema.parse({ prompt: 'x', menuItem: 'LANDING', brief: brief(), phone: '0912345678' }));
+  assert.throws(() => OrderCreateSchema.parse({ prompt: 'x', menuItem: 'DEMO_LANDING', brief: brief(), phone: '0912345678' }));
 });
 
 test('P0-4: "Tôi đã chuyển khoản" stamps the order and emits payment.reported once', async () => {
