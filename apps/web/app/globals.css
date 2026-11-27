@@ -1,70 +1,270 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* Font tự host (@fontsource, import trong app/layout.tsx); tailwind.config dùng 2 biến này. */
-:root {
-  --font-jakarta: 'Plus Jakarta Sans';
-  --font-inter: 'Inter';
+@source '../../../packages/auth-ui/src/**/*.tsx';
+
+@theme {
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dce8ff;
+  --color-brand-200: #bad1ff;
+  --color-brand-300: #8db2ff;
+  --color-brand-400: #5a8bfa;
+  --color-brand-500: #2f66ea;
+  --color-brand-600: #0b44cc;
+  --color-brand-700: #0a38a8;
+  --color-brand-800: #0c2f85;
+  --color-brand-900: #0d2766;
+
+  --color-ink: #1c1917;
+  --color-ink-soft: #292524;
+
+  --color-line-strong: #8a817c;
+  --color-brand-strong: #0a38a8;
+  --color-primary: #0c2f85;
+  --color-primary-fixed: #bad1ff;
+  --color-inverse-primary: #8db2ff;
+
+  --color-emerald: #0b44cc;
+  --color-emerald-dark: #0c2f85;
+  --color-emerald-mint: #eef4ff;
+  --color-emerald-mintHover: #dce8ff;
+
+  --color-amber: #f59e0b;
+  --color-amber-tint: #fef3c7;
+  --color-amber-text: #92400e;
+
+  --font-display: var(--font-jakarta), Plus Jakarta Sans, sans-serif;
+  --font-sans: var(--font-inter), Inter, sans-serif;
+
+  --shadow-raised:
+    0 1px 2px rgba(28, 25, 23, 0.06), 0 4px 12px -2px rgba(28, 25, 23, 0.08);
+  --shadow-overlay: 0 20px 48px -12px rgba(28, 25, 23, 0.28);
+  --shadow-sheet: 0 -8px 32px -8px rgba(28, 25, 23, 0.2);
+  --shadow-l2:
+    0 1px 2px rgba(28, 25, 23, 0.06), 0 4px 12px -2px rgba(28, 25, 23, 0.08);
+  --shadow-l3: 0 20px 48px -12px rgba(28, 25, 23, 0.28);
+  --shadow-l4: 0 20px 48px -12px rgba(28, 25, 23, 0.28);
+
+  --animate-sonar: sonar 2.4s ease-out infinite;
+  --animate-pop: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  @keyframes sonar {
+    0% {
+      transform: scale(0.4);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
 }
 
-/* Ai Code AI redesign components (HON-51 redesign-ds §6). Same block in apps/web, apps/coder, apps/admin. */
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility btn-base {
+  /* Buttons */
+  @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-5 font-display text-[15px] font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100;
+}
+
+@utility btn-primary {
+  @apply btn-base bg-brand-700 text-white hover:bg-brand-800 disabled:bg-stone-200 disabled:text-stone-500;
+}
+
+@utility btn-secondary {
+  @apply btn-base bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-200 hover:bg-brand-100 disabled:opacity-60;
+}
+
+@utility btn-outline {
+  @apply btn-base bg-white text-stone-900 ring-1 ring-inset ring-stone-300 hover:bg-stone-50 disabled:opacity-60;
+}
+
+@utility btn-ghost {
+  @apply btn-base min-h-[44px] px-4 text-stone-700 hover:bg-stone-100 disabled:opacity-60;
+}
+
+@utility btn-danger {
+  @apply btn-base bg-red-700 text-white hover:bg-red-800 disabled:bg-stone-200 disabled:text-stone-500;
+}
+
+@utility btn-danger-ghost {
+  @apply btn-base min-h-[44px] px-4 text-red-700 hover:bg-red-50;
+}
+
+@utility btn-sm {
+  @apply min-h-[44px] px-4 text-sm;
+}
+
+@utility btn-icon {
+  @apply grid h-11 w-11 shrink-0 place-items-center rounded-full text-stone-700 hover:bg-stone-100;
+}
+
+@utility field {
+  /* Fields */
+  @apply block min-h-[48px] w-full px-4 py-3;
+  &[aria-invalid='true'] {
+    @apply border-red-700 ring-red-700/15;
+  }
+}
+
+@utility label {
+  @apply mb-1.5 block font-display text-sm font-semibold text-stone-900;
+}
+
+@utility help {
+  @apply mt-1.5 block text-sm text-stone-600;
+}
+
+@utility error-text {
+  @apply mt-1.5 flex items-start gap-1 text-sm font-semibold text-red-700;
+}
+
+@utility check {
+  @apply h-6 w-6 shrink-0 rounded-md border-line-strong accent-brand-700;
+}
+
+@utility check-row {
+  @apply flex min-h-[48px] cursor-pointer items-start gap-3 rounded-xl border border-stone-200 bg-white p-3;
+}
+
+@utility card {
+  /* Surfaces */
+  @apply rounded-2xl border border-stone-200 bg-white p-4 md:p-6;
+}
+
+@utility card-raised {
+  @apply card shadow-raised;
+}
+
+@utility card-hover {
+  @apply transition hover:border-stone-300 hover:shadow-raised;
+}
+
+@utility card-action {
+  @apply card border-amber-300 shadow-raised;
+}
+
+@utility divider {
+  @apply border-t border-stone-200;
+}
+
+@utility chip {
+  /* Chips */
+  @apply inline-flex min-h-[28px] items-center gap-1 rounded-full px-2.5 font-display text-xs font-semibold;
+}
+
+@utility chip-warn {
+  @apply chip bg-amber-100 text-amber-800;
+}
+
+@utility chip-info {
+  @apply chip bg-blue-50 text-blue-700;
+}
+
+@utility chip-progress {
+  @apply chip bg-brand-50 text-brand-800;
+}
+
+@utility chip-success {
+  @apply chip bg-teal-50 text-teal-700;
+}
+
+@utility chip-danger {
+  @apply chip bg-red-50 text-red-700;
+}
+
+@utility chip-neutral {
+  @apply chip bg-stone-100 text-stone-700;
+}
+
+@utility chip-dark {
+  @apply chip bg-ink text-white;
+}
+
+@utility chip-ok {
+  @apply chip-success;
+}
+
+@utility banner {
+  /* legacy */
+  /* Banners (inline alert) */
+  @apply flex items-start gap-3 rounded-xl p-4 text-sm;
+}
+
+@utility banner-info {
+  @apply banner bg-blue-50 text-blue-900;
+}
+
+@utility banner-warn {
+  @apply banner border border-amber-200 bg-amber-50 text-amber-900;
+}
+
+@utility banner-danger {
+  @apply banner border border-red-200 bg-red-50 text-red-800;
+}
+
+@utility banner-success {
+  @apply banner bg-teal-50 text-teal-800;
+}
+
+@utility skeleton {
+  /* Loading */
+  @apply animate-pulse rounded-xl bg-stone-200/70 motion-reduce:animate-none;
+}
+
+@utility spinner {
+  @apply animate-spin motion-reduce:animate-none;
+  font-size: 18px !important;
+}
+
+@utility toast {
+  /* use with material-symbols-outlined */
+  /* Toast */
+  @apply pointer-events-auto flex items-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-overlay;
+}
+
+@layer utilities {
+  /* Font tự host (@fontsource, import trong app/layout.tsx); @theme dùng 2 biến này. */
+  :root {
+    --font-jakarta: 'Plus Jakarta Sans';
+    --font-inter: 'Inter';
+  }
+
+  /* Ai Code AI redesign components (HON-51 redesign-ds §6). Same block in apps/web, apps/coder, apps/admin. */
+}
 @layer base {
   html { background: #FAFAF9; }
   body { @apply bg-stone-50 font-sans text-base text-stone-900 antialiased; }
   h1, h2, h3, h4 { @apply font-display; }
   /* 16px on mobile: iOS Safari zooms into smaller fields (UX P1-3). */
-  input, textarea, select { @apply rounded-xl border border-line-strong bg-white text-base text-stone-900 outline-none transition placeholder:text-stone-500 md:text-sm; }
+  input, textarea, select { @apply rounded-xl border border-line-strong bg-white text-base text-stone-900 outline-hidden transition placeholder:text-stone-500 md:text-sm; }
   input:focus, textarea:focus, select:focus { @apply border-brand-700 ring-4 ring-brand-600/20; }
-  :focus-visible { @apply outline-none ring-2 ring-brand-600 ring-offset-2; }
-}
-
-@layer components {
-  /* Buttons */
-  .btn-base { @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-5 font-display text-[15px] font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100; }
-  .btn-primary { @apply btn-base bg-brand-700 text-white hover:bg-brand-800 disabled:bg-stone-200 disabled:text-stone-500; }
-  .btn-secondary { @apply btn-base bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-200 hover:bg-brand-100 disabled:opacity-60; }
-  .btn-outline { @apply btn-base bg-white text-stone-900 ring-1 ring-inset ring-stone-300 hover:bg-stone-50 disabled:opacity-60; }
-  .btn-ghost { @apply btn-base min-h-[44px] px-4 text-stone-700 hover:bg-stone-100 disabled:opacity-60; }
-  .btn-danger { @apply btn-base bg-red-700 text-white hover:bg-red-800 disabled:bg-stone-200 disabled:text-stone-500; }
-  .btn-danger-ghost { @apply btn-base min-h-[44px] px-4 text-red-700 hover:bg-red-50; }
-  .btn-sm { @apply min-h-[44px] px-4 text-sm; }
-  .btn-icon { @apply grid h-11 w-11 shrink-0 place-items-center rounded-full text-stone-700 hover:bg-stone-100; }
-  /* Fields */
-  .field { @apply block min-h-[48px] w-full px-4 py-3; }
-  .label { @apply mb-1.5 block font-display text-sm font-semibold text-stone-900; }
-  .help { @apply mt-1.5 block text-sm text-stone-600; }
-  .error-text { @apply mt-1.5 flex items-start gap-1 text-sm font-semibold text-red-700; }
-  .field[aria-invalid='true'] { @apply border-red-700 ring-red-700/15; }
-  .check { @apply h-6 w-6 shrink-0 rounded-md border-line-strong accent-brand-700; }
-  .check-row { @apply flex min-h-[48px] cursor-pointer items-start gap-3 rounded-xl border border-stone-200 bg-white p-3; }
-  /* Surfaces */
-  .card { @apply rounded-2xl border border-stone-200 bg-white p-4 md:p-6; }
-  .card-raised { @apply card shadow-raised; }
-  .card-hover { @apply transition hover:border-stone-300 hover:shadow-raised; }
-  .card-action { @apply card border-amber-300 shadow-raised; }
-  .divider { @apply border-t border-stone-200; }
-  /* Chips */
-  .chip { @apply inline-flex min-h-[28px] items-center gap-1 rounded-full px-2.5 font-display text-xs font-semibold; }
-  .chip-warn { @apply chip bg-amber-100 text-amber-800; }
-  .chip-info { @apply chip bg-blue-50 text-blue-700; }
-  .chip-progress { @apply chip bg-brand-50 text-brand-800; }
-  .chip-success { @apply chip bg-teal-50 text-teal-700; }
-  .chip-danger { @apply chip bg-red-50 text-red-700; }
-  .chip-neutral { @apply chip bg-stone-100 text-stone-700; }
-  .chip-dark { @apply chip bg-ink text-white; }
-  .chip-ok { @apply chip-success; } /* legacy */
-  /* Banners (inline alert) */
-  .banner { @apply flex items-start gap-3 rounded-xl p-4 text-sm; }
-  .banner-info { @apply banner bg-blue-50 text-blue-900; }
-  .banner-warn { @apply banner border border-amber-200 bg-amber-50 text-amber-900; }
-  .banner-danger { @apply banner border border-red-200 bg-red-50 text-red-800; }
-  .banner-success { @apply banner bg-teal-50 text-teal-800; }
-  /* Loading */
-  .skeleton { @apply animate-pulse rounded-xl bg-stone-200/70 motion-reduce:animate-none; }
-  .spinner { @apply animate-spin motion-reduce:animate-none; font-size: 18px !important; } /* use with material-symbols-outlined */
-  /* Toast */
-  .toast { @apply pointer-events-auto flex items-center gap-2 rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-overlay; }
+  :focus-visible { @apply outline-hidden ring-2 ring-brand-600 ring-offset-2; }
 }
 
 /* Room for StickyActionBar on mobile so it never covers the end of the page. */

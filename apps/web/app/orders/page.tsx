@@ -63,7 +63,7 @@ export default function MyOrdersPage() {
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-extrabold text-stone-900 md:text-3xl">Đơn của tôi</h1>
           <Link href="/#dispatch" className="btn-primary btn-sm">
-            <span className="material-symbols-outlined !text-[20px]" aria-hidden>add</span>
+            <span className="material-symbols-outlined text-[20px]!" aria-hidden>add</span>
             Đặt đơn mới
           </Link>
         </div>
@@ -84,7 +84,7 @@ export default function MyOrdersPage() {
         ) : rows.length === 0 ? (
           <section className="card flex flex-col items-center gap-3 py-10 text-center">
             <span className="grid h-16 w-16 place-items-center rounded-full bg-stone-100 text-stone-600" aria-hidden>
-              <span className="material-symbols-outlined !text-[40px]">receipt_long</span>
+              <span className="material-symbols-outlined text-[40px]!">receipt_long</span>
             </span>
             <h2 className="font-display text-base font-bold text-stone-900">Bạn chưa có đơn nào</h2>
             <p className="max-w-sm text-sm text-stone-600">Mô tả ý tưởng để nhận đặc tả và báo giá. Bạn chưa phải trả tiền cho tới khi có giá chốt.</p>
@@ -110,7 +110,7 @@ export default function MyOrdersPage() {
                   </button>
                 ))}
               </div>
-              <span className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-stone-50 md:hidden" aria-hidden />
+              <span className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-stone-50 md:hidden" aria-hidden />
             </div>
             {shown.length === 0 ? (
               <p className="card text-center text-sm text-stone-600">Không có đơn ở mục này.</p>
@@ -120,7 +120,7 @@ export default function MyOrdersPage() {
                   const sv = statusView(statusInput(order));
                   return (
                     <li key={order.id}>
-                      <Link href={`/order/${order.id}`} className="card card-hover block min-h-[96px] overflow-hidden !p-4">
+                      <Link href={`/order/${order.id}`} className="card card-hover block min-h-[96px] overflow-hidden p-4!">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs text-stone-600">
                             {order.id} · {dayMonth(order.createdAt)}
@@ -132,7 +132,7 @@ export default function MyOrdersPage() {
                         <p className="mt-0.5 text-sm tabular-nums text-stone-700">{formatVnd(order.priceVnd)}</p>
                         {todo && (
                           <p className="-mx-4 -mb-4 mt-3 flex items-center gap-2 rounded-b-2xl bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900">
-                            <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_forward</span>
+                            <span className="material-symbols-outlined text-[20px]!" aria-hidden>arrow_forward</span>
                             {todo}
                           </p>
                         )}

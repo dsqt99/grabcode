@@ -37,7 +37,7 @@ export default function JobBoard({ onClaim }: { onClaim: (orderId: string) => Pr
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-display text-lg font-bold">Việc đang chờ nhận</h2>
         <button type="button" onClick={load} className="btn-ghost btn-sm">
-          <span className="material-symbols-outlined !text-[20px]" aria-hidden>refresh</span> Làm mới
+          <span className="material-symbols-outlined text-[20px]!" aria-hidden>refresh</span> Làm mới
         </button>
       </div>
       {failed && (
@@ -60,7 +60,7 @@ export default function JobBoard({ onClaim }: { onClaim: (orderId: string) => Pr
       ) : jobs.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 py-10 text-center">
           <span className="grid h-16 w-16 place-items-center rounded-full bg-stone-100 text-stone-600">
-            <span className="material-symbols-outlined !text-[40px]" aria-hidden>inbox</span>
+            <span className="material-symbols-outlined text-[40px]!" aria-hidden>inbox</span>
           </span>
           <h3 className="font-display text-base font-bold">Chưa có việc nào đang chờ</h3>
           <p className="text-sm text-stone-600">Việc đã được khách thanh toán sẽ hiện ở đây. Bật nhận đơn để được báo khi có việc mới.</p>
@@ -76,7 +76,7 @@ export default function JobBoard({ onClaim }: { onClaim: (orderId: string) => Pr
                 <p className="font-display text-[28px] font-extrabold tabular-nums text-teal-800">{formatVnd(j.payoutVnd)}</p>
               </div>
               <p className="line-clamp-3 text-sm text-stone-700">{j.brief.scopeSummary || j.prompt}</p>
-              <p className="help !mt-0">{j.brief.milestones.length} mốc · tiền trả theo từng mốc khách duyệt, mốc cuối khi khách nghiệm thu.</p>
+              <p className="help mt-0!">{j.brief.milestones.length} mốc · tiền trả theo từng mốc khách duyệt, mốc cuối khi khách nghiệm thu.</p>
               <button type="button" disabled={busy !== null} onClick={() => claim(j.id)} className="btn-primary w-full">
                 {busy === j.id ? 'Đang nhận…' : 'Nhận việc này'}
               </button>

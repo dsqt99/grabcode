@@ -265,7 +265,7 @@ export default function OrderPage() {
           <main className="mx-auto max-w-md px-4 py-12">
             <section className="card flex flex-col items-center gap-3 py-10 text-center">
               <span className="grid h-16 w-16 place-items-center rounded-full bg-stone-100 text-stone-600" aria-hidden>
-                <span className="material-symbols-outlined !text-[40px]">search_off</span>
+                <span className="material-symbols-outlined text-[40px]!">search_off</span>
               </span>
               <h1 className="font-display text-base font-bold text-stone-900">Không tìm thấy đơn này hoặc bạn không có quyền xem.</h1>
               <Link href="/orders" className="btn-primary">Về Đơn của tôi</Link>
@@ -500,7 +500,7 @@ export default function OrderPage() {
                   <li key={m.id}>
                     <a href={m.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="flex min-h-[48px] items-center justify-between gap-3 font-semibold text-brand-800">
                       <span className="min-w-0 truncate">{m.id} · {m.title}</span>
-                      <span className="material-symbols-outlined !text-[20px]" aria-hidden>open_in_new</span>
+                      <span className="material-symbols-outlined text-[20px]!" aria-hidden>open_in_new</span>
                     </a>
                   </li>
                 ))}
@@ -560,7 +560,7 @@ export default function OrderPage() {
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-4 md:px-8 md:py-8 lg:space-y-6">
         <div className="flex items-center justify-between gap-3">
           <Link href="/orders" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-full px-2 font-display text-sm font-semibold text-stone-700 hover:bg-stone-100">
-            <span className="material-symbols-outlined !text-[20px]" aria-hidden>arrow_back</span>
+            <span className="material-symbols-outlined text-[20px]!" aria-hidden>arrow_back</span>
             Đơn của tôi
           </Link>
           <span className="chip-dark">{order.id}</span>
@@ -629,7 +629,7 @@ export default function OrderPage() {
                   <button type="button" className="btn-outline flex-1 lg:order-2" onClick={() => openSheet({ kind: 'revise' })}>
                     Yêu cầu sửa
                   </button>
-                  <button type="button" className="btn-primary flex-[2] lg:order-1" onClick={() => openSheet({ kind: 'accept' })}>
+                  <button type="button" className="btn-primary flex-2 lg:order-1" onClick={() => openSheet({ kind: 'accept' })}>
                     Nghiệm thu đơn
                   </button>
                 </div>
@@ -661,7 +661,7 @@ export default function OrderPage() {
                 {ordersApiEnabled && sv.canDispute && (
                   <div className="divider pt-3">
                     <button type="button" className="btn-danger-ghost w-full" onClick={() => openSheet({ kind: 'dispute' })}>
-                      <span className="material-symbols-outlined !text-[20px]" aria-hidden>gavel</span>
+                      <span className="material-symbols-outlined text-[20px]!" aria-hidden>gavel</span>
                       Mở tranh chấp
                     </button>
                     <p className="help">Chỉ dùng khi không thống nhất được với freelancer. Tiền còn giữ sẽ bị tạm khoá.</p>
@@ -682,7 +682,7 @@ export default function OrderPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn-primary flex-[2] whitespace-nowrap px-3"
+                  className="btn-primary flex-2 whitespace-nowrap px-3"
                   disabled={reviewing.qa?.status === 'FAILED'}
                   onClick={() => openSheet({ kind: 'approve', milestoneId: reviewing.id })}
                 >
@@ -706,7 +706,7 @@ export default function OrderPage() {
           {sheetMilestone.deliveryUrl ? (
             <div className="space-y-1">
               <a href={sheetMilestone.deliveryUrl} target="_blank" rel="noopener noreferrer nofollow" className="btn-outline btn-sm">
-                <span className="material-symbols-outlined !text-[20px]" aria-hidden>open_in_new</span>
+                <span className="material-symbols-outlined text-[20px]!" aria-hidden>open_in_new</span>
                 Mở bản bàn giao
               </a>
               <p className="break-all text-xs text-stone-600">{sheetMilestone.deliveryUrl}</p>
@@ -753,7 +753,7 @@ export default function OrderPage() {
           <ul className="divide-y divide-stone-100">
             {order.brief.milestones.map((m) => (
               <li key={m.id} className="flex items-start gap-2 py-2">
-                <span className={`material-symbols-outlined !text-[20px] ${m.status === 'COMPLETED' ? 'text-teal-700' : 'text-stone-500'}`} aria-hidden>
+                <span className={`material-symbols-outlined text-[20px]! ${m.status === 'COMPLETED' ? 'text-teal-700' : 'text-stone-500'}`} aria-hidden>
                   {m.status === 'COMPLETED' ? 'check_circle' : 'radio_button_unchecked'}
                 </span>
                 <span>
@@ -818,7 +818,7 @@ export default function OrderPage() {
               <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600" aria-hidden>@</span>
               <input
                 id="sheet-github"
-                className="field !pl-8"
+                className="field pl-8!"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}

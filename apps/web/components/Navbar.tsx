@@ -39,13 +39,13 @@ export default function Navbar() {
       {/* Home only and not sticky: keeps the mobile header at 56px everywhere else (UX P1-14). */}
       {pathname === '/' && (
         <div className="bg-ink px-4 py-2 text-center text-sm font-medium text-white">
-          <span className="material-symbols-outlined mr-1 !text-[18px] text-brand-300" aria-hidden>shield_lock</span>
+          <span className="material-symbols-outlined mr-1 text-[18px]! text-brand-300" aria-hidden>shield_lock</span>
           Tiền giữ tại {BRAND.name}, chỉ trả cho freelancer khi bạn duyệt từng mốc
           <span className="hidden md:inline"> · Thanh toán bằng chuyển khoản / VietQR</span>
         </div>
       )}
       <header className="sticky top-0 z-40">
-        <nav aria-label="Điều hướng chính" className="border-b border-stone-200 bg-white/90 backdrop-blur">
+        <nav aria-label="Điều hướng chính" className="border-b border-stone-200 bg-white/90 backdrop-blur-sm">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 md:h-16 md:px-8">
             <Link href="/" className="flex min-h-[44px] shrink-0 items-center" aria-label={`${BRAND.name} – Trang chủ`}>
               <Logo />
