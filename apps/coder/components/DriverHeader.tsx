@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@grabcode/auth-ui";
+import { BrandMark, useAuth } from "@grabcode/auth-ui";
 import { formatVnd } from "../lib/coderStore";
 
 const TIER_LABEL: Record<string, string> = {
@@ -32,6 +32,7 @@ export default function DriverHeader({
   return (
     <header className={`bg-ink px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white ${compact ? "pb-5" : "pb-6"}`}>
       <div className="flex items-center gap-3">
+        <BrandMark size={32} className="shrink-0" />
         <div className="relative">
           {avatar ? (
             <img src={avatar} alt="" className="h-11 w-11 rounded-full object-cover ring-2 ring-brand-600" />
